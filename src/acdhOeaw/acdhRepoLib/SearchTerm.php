@@ -3,7 +3,7 @@
 /*
  * The MIT License
  *
- * Copyright 2019 zozlak.
+ * Copyright 2019 Austrian Centre for Digital Humanities.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,16 +33,25 @@ namespace acdhOeaw\acdhRepoLib;
  */
 class SearchTerm {
 
+    const TYPE_RELATION = 'relation';
+    const TYPE_NUMBER   = 'number';
+    const TYPE_DATE     = 'date';
+    const TYPE_DATETIME = 'datetime';
+    const TYPE_STRING   = 'string';
+
     public $property;
     public $operator;
     public $value;
+    public $type;
     public $language;
 
-    public function __construct(string $property = null, $value = null,
-                                string $operator = '=', string $language = null) {
+    public function __construct(?string $property = null, $value = null,
+                                string $operator = '=', ?string $type = null,
+                                ?string $language = null) {
         $this->property = $property;
         $this->operator = $operator;
         $this->value    = $value;
+        $this->type     = $type;
         $this->language = $language;
     }
 
@@ -51,6 +60,7 @@ class SearchTerm {
             'property[]' => (string) $this->property,
             'operator[]' => (string) $this->operator,
             'value[]'    => (string) $this->value,
+            'type[]'     => (string) $this->type,
             'language[]' => (string) $this->language,
         ]);
     }
