@@ -47,24 +47,27 @@ class Repo {
 
         $baseUrl            = $config->rest->urlBase . $config->rest->pathBase;
         $schema             = new Schema($config->schema);
+        $headers            = new Schema($config->rest->headers);
         $options            = [];
         $options['headers'] = (array) $config->auth->httpHeader ?? [];
         if (!empty($config->auth->httpBasic->user ?? '')) {
             $options['auth'] = [$config->auth->httpBasic->user, $config->auth->httpBasic->password ?? ''];
         }
 
-        return new Repo($baseUrl, $schema, $options);
+        return new Repo($baseUrl, $schema, $headers, $options);
     }
 
     private $client;
     private $baseUrl;
+    private $headers;
     private $schema;
     private $txId;
 
     public function __construct(string $baseUrl, Schema $schema,
-                                array $guzzleOptions = []) {
+                                Schema $headers, array $guzzleOptions = []) {
         $this->client  = new Client($guzzleOptions);
         $this->baseUrl = $baseUrl;
+        $this->headers = $headers;
         $this->schema  = $schema;
     }
 
@@ -84,7 +87,7 @@ class Repo {
 
     public function sendRequest(Request $request): Response {
         if (!empty($this->txId)) {
-            $request = $request->withHeader('X-Transaction-Id', $this->txId);
+            $request = $request->withHeader($this->getHeaderName('transactionId'), $this->txId);
         }
         try {
             $response = $this->client->send($request);
@@ -132,21 +135,28 @@ class Repo {
         }
     }
 
-    public function getResourcesBySqlQuery(string $query, array $parameters = []): array {
+    public function getResourcesBySqlQuery(string $query,
+                                           array $parameters = [],
+                                           string $mode = RepoResource::META_RESOURCE): array {
         $headers = [
-            'Accept'       => 'application/n-triples',
-            'Content-Type' => 'application/x-www-form-urlencoded',
+            'Accept'                                       => 'application/n-triples',
+            'Content-Type'                                 => 'application/x-www-form-urlencoded',
+            $this->getHeaderName('metadataReadMode')       => $mode,
+            $this->getHeaderName('metadataParentProperty') => $this->schema->parent
         ];
         $body    = http_build_query(['sql' => $query, 'sqlParam' => $parameters]);
-        $req  = new Request('post', $this->baseUrl . 'search', $headers, $body);
-        $resp = $this->sendRequest($req);
+        $req     = new Request('post', $this->baseUrl . 'search', $headers, $body);
+        $resp    = $this->sendRequest($req);
         return $this->parseSearchResponse($resp);
     }
 
-    public function getResourcesBySearchTerms(array $searchTerms): array {
+    public function getResourcesBySearchTerms(array $searchTerms,
+                                              string $mode = RepoResource::META_RESOURCE): array {
         $headers = [
-            'Accept'       => 'application/n-triples',
-            'Content-Type' => 'application/x-www-form-urlencoded',
+            'Accept'                                       => 'application/n-triples',
+            'Content-Type'                                 => 'application/x-www-form-urlencoded',
+            $this->getHeaderName('metadataReadMode')       => $mode,
+            $this->getHeaderName('metadataParentProperty') => $this->schema->parent
         ];
         $body    = [];
         foreach ($searchTerms as $i) {
@@ -162,13 +172,13 @@ class Repo {
     public function begin(): void {
         $req        = new Request('post', $this->baseUrl . 'transaction');
         $resp       = $this->sendRequest($req);
-        $this->txId = $resp->getHeader('X-Transaction-Id')[0];
+        $this->txId = $resp->getHeader($this->getHeaderName('transactionId'))[0];
     }
 
     public function rollback(): void {
         if (!empty($this->txId)) {
-            $req        = new Request('delete', $this->baseUrl . 'transaction', [
-                'X-Transaction-Id' => $this->txId]);
+            $headers    = [$this->getHeaderName('transactionId') => $this->txId];
+            $req        = new Request('delete', $this->baseUrl . 'transaction', $headers);
             $this->sendRequest($req);
             $this->txId = null;
         }
@@ -176,7 +186,8 @@ class Repo {
 
     public function commit(): void {
         if (!empty($this->txId)) {
-            $req        = new Request('put', $this->baseUrl . 'transaction', ['X-Transaction-Id' => $this->txId]);
+            $headers    = [$this->getHeaderName('transactionId') => $this->txId];
+            $req        = new Request('put', $this->baseUrl . 'transaction', $headers);
             $this->sendRequest($req);
             $this->txId = null;
         }
@@ -184,7 +195,8 @@ class Repo {
 
     public function prolong(): void {
         if (!empty($this->txId)) {
-            $req = new Request('patch', $this->baseUrl . 'transaction', ['X-Transaction-Id' => $this->txId]);
+            $headers = [$this->getHeaderName('transactionId') => $this->txId];
+            $req     = new Request('patch', $this->baseUrl . 'transaction', $headers);
             $this->sendRequest($req);
         }
     }
@@ -195,6 +207,10 @@ class Repo {
 
     public function getSchema(): Schema {
         return $this->schema;
+    }
+
+    public function getHeaderName(string $purpose): ?string {
+        return $this->headers->$purpose ?? null;
     }
 
     public function getBaseUrl(): string {
@@ -214,7 +230,7 @@ class Repo {
         $objects   = [];
         foreach ($resources as $i) {
             $obj       = new RepoResource($i->getUri(), $this);
-            $obj->setMetadata($i);
+            $obj->setGraph($i);
             $objects[] = $obj;
         }
         return $objects;
