@@ -26,11 +26,17 @@
 
 namespace acdhOeaw\acdhRepoLib\exception;
 
+use Throwable;
+
 /**
  * Description of NotFound
  *
  * @author zozlak
  */
 class NotFound extends RepoLibException {
-    //put your code here
+    public function __construct(string $message = "", int $code = 404,
+                                Throwable $previous = NULL) {
+        parent::__construct($message, $code, $previous);
+    }
+
 }

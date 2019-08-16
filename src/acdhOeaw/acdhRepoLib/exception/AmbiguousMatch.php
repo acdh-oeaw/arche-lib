@@ -26,11 +26,18 @@
 
 namespace acdhOeaw\acdhRepoLib\exception;
 
+use Throwable;
+
 /**
  * Description of AmbiguousMatch
  *
  * @author zozlak
  */
 class AmbiguousMatch extends RepoLibException {
-    //put your code here
+
+    public function __construct(string $message = "", int $code = 500,
+                                Throwable $previous = NULL) {
+        parent::__construct($message, $code, $previous);
+    }
+
 }

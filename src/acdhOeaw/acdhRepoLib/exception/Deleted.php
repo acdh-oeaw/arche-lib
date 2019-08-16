@@ -26,11 +26,18 @@
 
 namespace acdhOeaw\acdhRepoLib\exception;
 
+use Throwable;
+
 /**
  * Description of Deleted
  *
  * @author zozlak
  */
 class Deleted extends RepoLibException {
-    //put your code here
+
+    public function __construct(string $message = "", int $code = 410,
+                                Throwable $previous = NULL) {
+        parent::__construct($message, $code, $previous);
+    }
+
 }
