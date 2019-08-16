@@ -41,7 +41,7 @@ class Schema {
 
     public function __get($name) {
         if (is_object($this->schema->$name)) {
-            return json_decode(json_encode($this->schema->name));
+            return json_decode(json_encode($this->schema->$name));
         } else {
             return $this->schema->$name;
         }
