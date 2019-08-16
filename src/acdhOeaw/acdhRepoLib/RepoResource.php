@@ -38,6 +38,10 @@ use GuzzleHttp\Psr7\Response;
  */
 class RepoResource {
 
+    const META_RESOURCE  = 'resource';
+    const META_NEIGHBORS = 'neighbors';
+    const META_RELATIVES = 'relatives';
+
     /**
      *
      * @var acdhOeaw\acdhRepoLib\Repo
@@ -117,24 +121,41 @@ class RepoResource {
     /**
      * Returns resource metadata.
      * 
-     * Fetches them from the Fedora if they were not fetched already.
+     * Fetches them from the repository if they were not fetched already.
      * 
      * A deep copy of metadata is returned meaning adjusting the returned object
      * does not automatically affect the resource metadata.
      * Use the setMetadata() method to write back the changes you made.
      * 
-     * @param bool $force enforce fetch from Fedora 
-     *   (when you want to make sure metadata are in line with ones in the Fedora 
-     *   or e.g. reset them back to their current state in Fedora)
+     * @param bool $force enforce fetch from the repository 
      * @return \EasyRdf\Resource
-     * @see updateMetadata()
      * @see setMetadata()
+     * @see setGraph()
+     * @see getGraph()
      */
     public function getMetadata(bool $force = false): Resource {
         $this->loadMetadata($force);
         return $this->metadata->copy();
     }
 
+    /**
+     * Returns resource metadata.
+     * 
+     * Fetches them from the repository if they were not fetched already.
+     * 
+     * A reference to the metadata is returned meaning adjusting the returned object
+     * automatically affects the resource metadata.
+     * 
+     * @param bool $force enforce fetch from the repository 
+     * @return \EasyRdf\Resource
+     * @see setGraph()
+     * @see getMetadata()
+     */
+    public function getGraph(bool $force = false): Resource {
+        $this->loadMetadata($force);
+        return $this->metadata;
+    }
+    
     /**
      * Naivly checks if the resource is of a given class.
      * 
@@ -149,21 +170,40 @@ class RepoResource {
     }
 
     /**
-     * Replaces resource metadata with a given RDF graph.
+     * Replaces resource metadata with a given RDF resource graph. A deep copy
+     * of the provided metadata is stored meaning future modifications of the
+     * $metadata object don't affect the resource metadata.
      * 
-     * New metadata are not automatically written back to the Fedora.
+     * New metadata are not automatically written back to the repository.
      * Use the updateMetadata() method to write them back.
      * 
      * @param EasyRdf\Resource $metadata
-     * @param bool $fixReferences Should reference to other repository resources
-     *   be switched into corresponding UUIDs?
      * @see updateMetadata()
+     * @see setGraph()
      */
     public function setMetadata(Resource $metadata): void {
-        $this->metadata   = $metadata->copy([], '/^$/', $this->getUri());
+        $this->metadata = $metadata->copy([], '/^$/', $this->getUri());
         $this->metaSynced = false;
     }
 
+    /**
+     * Replaces resource metadata with a given RDF resource graph. A reference
+     * to the provided metadata is stored meaning future modifications of the
+     * $metadata object automatically affect the resource metadata.
+     * 
+     * New metadata are not automatically written back to the repository.
+     * Use the updateMetadata() method to write them back.
+     * 
+     * @param EasyRdf\Resource $resource
+     * @return void
+     * @see updateMetadata()
+     * @see setMetadata()
+     */
+    public function setGraph(Resource $resource): void {
+        $this->metadata = $resource;
+        $this->metaSynced = false;
+    }
+    
     public function updateMetadata(): void {
         if (!$this->metaSynced) {
             $headers          = [
@@ -217,18 +257,6 @@ class RepoResource {
     }
 
     /**
-     * Returns list of dissemination services available for a resource.
-     * 
-     * @param bool $lazy when false returned array contains instances of
-     *   \acdhOeaw\fedora\dissemination\Service, when true it contains
-     *   dissemination service URIs
-     * @return array
-     */
-    public function getDissServices(bool $lazy = false): array {
-        throw new RuntimeException('TODO - implement');
-    }
-
-    /**
      * Loads current metadata from the Fedora.
      * 
      * @param bool $force enforce fetch from Fedora 
@@ -254,7 +282,7 @@ class RepoResource {
         $this->metaSynced = true;
     }
 
-    private function getId(): int {
+    protected function getId(): int {
         return (int) substr($this->getUri(), strlen($this->repo->getBaseUrl()));
     }
 
