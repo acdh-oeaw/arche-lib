@@ -56,13 +56,13 @@ class SearchTerm {
     }
 
     public function getFormData(): string {
-        return http_build_query([
-            'property[]' => (string) $this->property,
-            'operator[]' => (string) $this->operator,
-            'value[]'    => (string) $this->value,
-            'type[]'     => (string) $this->type,
-            'language[]' => (string) $this->language,
-        ]);
+        $terms = [];
+        foreach ($this as $k => $v) {
+            if ($v !== null) {
+                $terms[$k . '[]'] = (string) $v;
+            }
+        }
+        return http_build_query($terms);
     }
 
 }
