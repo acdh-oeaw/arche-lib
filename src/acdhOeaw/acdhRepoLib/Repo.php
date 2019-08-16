@@ -31,9 +31,9 @@ use EasyRdf\Resource;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\Request;
-use exception\Deleted;
-use exception\NotFound;
-use exception\AmbiguousMatch;
+use acdhOeaw\acdhRepoLib\exception\Deleted;
+use acdhOeaw\acdhRepoLib\exception\NotFound;
+use acdhOeaw\acdhRepoLib\exception\AmbiguousMatch;
 
 /**
  * Description of Repository
@@ -41,6 +41,8 @@ use exception\AmbiguousMatch;
  * @author zozlak
  */
 class Repo {
+
+    static public $resourceClass = '\acdhOeaw\acdhRepoLib\RepoResource';
 
     static public function factory(string $configFile): Repo {
         $config = json_decode(json_encode(yaml_parse_file($configFile)));
@@ -72,14 +74,16 @@ class Repo {
     }
 
     public function createResource(Resource $metadata,
-                                   BinaryPayload $payload = null): RepoResource {
+                                   BinaryPayload $payload = null,
+                                   string $class = null): RepoResource {
         $req = new Request('post', $this->baseUrl);
         if ($payload !== null) {
             $req = $payload->attachTo($req);
         }
-        $resp = $this->sendRequest($req);
-        $uri  = $resp->getHeader('Location')[0];
-        $res  = new RepoResource($uri, $this);
+        $resp  = $this->sendRequest($req);
+        $uri   = $resp->getHeader('Location')[0];
+        $class = $class ?? self::$resourceClass;
+        $res   = new $class($uri, $this);
         $res->setMetadata($metadata);
         $res->updateMetadata();
         return $res;
@@ -104,11 +108,11 @@ class Repo {
         return $response;
     }
 
-    public function getResourceById(string $id): RepoResource {
-        return $this->getResourceByIds([$id]);
+    public function getResourceById(string $id, string $class = null): RepoResource {
+        return $this->getResourceByIds([$id], $class);
     }
 
-    public function getResourceByIds(array $ids): RepoResource {
+    public function getResourceByIds(array $ids, string $class = null): RepoResource {
         $url     = $this->baseUrl . 'search';
         $headers = [
             'Content-Type' => 'application/x-www-form-urlencoded',
@@ -122,14 +126,16 @@ class Repo {
         }
         $req     = new Request('post', $url, $headers, implode('&', $body));
         $resp    = $this->sendRequest($req);
+        $format  = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
         $graph   = new Graph();
-        $graph->parse($resp->getBody());
+        $graph->parse($resp->getBody(), $format);
         $matches = $graph->resourcesMatching($this->schema->searchMatch);
         switch (count($matches)) {
             case 0:
                 throw new NotFound();
             case 1;
-                return new RepoResource($matches[0]->getUri(), $this);
+                $class = $class ?? self::$resourceClass;
+                return new $class($matches[0]->getUri(), $this);
             default:
                 throw new AmbiguousMatch();
         }
@@ -137,7 +143,8 @@ class Repo {
 
     public function getResourcesBySqlQuery(string $query,
                                            array $parameters = [],
-                                           string $mode = RepoResource::META_RESOURCE): array {
+                                           string $mode = RepoResource::META_RESOURCE,
+                                           string $class = null): array {
         $headers = [
             'Accept'                                       => 'application/n-triples',
             'Content-Type'                                 => 'application/x-www-form-urlencoded',
@@ -147,11 +154,12 @@ class Repo {
         $body    = http_build_query(['sql' => $query, 'sqlParam' => $parameters]);
         $req     = new Request('post', $this->baseUrl . 'search', $headers, $body);
         $resp    = $this->sendRequest($req);
-        return $this->parseSearchResponse($resp);
+        return $this->parseSearchResponse($resp, $class);
     }
 
     public function getResourcesBySearchTerms(array $searchTerms,
-                                              string $mode = RepoResource::META_RESOURCE): array {
+                                              string $mode = RepoResource::META_RESOURCE,
+                                              string $class = null): array {
         $headers = [
             'Accept'                                       => 'application/n-triples',
             'Content-Type'                                 => 'application/x-www-form-urlencoded',
@@ -166,7 +174,7 @@ class Repo {
         $req  = new Request('post', $this->baseUrl . 'search', $headers, $body);
 
         $resp = $this->sendRequest($req);
-        return $this->parseSearchResponse($resp);
+        return $this->parseSearchResponse($resp, $class);
     }
 
     public function begin(): void {
@@ -217,7 +225,9 @@ class Repo {
         return $this->baseUrl;
     }
 
-    private function parseSearchResponse(Response $resp): array {
+    private function parseSearchResponse(Response $resp, string $class = null): array {
+        $class = $class ?? self::$resourceClass;
+
         $graph = new Graph();
         $body  = $resp->getBody();
         if (empty($body)) {
@@ -229,7 +239,7 @@ class Repo {
         $resources = $graph->resourcesMatching($this->schema->searchMatch);
         $objects   = [];
         foreach ($resources as $i) {
-            $obj       = new RepoResource($i->getUri(), $this);
+            $obj       = new $class($i->getUri(), $this);
             $obj->setGraph($i);
             $objects[] = $obj;
         }
