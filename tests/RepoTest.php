@@ -35,26 +35,9 @@ use acdhOeaw\acdhRepoLib\exception\Deleted;
  *
  * @author zozlak
  */
-class RepoTest extends \PHPUnit\Framework\TestCase {
+class RepoTest extends TestBase {
 
-    /**
-     *
-     * @var \acdhOeaw\acdhRepoLib\Repo
-     */
-    static private $repo;
-    static private $config;
-
-    static public function setUpBeforeClass(): void {
-        $cfgFile      = __DIR__ . '/../../rdbms/config.yaml';
-        self::$config = json_decode(json_encode(yaml_parse_file($cfgFile)));
-        self::$repo   = Repo::factory($cfgFile);
-    }
-
-    static public function tearDownAfterClass(): void {
-        
-    }
-
-    public function testCrateFromConfig(): void {
+    public function testCreateFromConfig(): void {
         $this->assertTrue(is_a(self::$repo, 'acdhOeaw\acdhRepoLib\Repo'));
     }
 
@@ -97,13 +80,12 @@ class RepoTest extends \PHPUnit\Framework\TestCase {
 
     public function testCreateResource() {
         $labelProp = self::$config->schema->label;
-        $metadata  = $this->getMetadata([
-            $labelProp => 'sampleTitle'
-        ]);
+        $metadata  = $this->getMetadata([$labelProp => 'sampleTitle']);
         $binary    = new BinaryPayload(null, __FILE__);
 
         self::$repo->begin();
         $res1 = self::$repo->createResource($metadata, $binary);
+        $this->noteResource($res1);
         $this->assertEquals(file_get_contents(__FILE__), (string) $res1->getContent()->getBody(), 'file content mismatch');
         $this->assertEquals('sampleTitle', (string) $res1->getMetadata()->getLiteral($labelProp));
         self::$repo->commit();
@@ -143,16 +125,11 @@ class RepoTest extends \PHPUnit\Framework\TestCase {
         $meta   = $this->getMetadata([$idProp => $id]);
         self::$repo->begin();
         $res1   = self::$repo->createResource($meta);
+        $this->noteResource($res1);
         self::$repo->commit();
 
-//        $res2 = self::$repo->getResourceById($id);
-//        $this->assertEquals($res1->getUri(), $res2->getUri());
-
-        self::$repo->begin();
-        $res1->delete(true);
-        self::$repo->commit();
-
-        $this->assertTrue(true);
+        $res2 = self::$repo->getResourceById($id);
+        $this->assertEquals($res1->getUri(), $res2->getUri());
     }
 
     public function testDeleteResource() {
@@ -162,9 +139,11 @@ class RepoTest extends \PHPUnit\Framework\TestCase {
         $id    = 'https://a.b/' . rand();
         $meta1 = $this->getMetadata([self::$config->schema->id => $id]);
         $res1  = self::$repo->createResource($meta1);
+        $this->noteResource($res1);
 
         $meta2 = $this->getMetadata([$relProp => $res1->getUri()]);
         $res2  = self::$repo->createResource($meta2);
+        $this->noteResource($res2);
 
         $res1->delete(false, false);
 
@@ -183,9 +162,11 @@ class RepoTest extends \PHPUnit\Framework\TestCase {
         $id    = 'https://a.b/' . rand();
         $meta1 = $this->getMetadata([self::$config->schema->id => $id]);
         $res1  = self::$repo->createResource($meta1);
+        $this->noteResource($res1);
 
         $meta2 = $this->getMetadata([$relProp => $res1->getUri()]);
-        self::$repo->createResource($meta2);
+        $res2 = self::$repo->createResource($meta2);
+        $this->noteResource($res2);
 
         $res1->delete(true, false);
 
@@ -200,9 +181,11 @@ class RepoTest extends \PHPUnit\Framework\TestCase {
         $id    = 'https://a.b/' . rand();
         $meta1 = $this->getMetadata([self::$config->schema->id => $id]);
         $res1  = self::$repo->createResource($meta1);
+        $this->noteResource($res1);
 
         $meta2 = $this->getMetadata([$relProp => $res1->getUri()]);
         $res2  = self::$repo->createResource($meta2);
+        $this->noteResource($res2);
 
         $res1->delete(true, true);
         self::$repo->commit();
@@ -219,9 +202,11 @@ class RepoTest extends \PHPUnit\Framework\TestCase {
         $id    = 'https://a.b/' . rand();
         $meta1 = $this->getMetadata([self::$config->schema->id => $id]);
         $res1  = self::$repo->createResource($meta1);
+        $this->noteResource($res1);
 
         $meta2 = $this->getMetadata([$relProp => $res1->getUri()]);
         $res2  = self::$repo->createResource($meta2);
+        $this->noteResource($res2);
 
         $res1->deleteRecursively($relProp, false, false);
         self::$repo->commit();
@@ -236,26 +221,6 @@ class RepoTest extends \PHPUnit\Framework\TestCase {
         } catch (Deleted $e) {
             $this->assertEquals(410, $e->getCode());
         }
-    }
-
-    // HELPER FUNCTIONS
-
-    private function getMetadata(array $properties): Resource {
-        $graph = new Graph();
-        $res   = $graph->newBNode();
-        foreach ($properties as $p => $v) {
-            if (!is_array($v)) {
-                $v = [$v];
-            }
-            foreach ($v as $i) {
-                if (preg_match('|^https?://|', $i)) {
-                    $res->addResource($p, $i);
-                } else {
-                    $res->addLiteral($p, $i);
-                }
-            }
-        }
-        return $res;
     }
 
 }
