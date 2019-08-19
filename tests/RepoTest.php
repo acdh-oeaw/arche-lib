@@ -37,6 +37,10 @@ use GuzzleHttp\Exception\RequestException;
  */
 class RepoTest extends \PHPUnit\Framework\TestCase {
 
+    /**
+     *
+     * @var \acdhOeaw\acdhRepoLib\Repo
+     */
     static private $repo;
     static private $config;
 
@@ -71,28 +75,25 @@ class RepoTest extends \PHPUnit\Framework\TestCase {
     /**
      * @large
      */
-    /*
-      public function testTransactionProlong() {
-      self::$repo->begin();
-      sleep(self::$config->transactionController->timeout - 2);
-      self::$repo->prolong();
-      sleep(3);
-      self::$repo->commit();
-      }
-     */
+    public function testTransactionProlong() {
+        self::$repo->begin();
+        sleep(self::$config->transactionController->timeout - 2);
+        self::$repo->prolong();
+        sleep(3);
+        self::$repo->commit();
+        $this->assertFalse(self::$repo->inTransaction());
+    }
 
     /**
      * @large
      */
-    /*
-      public function testTransactionExpired() {
-      self::$repo->begin();
-      sleep(self::$config->transactionController->timeout + 1);
-      $this->expectException('GuzzleHttp\Exception\ClientException');
-      $this->expectExceptionMessage('resulted in a `400 Bad Request` response');
-      self::$repo->commit();
-      }
-     */
+    public function testTransactionExpired() {
+        self::$repo->begin();
+        sleep(self::$config->transactionController->timeout + 1);
+        $this->expectException('GuzzleHttp\Exception\ClientException');
+        $this->expectExceptionMessage('resulted in a `400 Bad Request` response');
+        self::$repo->commit();
+    }
 
     public function testCreateResource() {
         $labelProp = self::$config->schema->label;
