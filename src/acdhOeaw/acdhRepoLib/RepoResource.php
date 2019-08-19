@@ -112,7 +112,7 @@ class RepoResource {
     }
 
     public function updateContent(BinaryPayload $content): void {
-        $request = new RepoResource('put', $this->uri);
+        $request = new Request('put', $this->uri);
         $request = $content->attachTo($request);
         $this->repo->sendRequest($request);
         $this->loadMetadata(true);
@@ -155,7 +155,7 @@ class RepoResource {
         $this->loadMetadata($force);
         return $this->metadata;
     }
-    
+
     /**
      * Naivly checks if the resource is of a given class.
      * 
@@ -167,6 +167,15 @@ class RepoResource {
      */
     public function isA(string $class): bool {
         return in_array($class, $this->getClasses());
+    }
+
+    /**
+     * Checks if the resource has any binary content
+     * @return bool
+     */
+    public function hasBinaryContent(): bool {
+        $this->getMetadata();
+        return (int) ((string) $this->metadata->getLiteral($this->repo->getSchema()->binarySize)) > 0;
     }
 
     /**
@@ -182,7 +191,7 @@ class RepoResource {
      * @see setGraph()
      */
     public function setMetadata(Resource $metadata): void {
-        $this->metadata = $metadata->copy([], '/^$/', $this->getUri());
+        $this->metadata   = $metadata->copy([], '/^$/', $this->getUri());
         $this->metaSynced = false;
     }
 
@@ -200,10 +209,10 @@ class RepoResource {
      * @see setMetadata()
      */
     public function setGraph(Resource $resource): void {
-        $this->metadata = $resource;
+        $this->metadata   = $resource;
         $this->metaSynced = false;
     }
-    
+
     public function updateMetadata(): void {
         if (!$this->metaSynced) {
             $headers          = [
