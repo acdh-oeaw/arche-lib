@@ -26,8 +26,6 @@
 
 namespace acdhOeaw\acdhRepoLib;
 
-use EasyRdf\Graph;
-use EasyRdf\Resource;
 use acdhOeaw\acdhRepoLib\exception\Deleted;
 
 /**
@@ -38,7 +36,8 @@ use acdhOeaw\acdhRepoLib\exception\Deleted;
 class RepoTest extends TestBase {
 
     public function testCreateFromConfig(): void {
-        $this->assertTrue(is_a(self::$repo, 'acdhOeaw\acdhRepoLib\Repo'));
+        $repo = Repo::factory(__DIR__ . '/config.yaml');
+        $this->assertTrue(is_a($repo, 'acdhOeaw\acdhRepoLib\Repo'));
     }
 
     public function testTransactionCommit(): void {
