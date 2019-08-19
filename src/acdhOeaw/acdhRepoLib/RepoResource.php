@@ -38,9 +38,12 @@ use GuzzleHttp\Psr7\Response;
  */
 class RepoResource {
 
-    const META_RESOURCE  = 'resource';
-    const META_NEIGHBORS = 'neighbors';
-    const META_RELATIVES = 'relatives';
+    const META_RESOURCE    = 'resource';
+    const META_NEIGHBORS   = 'neighbors';
+    const META_RELATIVES   = 'relatives';
+    const UPDATE_ADD       = 'add';
+    const UPDATE_OVERWRITE = 'overwrite';
+    const UPDATE_MERGE     = 'merge';
 
     /**
      *
@@ -213,11 +216,13 @@ class RepoResource {
         $this->metaSynced = false;
     }
 
-    public function updateMetadata(): void {
+    public function updateMetadata(string $mode = self::UPDATE_MERGE): void {
         if (!$this->metaSynced) {
+            $updateModeHeader = $this->getRepo()->getHeaderName('metadataWriteMode');
             $headers          = [
-                'Content-Type' => 'application/n-triples',
-                'Accept'       => 'application/n-triples',
+                'Content-Type'    => 'application/n-triples',
+                'Accept'          => 'application/n-triples',
+                $updateModeHeader => $mode,
             ];
             $body             = $this->metadata->getGraph()->serialise('application/n-triples');
             $req              = new Request('patch', $this->uri . '/metadata', $headers, $body);

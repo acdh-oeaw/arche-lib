@@ -28,7 +28,7 @@ namespace acdhOeaw\acdhRepoLib;
 
 use EasyRdf\Graph;
 use EasyRdf\Resource;
-use GuzzleHttp\Exception\RequestException;
+use acdhOeaw\acdhRepoLib\exception\Deleted;
 
 /**
  * Description of RepoTest
@@ -228,12 +228,12 @@ class RepoTest extends \PHPUnit\Framework\TestCase {
 
         try {
             $res1->getMetadata(true);
-        } catch (RequestException $e) {
+        } catch (Deleted $e) {
             $this->assertEquals(410, $e->getCode());
         }
         try {
             $res2->getMetadata(true);
-        } catch (RequestException $e) {
+        } catch (Deleted $e) {
             $this->assertEquals(410, $e->getCode());
         }
     }
