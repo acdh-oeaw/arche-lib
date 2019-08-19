@@ -31,6 +31,7 @@ use EasyRdf\Resource;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Exception\RequestException;
 use acdhOeaw\acdhRepoLib\exception\Deleted;
 use acdhOeaw\acdhRepoLib\exception\NotFound;
 use acdhOeaw\acdhRepoLib\exception\AmbiguousMatch;
@@ -113,23 +114,22 @@ class Repo {
     }
 
     public function getResourceByIds(array $ids, string $class = null): RepoResource {
-        $url     = $this->baseUrl . 'search';
-        $headers = [
+        $url          = $this->baseUrl . 'search';
+        $headers      = [
             'Content-Type' => 'application/x-www-form-urlencoded',
         ];
-        $body    = [];
-        foreach ($ids as $i) {
-            $body[] = http_build_query([
-                'property[]' => $this->schema->id,
-                'value[]'    => $i,
-            ]);
-        }
-        $req     = new Request('post', $url, $headers, implode('&', $body));
-        $resp    = $this->sendRequest($req);
-        $format  = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
-        $graph   = new Graph();
+        $placeholders = substr(str_repeat('?, ', count($ids)), 0, -2);
+        $query        = "SELECT DISTINCT id FROM identifiers WHERE ids IN ($placeholders)";
+        $body         = http_build_query([
+            'sql'      => $query,
+            'sqlParam' => $ids,
+        ]);
+        $req          = new Request('post', $url, $headers, $body);
+        $resp         = $this->sendRequest($req);
+        $format       = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
+        $graph        = new Graph();
         $graph->parse($resp->getBody(), $format);
-        $matches = $graph->resourcesMatching($this->schema->searchMatch);
+        $matches      = $graph->resourcesMatching($this->schema->searchMatch);
         switch (count($matches)) {
             case 0:
                 throw new NotFound();
