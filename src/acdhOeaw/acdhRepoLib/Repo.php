@@ -56,6 +56,9 @@ class Repo {
         if (!empty($config->auth->httpBasic->user ?? '')) {
             $options['auth'] = [$config->auth->httpBasic->user, $config->auth->httpBasic->password ?? ''];
         }
+        if (($config->rest->verifyCert ?? true) === false) {
+            $options['verify'] = false;
+        }
 
         return new Repo($baseUrl, $schema, $headers, $options);
     }
