@@ -1,0 +1,35 @@
+rest:
+    urlBase: https://test.localhost
+    pathBase: /
+    verifyCert: false
+    headers:
+        metadataReadMode: X-METADATA-READ-MODE
+        metadataParentProperty: X-PARENT-PROPERTY
+        metadataWriteMode: X-METADATA-WRITE-MODE
+        transactionId: X-TRANSACTION-ID
+schema:
+    id: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
+    parent: https://vocabs.acdh.oeaw.ac.at/schema#isPartOf
+    label: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+    delete: delete://delete
+    searchMatch: search://match
+    searchFts: search://fts
+    binarySize: https://vocabs.acdh.oeaw.ac.at/schema#hasBinarySize
+    fileName: http://www.ebu.ch/metadata/ontologies/ebucore/ebucore#filename
+    mime: https://vocabs.acdh.oeaw.ac.at/schema#hasFormat
+    hash: http://www.loc.gov/premis/rdf/v1#hasMessageDigest
+    modificationDate: http://fedora.info/definitions/v4/repository#lastModified
+    modificationUser: http://fedora.info/definitions/v4/repository#lastModifiedBy
+    creationDate: http://fedora.info/definitions/v4/repository#created
+    creationUser: http://fedora.info/definitions/v4/repository#createdBy
+# client authorization config
+auth:
+    httpHeader:
+        Eppn: admin
+    httpBasic:
+        user: ''
+        passsword: ''
+transactionController:
+    # transaction timeout in s
+    timeout: 15
+
