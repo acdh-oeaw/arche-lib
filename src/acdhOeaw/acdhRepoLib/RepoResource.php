@@ -30,6 +30,7 @@ use EasyRdf\Graph;
 use EasyRdf\Resource;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
+use acdhOeaw\acdhRepoLib\exception\RepoLibException;
 
 /**
  * Description of RepoResource
@@ -98,7 +99,7 @@ class RepoResource {
      */
     public function getClasses(): array {
         $this->loadMetadata();
-        $ret = array();
+        $ret = [];
         foreach ($this->metadata->allResources('http://www.w3.org/1999/02/22-rdf-syntax-ns#type') as $i) {
             $ret[] = $i->getUri();
         }
@@ -130,14 +131,15 @@ class RepoResource {
      * does not automatically affect the resource metadata.
      * Use the setMetadata() method to write back the changes you made.
      * 
-     * @param bool $force enforce fetch from the repository 
      * @return \EasyRdf\Resource
      * @see setMetadata()
      * @see setGraph()
      * @see getGraph()
      */
-    public function getMetadata(bool $force = false): Resource {
-        $this->loadMetadata($force);
+    public function getMetadata(): Resource {
+        if ($this->metadata === null) {
+            throw new RepoLibException('Load metadata first');
+        }
         return $this->metadata->copy();
     }
 
@@ -149,13 +151,14 @@ class RepoResource {
      * A reference to the metadata is returned meaning adjusting the returned object
      * automatically affects the resource metadata.
      * 
-     * @param bool $force enforce fetch from the repository 
      * @return \EasyRdf\Resource
      * @see setGraph()
      * @see getMetadata()
      */
-    public function getGraph(bool $force = false): Resource {
-        $this->loadMetadata($force);
+    public function getGraph(): Resource {
+        if ($this->metadata === null) {
+            throw new RepoLibException('Load metadata first');
+        }
         return $this->metadata;
     }
 
@@ -246,6 +249,7 @@ class RepoResource {
             $refRes = $this->repo->getResourcesBySqlQuery($query, [$this->getId()]);
             foreach ($refRes as $res) {
                 /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
+                $res->loadMetadata(false, self::META_RESOURCE);
                 $meta = $res->getMetadata();
                 foreach ($meta->propertyUris() as $p) {
                     $meta->deleteResource($p, $this->getUri());
@@ -257,6 +261,8 @@ class RepoResource {
                 $res->updateMetadata();
             }
         }
+        
+        $this->metadata = null;
     }
 
     public function deleteRecursively(string $property, bool $tombstone = false,
@@ -276,11 +282,21 @@ class RepoResource {
      * @param bool $force enforce fetch from Fedora 
      *   (when you want to make sure metadata are in line with ones in the Fedora 
      *   or e.g. reset them back to their current state in Fedora)
+     * @param string $mode scope of the metadata returned by the repository: 
+     *   `RepoResource::META_RESOURCE` - only given resource metadata,
+     *   `RepoResource::META_NEIGHBORS` - metadata of a given resource and all the resources pointed by its metadata,
+     *   `RepoResource::META_RELATIVES` - metadata of a given resource and all resources recursively pointed to a given metadata property
+     *      (see the `$parentProperty` parameter), both directly and in a reverse order (reverse in RDF terms)
+     * @param string $parentProperty RDF property name used to find related resources in the `RepoResource::META_RELATIVES` mode
      */
-    protected function loadMetadata(bool $force = false): void {
-        if (!$this->metadata || $force) {
+    public function loadMetadata(bool $force = false,
+                                 string $mode = self::META_NEIGHBORS,
+                                 string $parentProperty = null): void {
+        if (!is_object($this->metadata) || $force) {
             $headers = [
-                'Accept' => 'application/n-triples',
+                'Accept'                                             => 'application/n-triples',
+                $this->repo->getHeaderName('metadataReadMode')       => $mode,
+                $this->repo->getHeaderName('metadataParentProperty') => $parentProperty ?? $this->repo->getSchema()->parent,
             ];
             $req     = new Request('get', $this->uri . '/metadata', $headers);
             $resp    = $this->repo->sendRequest($req);

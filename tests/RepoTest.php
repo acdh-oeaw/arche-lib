@@ -90,6 +90,7 @@ class RepoTest extends TestBase {
         self::$repo->commit();
 
         $res2 = new RepoResource($res1->getUri(), self::$repo);
+        $res2->loadMetadata();
         $this->assertEquals(file_get_contents(__FILE__), (string) $res2->getContent()->getBody(), 'file content mismatch');
         $this->assertEquals('sampleTitle', (string) $res2->getMetadata()->getLiteral($labelProp));
     }
@@ -151,7 +152,7 @@ class RepoTest extends TestBase {
 
         $this->assertEquals($res1->getUri(), (string) $res2->getMetadata()->getResource($relProp));
         $this->expectExceptionCode(410);
-        $res1->getMetadata(true);
+        $res1->loadMetadata(true);
     }
 
     public function testDeleteWithConflict() {
@@ -189,9 +190,10 @@ class RepoTest extends TestBase {
         $res1->delete(true, true);
         self::$repo->commit();
 
-        $this->assertNull($res2->getMetadata(true)->getResource($relProp));
+        $res2->loadMetadata(true);
+        $this->assertNull($res2->getMetadata()->getResource($relProp));
         $this->expectExceptionCode(404);
-        $res1->getMetadata(true);
+        $res1->loadMetadata(true);
     }
 
     public function testDeleteRecursively() {
@@ -211,12 +213,14 @@ class RepoTest extends TestBase {
         self::$repo->commit();
 
         try {
-            $res1->getMetadata(true);
+            $res1->loadMetadata();
+            $this->assertTrue(false, 'No exception');
         } catch (Deleted $e) {
             $this->assertEquals(410, $e->getCode());
         }
         try {
-            $res2->getMetadata(true);
+            $res2->loadMetadata(true);
+            $this->assertTrue(false, 'No exception');
         } catch (Deleted $e) {
             $this->assertEquals(410, $e->getCode());
         }

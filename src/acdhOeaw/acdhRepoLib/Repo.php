@@ -37,14 +37,29 @@ use acdhOeaw\acdhRepoLib\exception\NotFound;
 use acdhOeaw\acdhRepoLib\exception\AmbiguousMatch;
 
 /**
- * Description of Repository
+ * A repository connection class.
  *
  * @author zozlak
  */
 class Repo {
 
+    /**
+     * A class used to instantiate objects representing repository resources.
+     * 
+     * To be used by external libraries extending the RepoResource class funcionality provided by this library.
+     * 
+     * @var string
+     */
     static public $resourceClass = '\acdhOeaw\acdhRepoLib\RepoResource';
 
+    /**
+     * Creates a repository object instance from a given configuration file.
+     * 
+     * Automatically parses required config properties and passes them to the Repo object constructor.
+     * 
+     * @param string $configFile a path to the YAML config file
+     * @return \acdhOeaw\acdhRepoLib\Repo
+     */
     static public function factory(string $configFile): Repo {
         $config = json_decode(json_encode(yaml_parse_file($configFile)));
 
@@ -63,12 +78,49 @@ class Repo {
         return new Repo($baseUrl, $schema, $headers, $options);
     }
 
+    /**
+     * The Guzzle client object used to send HTTP requests
+     * 
+     * @var \GuzzleHttp\Client
+     */
     private $client;
+
+    /**
+     * Repository REST API base URL
+     * 
+     * @var string
+     */
     private $baseUrl;
+
+    /**
+     * An object providing mappings of repository REST API parameters to HTTP headers used by a given repository instance.
+     * 
+     * @var \acdhOeaw\acdhRepoLib\Schema
+     */
     private $headers;
+
+    /**
+     * An object providing mappings of repository concepts to RDF properties used to denote them by a given repository instance.
+     * 
+     * @var \acdhOeaw\acdhRepoLib\Schema
+     */
     private $schema;
+
+    /**
+     * Current transaction id
+     * 
+     * @var string
+     */
     private $txId;
 
+    /**
+     * Creates an repository connection object.
+     * 
+     * @param string $baseUrl repository REST API base URL
+     * @param \acdhOeaw\acdhRepoLib\Schema $schema mappings between repository concepts and RDF properties used to denote them by a given repository instance
+     * @param \acdhOeaw\acdhRepoLib\Schema $headers mappings between repository REST API parameters and HTTP headers used to pass them to a given repository instance
+     * @param array $guzzleOptions Guzzle HTTP client connection options to be used by all requests to the repository REST API (e.g. credentials)
+     */
     public function __construct(string $baseUrl, Schema $schema,
                                 Schema $headers, array $guzzleOptions = []) {
         $this->client  = new Client($guzzleOptions);
@@ -77,6 +129,13 @@ class Repo {
         $this->schema  = $schema;
     }
 
+    /**
+     * 
+     * @param Resource $metadata
+     * @param \acdhOeaw\acdhRepoLib\BinaryPayload $payload
+     * @param string $class
+     * @return \acdhOeaw\acdhRepoLib\RepoResource
+     */
     public function createResource(Resource $metadata,
                                    BinaryPayload $payload = null,
                                    string $class = null): RepoResource {
@@ -147,12 +206,13 @@ class Repo {
     public function getResourcesBySqlQuery(string $query,
                                            array $parameters = [],
                                            string $mode = RepoResource::META_RESOURCE,
+                                           string $parentProperty = null,
                                            string $class = null): array {
         $headers = [
             'Accept'                                       => 'application/n-triples',
             'Content-Type'                                 => 'application/x-www-form-urlencoded',
             $this->getHeaderName('metadataReadMode')       => $mode,
-            $this->getHeaderName('metadataParentProperty') => $this->schema->parent
+            $this->getHeaderName('metadataParentProperty') => $parentProperty ?? $this->schema->parent
         ];
         $body    = http_build_query(['sql' => $query, 'sqlParam' => $parameters]);
         $req     = new Request('post', $this->baseUrl . 'search', $headers, $body);
@@ -160,14 +220,22 @@ class Repo {
         return $this->parseSearchResponse($resp, $class);
     }
 
+    /**
+     * Returns repository resources matching all provided terms.
+     * @param array $searchTerms an array of SearchTerm class objects describing the search filters
+     * @param string $mode scope of the metadata returned by the repository 
+     * @param string $class
+     * @return array
+     */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               string $mode = RepoResource::META_RESOURCE,
+                                              string $parentProperty = null,
                                               string $class = null): array {
         $headers = [
             'Accept'                                       => 'application/n-triples',
             'Content-Type'                                 => 'application/x-www-form-urlencoded',
             $this->getHeaderName('metadataReadMode')       => $mode,
-            $this->getHeaderName('metadataParentProperty') => $this->schema->parent
+            $this->getHeaderName('metadataParentProperty') => $parentProperty ?? $this->schema->parent
         ];
         $body    = [];
         foreach ($searchTerms as $i) {
