@@ -17,5 +17,16 @@ install:
   - docker run --name acdh-repo -p 80:8080 -d zozlak/acdh-repo
   - sleep 30
   - "sed -i -e 's|urlBase:.*|urlBase: http://127.0.0.1|g' tests/config.yaml"
+  - composer require php-coveralls/php-coveralls
   - composer update
+
+before_script:
+  - mkdir -p build/logs
+
+after_success:
+  - php vendor/bin/php-coveralls -v
+
+cache:
+  directories:
+    - vendor
 
