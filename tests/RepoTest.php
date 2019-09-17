@@ -26,7 +26,9 @@
 
 namespace acdhOeaw\acdhRepoLib;
 
+use acdhOeaw\acdhRepoLib\exception\AmbiguousMatch;
 use acdhOeaw\acdhRepoLib\exception\Deleted;
+use acdhOeaw\acdhRepoLib\exception\NotFound;
 
 /**
  * Description of RepoTest
@@ -90,7 +92,6 @@ class RepoTest extends TestBase {
         self::$repo->commit();
 
         $res2 = new RepoResource($res1->getUri(), self::$repo);
-        $res2->loadMetadata();
         $this->assertEquals(file_get_contents(__FILE__), (string) $res2->getContent()->getBody(), 'file content mismatch');
         $this->assertEquals('sampleTitle', (string) $res2->getMetadata()->getLiteral($labelProp));
     }
@@ -119,7 +120,7 @@ class RepoTest extends TestBase {
         self::$repo->rollback();
     }
 
-    public function testSearchByIds() {
+    public function testSearchById() {
         $idProp = self::$config->schema->id;
         $id     = 'https://a.b/' . rand();
         $meta   = $this->getMetadata([$idProp => $id]);
@@ -132,6 +133,28 @@ class RepoTest extends TestBase {
         $this->assertEquals($res1->getUri(), $res2->getUri());
     }
 
+    public function testSearchByIdNotFound() {
+        $this->expectException(NotFound::class);
+        self::$repo->getResourceById('https://no.such/id');
+    }
+    
+    public function testSearchByIdsAmigous() {
+        $idProp = self::$config->schema->id;
+        $id1     = 'https://a.b/' . rand();
+        $id2     = 'https://a.b/' . rand();
+        $meta1   = $this->getMetadata([$idProp => $id1]);
+        $meta2   = $this->getMetadata([$idProp => $id2]);
+        self::$repo->begin();
+        $res1   = self::$repo->createResource($meta1);
+        $this->noteResource($res1);
+        $res2   = self::$repo->createResource($meta2);
+        $this->noteResource($res2);
+        self::$repo->commit();
+
+        $this->expectException(AmbiguousMatch::class);
+        self::$repo->getResourceByIds([$id1, $id2]);
+    }
+    
     public function testDeleteResource() {
         $relProp = 'https://some.prop';
         self::$repo->begin();

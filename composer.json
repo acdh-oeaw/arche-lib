@@ -9,12 +9,16 @@
     ],
     "require": {
         "guzzlehttp/guzzle": "*",
-        "acdh-oeaw/easyrdf": "*"
+        "acdh-oeaw/easyrdf": "*",
+        "zozlak/rdf-constants": "*"
     },
     "autoload": {
         "psr-4": {
             "acdhOeaw\\": "src/acdhOeaw",
             "acdhOeaw\\acdhRepoLib\\": "tests"
         }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^8.3"
     }
 }

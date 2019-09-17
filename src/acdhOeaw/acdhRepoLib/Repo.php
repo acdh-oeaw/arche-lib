@@ -117,9 +117,12 @@ class Repo {
      * Creates an repository connection object.
      * 
      * @param string $baseUrl repository REST API base URL
-     * @param \acdhOeaw\acdhRepoLib\Schema $schema mappings between repository concepts and RDF properties used to denote them by a given repository instance
-     * @param \acdhOeaw\acdhRepoLib\Schema $headers mappings between repository REST API parameters and HTTP headers used to pass them to a given repository instance
-     * @param array $guzzleOptions Guzzle HTTP client connection options to be used by all requests to the repository REST API (e.g. credentials)
+     * @param \acdhOeaw\acdhRepoLib\Schema $schema mappings between repository 
+     *   concepts and RDF properties used to denote them by a given repository instance
+     * @param \acdhOeaw\acdhRepoLib\Schema $headers mappings between repository 
+     *   REST API parameters and HTTP headers used to pass them to a given repository instance
+     * @param array $guzzleOptions Guzzle HTTP client connection options to be used 
+     *   by all requests to the repository REST API (e.g. credentials)
      */
     public function __construct(string $baseUrl, Schema $schema,
                                 Schema $headers, array $guzzleOptions = []) {
@@ -130,10 +133,12 @@ class Repo {
     }
 
     /**
+     * Creates a repository resource.
      * 
-     * @param Resource $metadata
-     * @param \acdhOeaw\acdhRepoLib\BinaryPayload $payload
-     * @param string $class
+     * @param Resource $metadata resource metadata
+     * @param \acdhOeaw\acdhRepoLib\BinaryPayload $payload resource binary payload (can be null)
+     * @param string $class an optional class of the resulting object representing the resource
+     *   (to be used by extension libraries)
      * @return \acdhOeaw\acdhRepoLib\RepoResource
      */
     public function createResource(Resource $metadata,
@@ -152,6 +157,19 @@ class Repo {
         return $res;
     }
 
+    /**
+     * Sends an HTTP request to the repository.
+     * 
+     * A low-level repository API method.
+     * 
+     * Handles most common errors which can be returned by the repository.
+     * 
+     * @param Request $request a PSR-7 HTTP request
+     * @return Response
+     * @throws Deleted
+     * @throws NotFound
+     * @throws RequestException
+     */
     public function sendRequest(Request $request): Response {
         if (!empty($this->txId)) {
             $request = $request->withHeader($this->getHeaderName('transactionId'), $this->txId);
@@ -171,10 +189,36 @@ class Repo {
         return $response;
     }
 
+    /**
+     * Tries to find a repository resource with a given id.
+     * 
+     * Throws an error on failure.
+     * 
+     * @param string $id
+     * @param string $class an optional class of the resulting object representing the resource
+     *   (to be used by extension libraries)
+     * @return \acdhOeaw\acdhRepoLib\RepoResource
+     */
     public function getResourceById(string $id, string $class = null): RepoResource {
         return $this->getResourceByIds([$id], $class);
     }
 
+    /**
+     * Tries to find a single repository resource matching provided identifiers.
+     * 
+     * A resource matches the search if at lest one id matches the provided list.
+     * Resource is not required to have all provided ids.
+     * 
+     * If more then one resources matches the search or there is no resource
+     * matching the search, an error is thrown.
+     * 
+     * @param array $ids an array of identifiers (being strings)
+     * @param string $class an optional class of the resulting object representing the resource
+     *   (to be used by extension libraries)
+     * @return \acdhOeaw\acdhRepoLib\RepoResource
+     * @throws NotFound
+     * @throws AmbiguousMatch
+     */
     public function getResourceByIds(array $ids, string $class = null): RepoResource {
         $url          = $this->baseUrl . 'search';
         $headers      = [
@@ -203,57 +247,82 @@ class Repo {
         }
     }
 
+    /**
+     * Performs a search
+     * 
+     * @param string $query
+     * @param array $parameters
+     * @param SearchConfig $config various search parameters
+     * @return array
+     */
     public function getResourcesBySqlQuery(string $query,
                                            array $parameters = [],
-                                           string $mode = RepoResource::META_RESOURCE,
-                                           string $parentProperty = null,
-                                           string $class = null): array {
+                                           SearchConfig $config): array {
         $headers = [
-            'Accept'                                       => 'application/n-triples',
-            'Content-Type'                                 => 'application/x-www-form-urlencoded',
-            $this->getHeaderName('metadataReadMode')       => $mode,
-            $this->getHeaderName('metadataParentProperty') => $parentProperty ?? $this->schema->parent
+            'Accept'       => 'application/n-triples',
+            'Content-Type' => 'application/x-www-form-urlencoded',
         ];
-        $body    = http_build_query(['sql' => $query, 'sqlParam' => $parameters]);
+        $headers = array_merge($headers, $config->getHeaders($this));
+        $body    = array_merge(
+            ['sql' => $query, 'sqlParam' => $parameters],
+            $config->toArray()
+        );
+        $body    = http_build_query($body);
         $req     = new Request('post', $this->baseUrl . 'search', $headers, $body);
         $resp    = $this->sendRequest($req);
-        return $this->parseSearchResponse($resp, $class);
+        return $this->parseSearchResponse($resp);
     }
 
     /**
-     * Returns repository resources matching all provided terms.
+     * Returns repository resources matching all provided search terms.
+     * 
      * @param array $searchTerms an array of SearchTerm class objects describing the search filters
-     * @param string $mode scope of the metadata returned by the repository 
-     * @param string $class
+     * @param SearchConfig $config various search parameters
      * @return array
      */
     public function getResourcesBySearchTerms(array $searchTerms,
-                                              string $mode = RepoResource::META_RESOURCE,
-                                              string $parentProperty = null,
-                                              string $class = null): array {
+                                              SearchConfig $config): array {
         $headers = [
             'Accept'                                       => 'application/n-triples',
             'Content-Type'                                 => 'application/x-www-form-urlencoded',
-            $this->getHeaderName('metadataReadMode')       => $mode,
-            $this->getHeaderName('metadataParentProperty') => $parentProperty ?? $this->schema->parent
         ];
+        $headers = array_merge($headers, $config->getHeaders($this));
         $body    = [];
         foreach ($searchTerms as $i) {
             $body[] = $i->getFormData();
         }
         $body = implode('&', $body);
+        $body .= (!empty($body) ? '&' : '') . $config->toQuery();
         $req  = new Request('post', $this->baseUrl . 'search', $headers, $body);
 
         $resp = $this->sendRequest($req);
-        return $this->parseSearchResponse($resp, $class);
+        return $this->parseSearchResponse($resp);
     }
 
+    /**
+     * Begins a transaction.
+     * 
+     * All data modifications must be performed within a transaction.
+     * 
+     * @return void
+     * @see rollback()
+     * @see commit()
+     */
     public function begin(): void {
         $req        = new Request('post', $this->baseUrl . 'transaction');
         $resp       = $this->sendRequest($req);
         $this->txId = $resp->getHeader($this->getHeaderName('transactionId'))[0];
     }
 
+    /**
+     * Rolls back the current transaction (started with `begin()`).
+     * 
+     * All data modifications must be performed within a transaction.
+     * 
+     * @return void
+     * @see begin()
+     * @see commit()
+     */
     public function rollback(): void {
         if (!empty($this->txId)) {
             $headers    = [$this->getHeaderName('transactionId') => $this->txId];
@@ -263,6 +332,15 @@ class Repo {
         }
     }
 
+    /**
+     * Commits the current transaction (started with `begin()`).
+     * 
+     * All data modifications must be performed within a transaction.
+     * 
+     * @return void
+     * @see begin()
+     * @see rollback()
+     */
     public function commit(): void {
         if (!empty($this->txId)) {
             $headers    = [$this->getHeaderName('transactionId') => $this->txId];
@@ -272,6 +350,15 @@ class Repo {
         }
     }
 
+    /**
+     * Prolongs the current transaction (started with `begin()`).
+     * 
+     * Every repository has a transaction timeout. If there are no calls to the
+     * repository 
+     * 
+     * @return void
+     * @see begin()
+     */
     public function prolong(): void {
         if (!empty($this->txId)) {
             $headers = [$this->getHeaderName('transactionId') => $this->txId];
@@ -280,22 +367,55 @@ class Repo {
         }
     }
 
+    /**
+     * Checks if there is an active transaction.
+     * 
+     * @return bool
+     * @see begin()
+     * @see rollback()
+     * @see commit()
+     * @see prolong()
+     */
     public function inTransaction(): bool {
         return !empty($this->txId);
     }
 
+    /**
+     * Returns the `Schema` object defining repository entities to RDF property mappings.
+     * 
+     * @return \acdhOeaw\acdhRepoLib\Schema
+     */
     public function getSchema(): Schema {
         return $this->schema;
     }
 
+    /**
+     * Returns an HTTP header name to be used to pass a given information in the repository request.
+     * 
+     * @param string $purpose
+     * @return string|null
+     */
     public function getHeaderName(string $purpose): ?string {
         return $this->headers->$purpose ?? null;
     }
 
+    /**
+     * Returns the repository REST API base URL.
+     * 
+     * @return string
+     */
     public function getBaseUrl(): string {
         return $this->baseUrl;
     }
 
+    /**
+     * Parses search request response into an array of `RepoResource` objects.
+     * 
+     * @param Response $resp PSR-7 search request response
+     * @param string $class class of instantiated repo resource objects (to be used
+     *   by extension libraries)
+     * @return array
+     */
     private function parseSearchResponse(Response $resp, string $class = null): array {
         $class = $class ?? self::$resourceClass;
 

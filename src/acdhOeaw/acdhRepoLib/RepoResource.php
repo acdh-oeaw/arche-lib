@@ -30,7 +30,6 @@ use EasyRdf\Graph;
 use EasyRdf\Resource;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
-use acdhOeaw\acdhRepoLib\exception\RepoLibException;
 
 /**
  * Description of RepoResource
@@ -56,7 +55,7 @@ class RepoResource {
      *
      * @var string
      */
-    private $uri;
+    private $url;
 
     /**
      *
@@ -70,19 +69,40 @@ class RepoResource {
      */
     private $metaSynced;
 
-    public function __construct(string $uri, Repo $repo) {
-        $this->uri  = $uri;
+    /**
+     * Creates an object representing a repository resource.
+     * 
+     * @param string $url URL of the resource
+     * @param \acdhOeaw\acdhRepoLib\Repo $repo repository connection object
+     */
+    public function __construct(string $url, Repo $repo) {
+        $this->url  = $url;
         $this->repo = $repo;
     }
 
+    /**
+     * Returns repository connection object associated with the given resource object.
+     * 
+     * @return \acdhOeaw\acdhRepoLib\Repo
+     */
     public function getRepo(): Repo {
         return $this->repo;
     }
 
+    /**
+     * Returns the repository resource URL.
+     * 
+     * @return string
+     */
     public function getUri(): string {
-        return $this->uri;
+        return $this->url;
     }
 
+    /**
+     * Returns an array with all repository resource identifiers.
+     * 
+     * @return array
+     */
     public function getIds(): array {
         $idProp = $this->repo->getSchema()->id;
         $this->loadMetadata();
@@ -94,7 +114,8 @@ class RepoResource {
     }
 
     /**
-     * Returns all RDF types (classes) of a given resource.
+     * Returns all RDF types (classes) of a given repository resource.
+     * 
      * @return array
      */
     public function getClasses(): array {
@@ -107,16 +128,23 @@ class RepoResource {
     }
 
     /**
-     * Returns resource's binary content.
+     * Returns repository resource binary content.
+     * 
      * @return Response PSR-7 response containing resource's binary content
      */
     public function getContent(): Response {
-        $request = new Request('get', $this->uri);
+        $request = new Request('get', $this->url);
         return $this->repo->sendRequest($request);
     }
 
+    /**
+     * Updates repository resource binary content with a given payload.
+     * 
+     * @param \acdhOeaw\acdhRepoLib\BinaryPayload $content new content
+     * @return void
+     */
     public function updateContent(BinaryPayload $content): void {
-        $request = new Request('put', $this->uri);
+        $request = new Request('put', $this->url);
         $request = $content->attachTo($request);
         $this->repo->sendRequest($request);
         $this->loadMetadata(true);
@@ -125,7 +153,8 @@ class RepoResource {
     /**
      * Returns resource metadata.
      * 
-     * Fetches them from the repository if they were not fetched already.
+     * Fetches them from the repository with the `loadMetadata()` if they were 
+     * not fetched already.
      * 
      * A deep copy of metadata is returned meaning adjusting the returned object
      * does not automatically affect the resource metadata.
@@ -137,16 +166,15 @@ class RepoResource {
      * @see getGraph()
      */
     public function getMetadata(): Resource {
-        if ($this->metadata === null) {
-            throw new RepoLibException('Load metadata first');
-        }
+        $this->loadMetadata();
         return $this->metadata->copy();
     }
 
     /**
      * Returns resource metadata.
      * 
-     * Fetches them from the repository if they were not fetched already.
+     * Fetches them from the repository with the `loadMetadata()` if they were 
+     * not fetched already.
      * 
      * A reference to the metadata is returned meaning adjusting the returned object
      * automatically affects the resource metadata.
@@ -156,9 +184,7 @@ class RepoResource {
      * @see getMetadata()
      */
     public function getGraph(): Resource {
-        if ($this->metadata === null) {
-            throw new RepoLibException('Load metadata first');
-        }
+        $this->loadMetadata();
         return $this->metadata;
     }
 
@@ -176,11 +202,12 @@ class RepoResource {
     }
 
     /**
-     * Checks if the resource has any binary content
+     * Checks if the resource has the binary content.
+     * 
      * @return bool
      */
     public function hasBinaryContent(): bool {
-        $this->getMetadata();
+        $this->loadMetadata();
         return (int) ((string) $this->metadata->getLiteral($this->repo->getSchema()->binarySize)) > 0;
     }
 
@@ -190,7 +217,7 @@ class RepoResource {
      * $metadata object don't affect the resource metadata.
      * 
      * New metadata are not automatically written back to the repository.
-     * Use the updateMetadata() method to write them back.
+     * Use the `updateMetadata()` method to write them back.
      * 
      * @param EasyRdf\Resource $metadata
      * @see updateMetadata()
@@ -219,6 +246,15 @@ class RepoResource {
         $this->metaSynced = false;
     }
 
+    /**
+     * Saves the object metadata to the repository.
+     * 
+     * Local metadata are automatically updated with the metadata resulting from the update.
+     * 
+     * @param string $mode metadata update mode - one of `RepoResource::UPDATE_MERGE`,
+     *   `RepoResource::UPDATE_ADD` and `RepoResource::UPDATE_OVERWRITE`
+     * @return void
+     */
     public function updateMetadata(string $mode = self::UPDATE_MERGE): void {
         if (!$this->metaSynced) {
             $updateModeHeader = $this->getRepo()->getHeaderName('metadataWriteMode');
@@ -228,13 +264,21 @@ class RepoResource {
                 $updateModeHeader => $mode,
             ];
             $body             = $this->metadata->getGraph()->serialise('application/n-triples');
-            $req              = new Request('patch', $this->uri . '/metadata', $headers, $body);
+            $req              = new Request('patch', $this->url . '/metadata', $headers, $body);
             $resp             = $this->repo->sendRequest($req);
             $this->parseMetadata($resp);
             $this->metaSynced = true;
         }
     }
 
+    /**
+     * Deletes the repository resource.
+     * 
+     * @param bool $tombstone should tombstones be removed for deleted resources?
+     * @param bool $references should references to deleted resources be removed
+     *   from other resources?
+     * @return void
+     */
     public function delete(bool $tombstone = false, bool $references = false): void {
         $req = new Request('delete', $this->getUri());
         $this->repo->sendRequest($req);
@@ -246,7 +290,7 @@ class RepoResource {
 
         if ($references) {
             $query  = "SELECT id FROM relations WHERE target_id = ?";
-            $refRes = $this->repo->getResourcesBySqlQuery($query, [$this->getId()]);
+            $refRes = $this->repo->getResourcesBySqlQuery($query, [$this->getId()], new SearchConfig());
             foreach ($refRes as $res) {
                 /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
                 $res->loadMetadata(false, self::META_RESOURCE);
@@ -265,10 +309,22 @@ class RepoResource {
         $this->metadata = null;
     }
 
+    /**
+     * Deletes the repository resource as well as all the resources pointing to
+     * it with a given metadata property.
+     * 
+     * The deletion is performed recursively.
+     * 
+     * @param string $property property used for the recursive deletion
+     * @param bool $tombstone should tombstones be removed for deleted resources?
+     * @param bool $references should references to deleted resources be removed
+     *   from other resources?
+     * @return void
+     */
     public function deleteRecursively(string $property, bool $tombstone = false,
                                       bool $references = false): void {
         $query  = "SELECT id FROM relations WHERE property = ? AND target_id = ?";
-        $refRes = $this->repo->getResourcesBySqlQuery($query, [$property, $this->getId()]);
+        $refRes = $this->repo->getResourcesBySqlQuery($query, [$property, $this->getId()], new SearchConfig());
         foreach ($refRes as $res) {
             /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
             $res->deleteRecursively($property, $tombstone, $references);
@@ -277,7 +333,7 @@ class RepoResource {
     }
 
     /**
-     * Loads current metadata from the Fedora.
+     * Loads current metadata from the repository.
      * 
      * @param bool $force enforce fetch from Fedora 
      *   (when you want to make sure metadata are in line with ones in the Fedora 
@@ -290,7 +346,7 @@ class RepoResource {
      * @param string $parentProperty RDF property name used to find related resources in the `RepoResource::META_RELATIVES` mode
      */
     public function loadMetadata(bool $force = false,
-                                 string $mode = self::META_NEIGHBORS,
+                                 string $mode = self::META_RESOURCE,
                                  string $parentProperty = null): void {
         if (!is_object($this->metadata) || $force) {
             $headers = [
@@ -298,20 +354,31 @@ class RepoResource {
                 $this->repo->getHeaderName('metadataReadMode')       => $mode,
                 $this->repo->getHeaderName('metadataParentProperty') => $parentProperty ?? $this->repo->getSchema()->parent,
             ];
-            $req     = new Request('get', $this->uri . '/metadata', $headers);
+            $req     = new Request('get', $this->url . '/metadata', $headers);
             $resp    = $this->repo->sendRequest($req);
             $this->parseMetadata($resp);
         }
     }
 
+    /**
+     * Parses metadata fetched from the repository.
+     * 
+     * @param \GuzzleHttp\Psr7\Response $resp response to the metadata fetch HTTP request.
+     * @return void
+     */
     private function parseMetadata(Response $resp): void {
         $format           = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
         $graph            = new Graph();
         $graph->parse($resp->getBody(), $format);
-        $this->metadata   = $graph->resource($this->uri);
+        $this->metadata   = $graph->resource($this->url);
         $this->metaSynced = true;
     }
 
+    /**
+     * Returns an internal repository resource identifier.
+     * 
+     * @return int
+     */
     protected function getId(): int {
         return (int) substr($this->getUri(), strlen($this->repo->getBaseUrl()));
     }

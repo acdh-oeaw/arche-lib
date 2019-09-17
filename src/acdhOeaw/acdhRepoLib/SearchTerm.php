@@ -27,7 +27,7 @@
 namespace acdhOeaw\acdhRepoLib;
 
 /**
- * Description of SearchTerm
+ * Describes a single search condition.
  *
  * @author zozlak
  */
@@ -39,12 +39,57 @@ class SearchTerm {
     const TYPE_DATETIME = 'datetime';
     const TYPE_STRING   = 'string';
 
+    /**
+     * Property to be matched by the RDF triple.
+     * 
+     * @var string
+     */
     public $property;
+
+    /**
+     * Operator to be used for the RDF triple value comparison.
+     * 
+     * One of `=`, `<`, `<=`, `>`, `>=`, `~` (regular expresion match), `@@` (full text search match)
+     * 
+     * @var string
+     * @see $value
+     */
     public $operator;
+
+    /**
+     * Value to be matched by the RDF triple (with a given operator)
+     * 
+     * @var mixed
+     * @see $operator
+     */
     public $value;
+
+    /**
+     * Data type to be matched by the RDF triple.
+     * 
+     * Should be one of main XSD data types or one of `TYPE_...` constants defined by this class.
+     * 
+     * @var string
+     */
     public $type;
+
+    /**
+     * Language to be matched by the RDF triple
+     * 
+     * @var string
+     */
     public $language;
 
+    /**
+     * Creates a search term object.
+     * 
+     * @param string|null $property property to be matched by the RDF triple
+     * @param type $value value to be matched by the RDF triple (with a given operator)
+     * @param string $operator operator used to compare the RDF triple value
+     * @param string|null $type value to be matched by the RDF triple 
+     *   (one of base XSD types or one of `TYPE_...` constants defined by this class)
+     * @param string|null $language language to be matched by the RDF triple
+     */
     public function __construct(?string $property = null, $value = null,
                                 string $operator = '=', ?string $type = null,
                                 ?string $language = null) {
@@ -55,6 +100,11 @@ class SearchTerm {
         $this->language = $language;
     }
 
+    /**
+     * Returns the search term formatted as an HTTP query string.
+     * 
+     * @return string
+     */
     public function getFormData(): string {
         $terms = [];
         foreach ($this as $k => $v) {
