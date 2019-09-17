@@ -29,11 +29,47 @@
 <path fill="none" stroke="#c0c0c0" d="M173.4913,-186C173.4913,-186 473.4913,-186 473.4913,-186 479.4913,-186 485.4913,-192 485.4913,-198 485.4913,-198 485.4913,-354 485.4913,-354 485.4913,-360 479.4913,-366 473.4913,-366 473.4913,-366 173.4913,-366 173.4913,-366 167.4913,-366 161.4913,-360 161.4913,-354 161.4913,-354 161.4913,-198 161.4913,-198 161.4913,-192 167.4913,-186 173.4913,-186"/>
 <text text-anchor="middle" x="323.4913" y="-353.2" font-family="Times,serif" font-size="11.00" fill="#c0c0c0">exception</text>
 </g>
-<!-- \\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException -->
+<!-- \\acdhOeaw\\acdhRepoLib\\exception\\Deleted -->
 <g id="node1" class="node">
+<title>\\acdhOeaw\\acdhRepoLib\\exception\\Deleted</title>
+<polygon fill="none" stroke="#000000" points="453.9913,-338 389.9913,-338 389.9913,-302 453.9913,-302 453.9913,-338"/>
+<text text-anchor="middle" x="421.9913" y="-317.2" font-family="Courier,monospace" font-size="11.00" fill="#000000">Deleted</text>
+</g>
+<!-- \\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException -->
+<g id="node4" class="node">
 <title>\\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException</title>
 <polygon fill="none" stroke="#000000" points="294.4913,-284 169.4913,-284 169.4913,-248 294.4913,-248 294.4913,-284"/>
 <text text-anchor="middle" x="231.9913" y="-263.2" font-family="Courier,monospace" font-size="11.00" fill="#000000">RepoLibException</text>
+</g>
+<!-- \\acdhOeaw\\acdhRepoLib\\exception\\Deleted&#45;&gt;\\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException -->
+<g id="edge1" class="edge">
+<title>\\acdhOeaw\\acdhRepoLib\\exception\\Deleted&#45;&gt;\\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException</title>
+<path fill="none" stroke="#000000" d="M389.7604,-310.8396C366.4556,-304.2162 334.0289,-295.0001 304.6309,-286.6449"/>
+<polygon fill="none" stroke="#000000" points="305.3708,-283.2167 294.7949,-283.8494 303.457,-289.95 305.3708,-283.2167"/>
+</g>
+<!-- \\acdhOeaw\\acdhRepoLib\\exception\\NotFound -->
+<g id="node2" class="node">
+<title>\\acdhOeaw\\acdhRepoLib\\exception\\NotFound</title>
+<polygon fill="none" stroke="#000000" points="457.4913,-284 386.4913,-284 386.4913,-248 457.4913,-248 457.4913,-284"/>
+<text text-anchor="middle" x="421.9913" y="-263.2" font-family="Courier,monospace" font-size="11.00" fill="#000000">NotFound</text>
+</g>
+<!-- \\acdhOeaw\\acdhRepoLib\\exception\\NotFound&#45;&gt;\\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException -->
+<g id="edge2" class="edge">
+<title>\\acdhOeaw\\acdhRepoLib\\exception\\NotFound&#45;&gt;\\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException</title>
+<path fill="none" stroke="#000000" d="M386.2538,-266C363.2764,-266 332.5978,-266 304.653,-266"/>
+<polygon fill="none" stroke="#000000" points="304.5006,-262.5001 294.5005,-266 304.5005,-269.5001 304.5006,-262.5001"/>
+</g>
+<!-- \\acdhOeaw\\acdhRepoLib\\exception\\AmbiguousMatch -->
+<g id="node3" class="node">
+<title>\\acdhOeaw\\acdhRepoLib\\exception\\AmbiguousMatch</title>
+<polygon fill="none" stroke="#000000" points="477.4913,-230 366.4913,-230 366.4913,-194 477.4913,-194 477.4913,-230"/>
+<text text-anchor="middle" x="421.9913" y="-209.2" font-family="Courier,monospace" font-size="11.00" fill="#000000">AmbiguousMatch</text>
+</g>
+<!-- \\acdhOeaw\\acdhRepoLib\\exception\\AmbiguousMatch&#45;&gt;\\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException -->
+<g id="edge3" class="edge">
+<title>\\acdhOeaw\\acdhRepoLib\\exception\\AmbiguousMatch&#45;&gt;\\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException</title>
+<path fill="none" stroke="#000000" d="M366.2689,-227.8369C346.8905,-233.3444 324.8658,-239.6041 304.3393,-245.438"/>
+<polygon fill="none" stroke="#000000" points="303.3783,-242.0724 294.7161,-248.173 305.292,-248.8057 303.3783,-242.0724"/>
 </g>
 <!-- \\Exception -->
 <g id="node8" class="node">
@@ -42,46 +78,10 @@
 <text text-anchor="middle" x="48.7457" y="-262.3" font-family="Times,serif" font-size="14.00" fill="#c0c0c0">\Exception</text>
 </g>
 <!-- \\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException&#45;&gt;\\Exception -->
-<g id="edge1" class="edge">
+<g id="edge4" class="edge">
 <title>\\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException&#45;&gt;\\Exception</title>
 <path fill="none" stroke="#000000" d="M169.4411,-266C149.4873,-266 127.4812,-266 107.7848,-266"/>
 <polygon fill="none" stroke="#000000" points="107.7186,-262.5001 97.7186,-266 107.7186,-269.5001 107.7186,-262.5001"/>
-</g>
-<!-- \\acdhOeaw\\acdhRepoLib\\exception\\NotFound -->
-<g id="node2" class="node">
-<title>\\acdhOeaw\\acdhRepoLib\\exception\\NotFound</title>
-<polygon fill="none" stroke="#000000" points="457.4913,-338 386.4913,-338 386.4913,-302 457.4913,-302 457.4913,-338"/>
-<text text-anchor="middle" x="421.9913" y="-317.2" font-family="Courier,monospace" font-size="11.00" fill="#000000">NotFound</text>
-</g>
-<!-- \\acdhOeaw\\acdhRepoLib\\exception\\NotFound&#45;&gt;\\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException -->
-<g id="edge2" class="edge">
-<title>\\acdhOeaw\\acdhRepoLib\\exception\\NotFound&#45;&gt;\\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException</title>
-<path fill="none" stroke="#000000" d="M386.2538,-309.843C363.1756,-303.2839 332.3285,-294.5169 304.2854,-286.5467"/>
-<polygon fill="none" stroke="#000000" points="305.0764,-283.133 294.5005,-283.7658 303.1627,-289.8663 305.0764,-283.133"/>
-</g>
-<!-- \\acdhOeaw\\acdhRepoLib\\exception\\AmbiguousMatch -->
-<g id="node3" class="node">
-<title>\\acdhOeaw\\acdhRepoLib\\exception\\AmbiguousMatch</title>
-<polygon fill="none" stroke="#000000" points="477.4913,-284 366.4913,-284 366.4913,-248 477.4913,-248 477.4913,-284"/>
-<text text-anchor="middle" x="421.9913" y="-263.2" font-family="Courier,monospace" font-size="11.00" fill="#000000">AmbiguousMatch</text>
-</g>
-<!-- \\acdhOeaw\\acdhRepoLib\\exception\\AmbiguousMatch&#45;&gt;\\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException -->
-<g id="edge3" class="edge">
-<title>\\acdhOeaw\\acdhRepoLib\\exception\\AmbiguousMatch&#45;&gt;\\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException</title>
-<path fill="none" stroke="#000000" d="M366.2689,-266C347.0659,-266 325.2642,-266 304.8969,-266"/>
-<polygon fill="none" stroke="#000000" points="304.7161,-262.5001 294.7161,-266 304.7161,-269.5001 304.7161,-262.5001"/>
-</g>
-<!-- \\acdhOeaw\\acdhRepoLib\\exception\\Deleted -->
-<g id="node4" class="node">
-<title>\\acdhOeaw\\acdhRepoLib\\exception\\Deleted</title>
-<polygon fill="none" stroke="#000000" points="453.9913,-230 389.9913,-230 389.9913,-194 453.9913,-194 453.9913,-230"/>
-<text text-anchor="middle" x="421.9913" y="-209.2" font-family="Courier,monospace" font-size="11.00" fill="#000000">Deleted</text>
-</g>
-<!-- \\acdhOeaw\\acdhRepoLib\\exception\\Deleted&#45;&gt;\\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException -->
-<g id="edge4" class="edge">
-<title>\\acdhOeaw\\acdhRepoLib\\exception\\Deleted&#45;&gt;\\acdhOeaw\\acdhRepoLib\\exception\\RepoLibException</title>
-<path fill="none" stroke="#000000" d="M389.7604,-221.1604C366.4556,-227.7838 334.0289,-236.9999 304.6309,-245.3551"/>
-<polygon fill="none" stroke="#000000" points="303.457,-242.05 294.7949,-248.1506 305.3708,-248.7833 303.457,-242.05"/>
 </g>
 <!-- \\acdhOeaw\\acdhRepoLib\\RepoResource -->
 <g id="node5" class="node">

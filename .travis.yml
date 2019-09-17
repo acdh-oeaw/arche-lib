@@ -8,10 +8,8 @@ sudo: required
 services:
   - docker
 
-before_install:
-  - echo 'extension="yaml.so"' >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
-
 install:
+  - apt install -y php-yaml
   - docker run --name acdh-repo -p 80:8080 -d zozlak/acdh-repo
   - sleep 30
   - "sed -i -e 's|urlBase:.*|urlBase: http://127.0.0.1|g' tests/config.yaml"
