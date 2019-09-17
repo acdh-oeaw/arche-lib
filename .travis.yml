@@ -15,7 +15,7 @@ install:
   - sudo apt install -y libyaml-dev
   - 'printf "\n" | pecl install yaml'
   - docker run --name acdh-repo -p 80:8080 -d zozlak/acdh-repo
-  - sleep 30
+  - sleep 45
   - "sed -i -e 's|urlBase:.*|urlBase: http://127.0.0.1|g' tests/config.yaml"
   - composer require php-coveralls/php-coveralls
   - composer update
