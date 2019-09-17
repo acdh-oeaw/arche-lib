@@ -1,6 +1,10 @@
 {
     "name": "acdh-oeaw/acdh-repo-lib",
+    "type": "library",
     "description": "A client library for the ACDH digital objects repository",
+    "keywords": [],
+    "homepage": "https://github.com/zozlak/acdh-repo-lib",
+    "license": "MIT",
     "authors": [
         {
             "name": "Mateusz Żółtak",
