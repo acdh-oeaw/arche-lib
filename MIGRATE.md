@@ -102,7 +102,7 @@ Use the `RepoResource::loadMetadata()` method to reload the metadata.
 The new repository solution offers many metadata fetch modes:
 
 * _resource_ - same as in repo-php-util - only resource metadata are returned;
-* _neigbours_ - metadata of the resource and all resources pointed to by the resource metadata are returned
+* _neighbors_ - metadata of the resource and all resources pointed to by the resource metadata are returned
   (convenient e.g. when you want to display a particular resource view);
 * _relatives_ - metadata of the resource and all resources pointed recursively (in any direction) by a given metadata property are returned
   (convenient e.g. when you want to display a whole collection tree).
