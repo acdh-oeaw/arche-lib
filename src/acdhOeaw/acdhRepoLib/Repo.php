@@ -270,7 +270,7 @@ class Repo {
         $body    = http_build_query($body);
         $req     = new Request('post', $this->baseUrl . 'search', $headers, $body);
         $resp    = $this->sendRequest($req);
-        return $this->parseSearchResponse($resp);
+        return $this->parseSearchResponse($resp, $config->class);
     }
 
     /**
@@ -296,7 +296,7 @@ class Repo {
         $req  = new Request('post', $this->baseUrl . 'search', $headers, $body);
 
         $resp = $this->sendRequest($req);
-        return $this->parseSearchResponse($resp);
+        return $this->parseSearchResponse($resp, $config->class);
     }
 
     /**
