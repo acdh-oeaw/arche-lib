@@ -144,16 +144,22 @@ class Repo {
     public function createResource(Resource $metadata,
                                    BinaryPayload $payload = null,
                                    string $class = null): RepoResource {
-        $req = new Request('post', $this->baseUrl);
-        if ($payload !== null) {
-            $req = $payload->attachTo($req);
-        }
+        $headers = ['Content-Type' => 'application/n-triples'];
+        $graph = new Graph();
+        $metadata = $body = $metadata->copy([], '/^$/', $this->baseUrl, $graph);
+        $body = $graph->serialise('application/n-triples');
+        $req = new Request('post', $this->baseUrl . 'metadata', $headers, $body);
         $resp  = $this->sendRequest($req);
+        
         $uri   = $resp->getHeader('Location')[0];
         $class = $class ?? self::$resourceClass;
+        /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
         $res   = new $class($uri, $this);
-        $res->setMetadata($metadata);
-        $res->updateMetadata();
+        
+        if ($payload !== null) {
+            $res->updateContent($payload);
+        }
+            
         return $res;
     }
 
