@@ -305,7 +305,7 @@ class RepoResource {
                 $res->updateMetadata();
             }
         }
-        
+
         $this->metadata = null;
     }
 
@@ -335,9 +335,9 @@ class RepoResource {
     /**
      * Loads current metadata from the repository.
      * 
-     * @param bool $force enforce fetch from Fedora 
-     *   (when you want to make sure metadata are in line with ones in the Fedora 
-     *   or e.g. reset them back to their current state in Fedora)
+     * @param bool $force enforce fetch from the repository 
+     *   (when you want to make sure metadata are in line with ones in the repository 
+     *   or e.g. reset them back to their current state in the repository)
      * @param string $mode scope of the metadata returned by the repository: 
      *   `RepoResource::META_RESOURCE` - only given resource metadata,
      *   `RepoResource::META_NEIGHBORS` - metadata of a given resource and all the resources pointed by its metadata,
