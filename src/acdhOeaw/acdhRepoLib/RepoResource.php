@@ -38,9 +38,6 @@ use GuzzleHttp\Psr7\Response;
  */
 class RepoResource {
 
-    const META_RESOURCE    = 'resource';
-    const META_NEIGHBORS   = 'neighbors';
-    const META_RELATIVES   = 'relatives';
     const UPDATE_ADD       = 'add';
     const UPDATE_OVERWRITE = 'overwrite';
     const UPDATE_MERGE     = 'merge';
@@ -73,58 +70,11 @@ class RepoResource {
      * Creates an object representing a repository resource.
      * 
      * @param string $url URL of the resource
-     * @param \acdhOeaw\acdhRepoLib\Repo $repo repository connection object
+     * @param \acdhOeaw\acdhRepoLib\RepoInterface $repo repository connection object
      */
-    public function __construct(string $url, Repo $repo) {
+    public function __construct(string $url, RepoInterface $repo) {
         $this->url  = $url;
         $this->repo = $repo;
-    }
-
-    /**
-     * Returns repository connection object associated with the given resource object.
-     * 
-     * @return \acdhOeaw\acdhRepoLib\Repo
-     */
-    public function getRepo(): Repo {
-        return $this->repo;
-    }
-
-    /**
-     * Returns the repository resource URL.
-     * 
-     * @return string
-     */
-    public function getUri(): string {
-        return $this->url;
-    }
-
-    /**
-     * Returns an array with all repository resource identifiers.
-     * 
-     * @return array
-     */
-    public function getIds(): array {
-        $idProp = $this->repo->getSchema()->id;
-        $this->loadMetadata();
-        $ids    = array();
-        foreach ($this->metadata->allResources($idProp) as $i) {
-            $ids[] = $i->getUri();
-        }
-        return $ids;
-    }
-
-    /**
-     * Returns all RDF types (classes) of a given repository resource.
-     * 
-     * @return array
-     */
-    public function getClasses(): array {
-        $this->loadMetadata();
-        $ret = [];
-        foreach ($this->metadata->allResources('http://www.w3.org/1999/02/22-rdf-syntax-ns#type') as $i) {
-            $ret[] = $i->getUri();
-        }
-        return $ret;
     }
 
     /**
@@ -148,57 +98,6 @@ class RepoResource {
         $request = $content->attachTo($request);
         $this->repo->sendRequest($request);
         $this->loadMetadata(true);
-    }
-
-    /**
-     * Returns resource metadata.
-     * 
-     * Fetches them from the repository with the `loadMetadata()` if they were 
-     * not fetched already.
-     * 
-     * A deep copy of metadata is returned meaning adjusting the returned object
-     * does not automatically affect the resource metadata.
-     * Use the setMetadata() method to write back the changes you made.
-     * 
-     * @return \EasyRdf\Resource
-     * @see setMetadata()
-     * @see setGraph()
-     * @see getGraph()
-     */
-    public function getMetadata(): Resource {
-        $this->loadMetadata();
-        return $this->metadata->copy();
-    }
-
-    /**
-     * Returns resource metadata.
-     * 
-     * Fetches them from the repository with the `loadMetadata()` if they were 
-     * not fetched already.
-     * 
-     * A reference to the metadata is returned meaning adjusting the returned object
-     * automatically affects the resource metadata.
-     * 
-     * @return \EasyRdf\Resource
-     * @see setGraph()
-     * @see getMetadata()
-     */
-    public function getGraph(): Resource {
-        $this->loadMetadata();
-        return $this->metadata;
-    }
-
-    /**
-     * Naivly checks if the resource is of a given class.
-     * 
-     * Naivly means that a given rdfs:type triple must exist in the resource
-     * metadata.
-     * 
-     * @param type $class
-     * @return bool
-     */
-    public function isA(string $class): bool {
-        return in_array($class, $this->getClasses());
     }
 
     /**
@@ -347,7 +246,7 @@ class RepoResource {
      */
     public function loadMetadata(bool $force = false,
                                  string $mode = self::META_RESOURCE,
-                                 string $parentProperty = null): void {
+                                 ?string $parentProperty = null): void {
         if (!is_object($this->metadata) || $force) {
             $headers = [
                 'Accept'                                             => 'application/n-triples',

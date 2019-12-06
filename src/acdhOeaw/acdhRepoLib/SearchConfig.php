@@ -36,6 +36,22 @@ class SearchConfig {
     const FTS_BINARY = 'BINARY';
 
     /**
+     * Creates an instance of the SearchConfig class form the POST data.
+     * 
+     * @return \self
+     */
+    static public function factory(): self {
+        $sc = new SearchConfig();
+        foreach ($sc as $k => $v) {
+            if (isset($_POST[$k])) {
+                $sc->$k = $_POST[$k];
+            }
+        }
+
+        return $sc;
+    }
+
+    /**
      * Controls how broad metadata should be returned for resources matching the search.
      * 
      * See `RepoResource::loadMetadata()` method `$mode` parameter description.

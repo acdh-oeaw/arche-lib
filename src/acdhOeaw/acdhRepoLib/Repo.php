@@ -43,6 +43,8 @@ use acdhOeaw\acdhRepoLib\exception\AmbiguousMatch;
  */
 class Repo {
 
+    use RepoTrait;
+    
     /**
      * A class used to instantiate objects representing repository resources.
      * 
@@ -86,27 +88,6 @@ class Repo {
     private $client;
 
     /**
-     * Repository REST API base URL
-     * 
-     * @var string
-     */
-    private $baseUrl;
-
-    /**
-     * An object providing mappings of repository REST API parameters to HTTP headers used by a given repository instance.
-     * 
-     * @var \acdhOeaw\acdhRepoLib\Schema
-     */
-    private $headers;
-
-    /**
-     * An object providing mappings of repository concepts to RDF properties used to denote them by a given repository instance.
-     * 
-     * @var \acdhOeaw\acdhRepoLib\Schema
-     */
-    private $schema;
-
-    /**
      * Current transaction id
      * 
      * @var string
@@ -144,22 +125,22 @@ class Repo {
     public function createResource(Resource $metadata,
                                    BinaryPayload $payload = null,
                                    string $class = null): RepoResource {
-        $headers = ['Content-Type' => 'application/n-triples'];
-        $graph = new Graph();
-        $metadata = $body = $metadata->copy([], '/^$/', $this->baseUrl, $graph);
-        $body = $graph->serialise('application/n-triples');
-        $req = new Request('post', $this->baseUrl . 'metadata', $headers, $body);
-        $resp  = $this->sendRequest($req);
-        
+        $headers  = ['Content-Type' => 'application/n-triples'];
+        $graph    = new Graph();
+        $metadata = $body     = $metadata->copy([], '/^$/', $this->baseUrl, $graph);
+        $body     = $graph->serialise('application/n-triples');
+        $req      = new Request('post', $this->baseUrl . 'metadata', $headers, $body);
+        $resp     = $this->sendRequest($req);
+
         $uri   = $resp->getHeader('Location')[0];
         $class = $class ?? self::$resourceClass;
         /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
         $res   = new $class($uri, $this);
-        
+
         if ($payload !== null) {
             $res->updateContent($payload);
         }
-            
+
         return $res;
     }
 
@@ -193,20 +174,6 @@ class Repo {
             }
         }
         return $response;
-    }
-
-    /**
-     * Tries to find a repository resource with a given id.
-     * 
-     * Throws an error on failure.
-     * 
-     * @param string $id
-     * @param string $class an optional class of the resulting object representing the resource
-     *   (to be used by extension libraries)
-     * @return \acdhOeaw\acdhRepoLib\RepoResource
-     */
-    public function getResourceById(string $id, string $class = null): RepoResource {
-        return $this->getResourceByIds([$id], $class);
     }
 
     /**
@@ -258,11 +225,11 @@ class Repo {
      * 
      * @param string $query
      * @param array $parameters
-     * @param SearchConfig $config various search parameters
-     * @return array
+     * @param \acdhOeaw\acdhRepoLib\SearchConfig $config
+     * @return \acdhOeaw\acdhRepoLib\RepoResourceInterface[]
      */
     public function getResourcesBySqlQuery(string $query,
-                                           array $parameters = [],
+                                           array $parameters,
                                            SearchConfig $config): array {
         $headers = [
             'Accept'       => 'application/n-triples',
@@ -282,15 +249,15 @@ class Repo {
     /**
      * Returns repository resources matching all provided search terms.
      * 
-     * @param array $searchTerms an array of SearchTerm class objects describing the search filters
-     * @param SearchConfig $config various search parameters
-     * @return array
+     * @param array $searchTerms
+     * @param \acdhOeaw\acdhRepoLib\SearchConfig $config
+     * @return \acdhOeaw\acdhRepoLib\RepoResourceInterface[]
      */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): array {
         $headers = [
-            'Accept'                                       => 'application/n-triples',
-            'Content-Type'                                 => 'application/x-www-form-urlencoded',
+            'Accept'       => 'application/n-triples',
+            'Content-Type' => 'application/x-www-form-urlencoded',
         ];
         $headers = array_merge($headers, $config->getHeaders($this));
         $body    = [];
@@ -368,7 +335,7 @@ class Repo {
     public function prolong(): void {
         if (!empty($this->txId)) {
             $headers = [$this->getHeaderName('transactionId') => $this->txId];
-            $req     = new Request('patch', $this->baseUrl . 'transaction', $headers);
+            $req     = new Request('get', $this->baseUrl . 'transaction', $headers);
             $this->sendRequest($req);
         }
     }
@@ -384,34 +351,6 @@ class Repo {
      */
     public function inTransaction(): bool {
         return !empty($this->txId);
-    }
-
-    /**
-     * Returns the `Schema` object defining repository entities to RDF property mappings.
-     * 
-     * @return \acdhOeaw\acdhRepoLib\Schema
-     */
-    public function getSchema(): Schema {
-        return $this->schema;
-    }
-
-    /**
-     * Returns an HTTP header name to be used to pass a given information in the repository request.
-     * 
-     * @param string $purpose
-     * @return string|null
-     */
-    public function getHeaderName(string $purpose): ?string {
-        return $this->headers->$purpose ?? null;
-    }
-
-    /**
-     * Returns the repository REST API base URL.
-     * 
-     * @return string
-     */
-    public function getBaseUrl(): string {
-        return $this->baseUrl;
     }
 
     /**
