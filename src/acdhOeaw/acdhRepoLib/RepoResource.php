@@ -36,8 +36,10 @@ use GuzzleHttp\Psr7\Response;
  *
  * @author zozlak
  */
-class RepoResource {
+class RepoResource implements RepoResourceInterface {
 
+    use RepoResourceTrait;
+    
     const UPDATE_ADD       = 'add';
     const UPDATE_OVERWRITE = 'overwrite';
     const UPDATE_MERGE     = 'merge';

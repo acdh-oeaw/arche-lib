@@ -26,10 +26,6 @@
 
 namespace acdhOeaw\acdhRepoLib;
 
-use PDOStatement;
-use EasyRdf\Graph;
-use EasyRdf\Literal;
-use zozlak\RdfConstants as RDF;
 use acdhOeaw\acdhRepoLib\exception\RepoLibException;
 
 /**

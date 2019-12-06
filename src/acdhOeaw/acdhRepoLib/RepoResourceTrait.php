@@ -27,6 +27,7 @@
 namespace acdhOeaw\acdhRepoLib;
 
 use EasyRdf\Resource;
+use zozlak\RdfConstants as RDF;
 
 /**
  * A common boilet plate code to be reused by all RepoResourceInterface
@@ -78,7 +79,7 @@ trait RepoResourceTrait {
      * @return string[]
      */
     public function getIds(): array {
-        $idProp = $this->repo->getSchema() > id;
+        $idProp = $this->repo->getSchema()->id;
         $this->loadMetadata();
         $ids    = [];
         foreach ($this->metadata->allResources($idProp) as $i) {
@@ -100,7 +101,7 @@ trait RepoResourceTrait {
         }
         return $ret;
     }
-    
+
     /**
      * Returns resource metadata.
      * 
@@ -151,7 +152,6 @@ trait RepoResourceTrait {
     public function isA(string $class): bool {
         return in_array($class, $this->getClasses());
     }
-
 
     abstract public function loadMetadata();
 }

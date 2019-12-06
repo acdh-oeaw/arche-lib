@@ -41,7 +41,7 @@ use acdhOeaw\acdhRepoLib\exception\AmbiguousMatch;
  *
  * @author zozlak
  */
-class Repo {
+class Repo implements RepoInterface {
 
     use RepoTrait;
     
@@ -192,7 +192,7 @@ class Repo {
      * @throws NotFound
      * @throws AmbiguousMatch
      */
-    public function getResourceByIds(array $ids, string $class = null): RepoResource {
+    public function getResourceByIds(array $ids, string $class = null): RepoResourceInterface {
         $url          = $this->baseUrl . 'search';
         $headers      = [
             'Content-Type' => 'application/x-www-form-urlencoded',
