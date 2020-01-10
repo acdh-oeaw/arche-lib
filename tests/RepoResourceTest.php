@@ -48,7 +48,6 @@ class RepoResourceTest extends TestBase {
             'https://lorem.ipsum'        => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed iaculis nisl enim, malesuada tempus nisl ultrices ut. Duis egestas at arcu in blandit. Nulla eget sem urna. Sed hendrerit enim ut ultrices luctus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur non dolor non neque venenatis aliquet vitae venenatis est.',
         ]);
         $res1  = self::$repo->createResource($meta1);
-print_r([$res1->getUri()]);
         $this->noteResource($res1);
         self::$repo->commit();
     }
