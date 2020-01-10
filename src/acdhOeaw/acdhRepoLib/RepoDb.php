@@ -46,6 +46,15 @@ class RepoDb implements RepoInterface {
 
     use RepoTrait;
 
+    /**
+     * A class used to instantiate objects representing repository resources.
+     * 
+     * To be used by external libraries extending the RepoResource class funcionality provided by this library.
+     * 
+     * @var string
+     */
+    static public $resourceClass = '\acdhOeaw\acdhRepoLib\RepoResourceDb';
+
     static private $highlightParam = [
         'StartSel', 'StopSel', 'MaxWords', 'MinWords',
         'ShortWord', 'HighlightAll', 'MaxFragments', 'FragmentDelimiter'

@@ -57,18 +57,6 @@ class RepoResource implements RepoResourceInterface {
     private $url;
 
     /**
-     *
-     * @var EasyRdf\Resource
-     */
-    private $metadata;
-
-    /**
-     *
-     * @var bool
-     */
-    private $metaSynced;
-
-    /**
      * Creates an object representing a repository resource.
      * 
      * @param string $url URL of the resource
@@ -110,41 +98,6 @@ class RepoResource implements RepoResourceInterface {
     public function hasBinaryContent(): bool {
         $this->loadMetadata();
         return (int) ((string) $this->metadata->getLiteral($this->repo->getSchema()->binarySize)) > 0;
-    }
-
-    /**
-     * Replaces resource metadata with a given RDF resource graph. A deep copy
-     * of the provided metadata is stored meaning future modifications of the
-     * $metadata object don't affect the resource metadata.
-     * 
-     * New metadata are not automatically written back to the repository.
-     * Use the `updateMetadata()` method to write them back.
-     * 
-     * @param EasyRdf\Resource $metadata
-     * @see updateMetadata()
-     * @see setGraph()
-     */
-    public function setMetadata(Resource $metadata): void {
-        $this->metadata   = $metadata->copy([], '/^$/', $this->getUri());
-        $this->metaSynced = false;
-    }
-
-    /**
-     * Replaces resource metadata with a given RDF resource graph. A reference
-     * to the provided metadata is stored meaning future modifications of the
-     * $metadata object automatically affect the resource metadata.
-     * 
-     * New metadata are not automatically written back to the repository.
-     * Use the updateMetadata() method to write them back.
-     * 
-     * @param EasyRdf\Resource $resource
-     * @return void
-     * @see updateMetadata()
-     * @see setMetadata()
-     */
-    public function setGraph(Resource $resource): void {
-        $this->metadata   = $resource;
-        $this->metaSynced = false;
     }
 
     /**

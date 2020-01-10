@@ -46,6 +46,15 @@ class Repo implements RepoInterface {
     use RepoTrait;
     
     /**
+     * A class used to instantiate objects representing repository resources.
+     * 
+     * To be used by external libraries extending the RepoResource class funcionality provided by this library.
+     * 
+     * @var string
+     */
+    static public $resourceClass = '\acdhOeaw\acdhRepoLib\RepoResource';
+
+    /**
      * Creates a repository object instance from a given configuration file.
      * 
      * Automatically parses required config properties and passes them to the Repo object constructor.
