@@ -50,7 +50,6 @@ class TestBase extends \PHPUnit\Framework\TestCase {
         $cfgFile      = __DIR__ . '/config.yaml';
         self::$config = json_decode(json_encode(yaml_parse_file($cfgFile)));
         self::$repo   = Repo::factory($cfgFile);
-        print_r([self::$config->rest->urlBase . self::$config->rest->pathBase]);
     }
 
     static public function tearDownAfterClass(): void {
