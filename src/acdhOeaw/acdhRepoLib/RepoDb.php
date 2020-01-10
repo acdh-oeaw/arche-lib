@@ -119,6 +119,7 @@ class RepoDb implements RepoInterface {
             throw new AmbiguousMatch();
         }
         $url = $this->getBaseUrl() . $id;
+        $class = $class ?? self::$resourceClass;
         return new $class($url, $this);
     }
 

@@ -34,6 +34,15 @@ use Psr\Log\AbstractLogger;
  * @author zozlak
  */
 trait RepoTrait {
+    
+    /**
+     * A class used to instantiate objects representing repository resources.
+     * 
+     * To be used by external libraries extending the RepoResource class funcionality provided by this library.
+     * 
+     * @var string
+     */
+    static public $resourceClass = '\acdhOeaw\acdhRepoLib\RepoResource';
 
     /**
      * Repository REST API base URL

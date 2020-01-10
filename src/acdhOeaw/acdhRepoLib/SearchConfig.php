@@ -184,6 +184,13 @@ class SearchConfig {
         return $a;
     }
 
+    /**
+     * Returns HTTP request headers setting metadata read mode and metadata parent property
+     * according to the search config settings.
+     * 
+     * @param \acdhOeaw\acdhRepoLib\Repo $repo
+     * @return type
+     */
     public function getHeaders(Repo $repo) {
         $h = [];
         if (!empty($this->metadataMode)) {
