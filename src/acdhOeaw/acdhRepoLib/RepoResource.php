@@ -105,17 +105,24 @@ class RepoResource implements RepoResourceInterface {
      * 
      * Local metadata are automatically updated with the metadata resulting from the update.
      * 
-     * @param string $mode metadata update mode - one of `RepoResource::UPDATE_MERGE`,
+     * @param string $updateMode metadata update mode - one of `RepoResource::UPDATE_MERGE`,
      *   `RepoResource::UPDATE_ADD` and `RepoResource::UPDATE_OVERWRITE`
+     * @param string $readMode scope of the metadata returned by the repository: 
+     *   `RepoResourceInterface::META_RESOURCE` - only given resource metadata,
+     *   `RepoResourceInterface::META_NEIGHBORS` - metadata of a given resource and all the resources pointed by its metadata,
+     *   `RepoResourceInterface::META_RELATIVES` - metadata of a given resource and all resources recursively pointed to a given metadata property
+     *      (see the `$parentProperty` parameter), both directly and in a reverse order (reverse in RDF terms)
      * @return void
      */
-    public function updateMetadata(string $mode = self::UPDATE_MERGE): void {
+    public function updateMetadata(string $updateMode = self::UPDATE_MERGE, string $readMode = self::META_RESOURCE): void {
         if (!$this->metaSynced) {
             $updateModeHeader = $this->getRepo()->getHeaderName('metadataWriteMode');
+            $readModeHeader    = $this->getRepo()->getHeaderName('metadataReadMode');
             $headers          = [
                 'Content-Type'    => 'application/n-triples',
                 'Accept'          => 'application/n-triples',
-                $updateModeHeader => $mode,
+                $updateModeHeader => $updateMode,
+                $readModeHeader   => $readMode,
             ];
             $body             = $this->metadata->getGraph()->serialise('application/n-triples');
             $req              = new Request('patch', $this->url . '/metadata', $headers, $body);
