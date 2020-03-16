@@ -69,7 +69,7 @@ class Repo implements RepoInterface {
         $schema             = new Schema($config->schema);
         $headers            = new Schema($config->rest->headers);
         $options            = [];
-        $options['headers'] = (array) $config->auth->httpHeader ?? [];
+        $options['headers'] = (array) ($config->auth->httpHeader ?? []);
         if (!empty($config->auth->httpBasic->user ?? '')) {
             $options['auth'] = [$config->auth->httpBasic->user, $config->auth->httpBasic->password ?? ''];
         }
