@@ -3,7 +3,7 @@
     "type": "library",
     "description": "A client library for the ACDH digital objects repository",
     "keywords": [],
-    "homepage": "https://github.com/acdh-oeaw/arche-phplib",
+    "homepage": "https://github.com/acdh-oeaw/arche-lib",
     "license": "MIT",
     "authors": [
         {
