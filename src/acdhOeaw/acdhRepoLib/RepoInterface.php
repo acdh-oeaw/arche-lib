@@ -88,7 +88,7 @@ interface RepoInterface {
     /**
      * Returns repository resources matching all provided search terms.
      * 
-     * @param array $searchTerms
+     * @param \acdhOeaw\acdhRepoLib\SearchTerm[] $searchTerms
      * @param \acdhOeaw\acdhRepoLib\SearchConfig $config
      * @return \acdhOeaw\acdhRepoLib\RepoResourceInterface[]
      */

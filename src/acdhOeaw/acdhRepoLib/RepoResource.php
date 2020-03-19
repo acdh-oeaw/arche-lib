@@ -27,7 +27,6 @@
 namespace acdhOeaw\acdhRepoLib;
 
 use EasyRdf\Graph;
-use EasyRdf\Resource;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 
