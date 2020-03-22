@@ -54,11 +54,34 @@ class RepoDb implements RepoInterface {
      * @var string
      */
     static public $resourceClass = '\acdhOeaw\acdhRepoLib\RepoResourceDb';
-
     static private $highlightParam = [
         'StartSel', 'StopSel', 'MaxWords', 'MinWords',
         'ShortWord', 'HighlightAll', 'MaxFragments', 'FragmentDelimiter'
     ];
+
+    /**
+     * Creates a repository object instance from a given configuration file.
+     * 
+     * Automatically parses required config properties and passes them to the RepoDb object constructor.
+     * 
+     * At the moment it doesn't support authorization provider instantiating.
+     * 
+     * @param string $configFile a path to the YAML config file
+     * @param string $dbSettings database connection variant to read from the config
+     * @return \acdhOeaw\acdhRepoLib\Repo
+     */
+    static public function factory(string $configFile,
+                                   string $dbSettings = 'guest'): Repo {
+        $config = json_decode(json_encode(yaml_parse_file($configFile)));
+
+        $baseUrl    = $config->rest->urlBase . $config->rest->pathBase;
+        $schema     = new Schema($config->schema);
+        $headers    = new Schema($config->rest->headers);
+        $pdo        = new PDO($config->dbConnStr->$dbSettings);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $nonRelProp = $config->metadataManagment->nonRelationProperties ?? [];
+        return new Repo($baseUrl, $schema, $headers, $pdo, $nonRelProp);
+    }
 
     /**
      *
@@ -127,7 +150,7 @@ class RepoDb implements RepoInterface {
         if ($query->fetchColumn() !== false) {
             throw new AmbiguousMatch();
         }
-        $url = $this->getBaseUrl() . $id;
+        $url   = $this->getBaseUrl() . $id;
         $class = $class ?? self::$resourceClass;
         return new $class($url, $this);
     }
