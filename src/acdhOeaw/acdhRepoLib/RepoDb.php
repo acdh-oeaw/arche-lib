@@ -53,7 +53,7 @@ class RepoDb implements RepoInterface {
      * 
      * @var string
      */
-    static public $resourceClass = '\acdhOeaw\acdhRepoLib\RepoResourceDb';
+    static public $resourceClass   = '\acdhOeaw\acdhRepoLib\RepoResourceDb';
     static private $highlightParam = [
         'StartSel', 'StopSel', 'MaxWords', 'MinWords',
         'ShortWord', 'HighlightAll', 'MaxFragments', 'FragmentDelimiter'
@@ -80,7 +80,7 @@ class RepoDb implements RepoInterface {
         $pdo        = new PDO($config->dbConnStr->$dbSettings);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $nonRelProp = $config->metadataManagment->nonRelationProperties ?? [];
-        return new Repo($baseUrl, $schema, $headers, $pdo, $nonRelProp);
+        return new RepoDb($baseUrl, $schema, $headers, $pdo, (array) $nonRelProp);
     }
 
     /**
