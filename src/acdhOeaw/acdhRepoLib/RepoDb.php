@@ -71,7 +71,7 @@ class RepoDb implements RepoInterface {
      * @return \acdhOeaw\acdhRepoLib\Repo
      */
     static public function factory(string $configFile,
-                                   string $dbSettings = 'guest'): Repo {
+                                   string $dbSettings = 'guest'): RepoDb {
         $config = json_decode(json_encode(yaml_parse_file($configFile)));
 
         $baseUrl    = $config->rest->urlBase . $config->rest->pathBase;
