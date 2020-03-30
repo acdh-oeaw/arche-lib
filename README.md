@@ -7,12 +7,12 @@ A library providing PHP bindings for the ACDH repository solution.
 
 ## Installation
 
-`composer require acdh-oeaw/acdh-repo-lib`
+`composer require acdh-oeaw/arche-lib`
 
 ## Documentation
 
-https://zozlak.github.io/acdh-repo-lib/
+https://acdh-oeaw.github.io/arche-lib/
 
 ## repo-php-util migration guide
 
-https://github.com/zozlak/acdh-repo-lib/blob/master/MIGRATE.md
+https://github.com/acdh-oeaw/arche-lib/blob/master/MIGRATE.md

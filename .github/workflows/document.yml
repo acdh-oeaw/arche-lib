@@ -1,0 +1,20 @@
+name: document
+
+on: push
+
+jobs:
+  document:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: install phpdocumentator
+      run: curl -L https://github.com/phpDocumentor/phpDocumentor/releases/download/v3.0.0-rc/phpDocumentor.phar > phpdoc.phar
+    - name: generate docs
+      run: php -f phpdoc.phar run -d src -t docs
+    - name: commit docs
+      run: |
+        git config user.email "workflow@github.actions"
+        git config user.name "Github Actions Workflow"
+        git add docs/*
+        git commit -a -m 'Documentation updated'
+        git push origin
