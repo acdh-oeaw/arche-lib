@@ -25,3 +25,4 @@ jobs:
         git commit -a -m 'Documentation updated'
         git tag docs
         git push origin docs
+        git branch -v
