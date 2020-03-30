@@ -13,3 +13,5 @@ jobs:
       run: curl -L https://github.com/phpDocumentor/phpDocumentor/releases/download/v3.0.0-rc/phpDocumentor.phar > phpdoc.phar
     - name: generate docs
       run: php -f phpdoc.phar run -d src -t docs
+    - name: commit docs
+      run: git add docs/* && git commit -a -m 'Documentation updated' && git remote -v && git branch -v
