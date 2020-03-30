@@ -7,15 +7,9 @@ on: push
 jobs:
   document:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: acdh-oeaw/arche-lib@master
-
-    - name: install php
-      run: apt install -y php-cli
-
+    - uses: actions/checkout@v2
     - name: install phpdocumentator
       run: curl https://github.com/phpDocumentor/phpDocumentor/releases/download/v3.0.0-rc/phpDocumentor.phar > phpdoc.phar
-
     - name: generate docs
       run: php -f phpdoc.phar -d src -t docs
