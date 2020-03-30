@@ -14,4 +14,10 @@ jobs:
     - name: generate docs
       run: php -f phpdoc.phar run -d src -t docs
     - name: commit docs
-      run: git add docs/* && git commit -a -m 'Documentation updated' && git remote -v && git branch -v
+      run: |
+        git config user.email "workflow@github.actions"
+        git config user.name "Github Actions Workflow"
+        git add docs/*
+        git commit -a -m 'Documentation updated'
+        git remote -v
+        git branch -v
