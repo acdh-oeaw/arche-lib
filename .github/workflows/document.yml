@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: acdh-oeaw/arche-lib
+    - uses: acdh-oeaw/arche-lib@master
 
     - name: install php
       run: apt install -y php-cli
