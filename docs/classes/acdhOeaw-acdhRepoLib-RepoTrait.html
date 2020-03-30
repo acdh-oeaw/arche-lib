@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Documentation</title>
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro">
+    <link rel="stylesheet" href="../css/normalize.css">
+    <link rel="stylesheet" href="../css/template.css">
+    <link rel="icon" href="../images/favicon.ico"/>
+        <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/3.4.6/fuse.min.js"></script>
+    <script src="../js/search.js"></script>
+    <script defer src="../js/searchIndex.js"></script>
+    </head>
+<body>
+<header class="phpdocumentor-top-header"></header>
+<header class="phpdocumentor-header">
+    <section class="phpdocumentor-section">
+        <h1 class="phpdocumentor-title">Documentation</h1>
+    </section>
+</header>
+<main class="phpdocumentor">
+    <div class="phpdocumentor-section">
+        <aside class="three phpdocumentor-columns phpdocumentor-sidebar">
+    <section data-search-form class="phpdocumentor-search">
+        <h1 class="phpdocumentor-sidebar__category-header">Search</h1>
+        <label class="phpdocumentor-label">
+            <span class="visually-hidden">Search for</span>
+            <input type="search" class="phpdocumentor-field phpdocumentor-search__field" placeholder="Loading .." disabled />
+        </label>
+    </section>
+
+    
+    <h1 class="phpdocumentor-sidebar__category-header">Namespaces</h1>
+            <h2 class="phpdocumentor-sidebar__root-namespace"><a href="../namespaces/default.html"><abbr title="\">Global</abbr></a></h2>
+                    <h3 class="phpdocumentor-sidebar__root-namespace"><a href="../namespaces/acdhoeaw.html"><abbr title="\acdhOeaw">acdhOeaw</abbr></a></h3>
+            <ul class="phpdocumentor-list">
+                                    <li><a href="../namespaces/acdhoeaw-acdhrepolib.html"><abbr title="\acdhOeaw\acdhRepoLib">acdhRepoLib</abbr></a></li>
+                            </ul>
+            
+    
+    <h1 class="phpdocumentor-sidebar__category-header">Reports</h1>
+        <h2 class="phpdocumentor-sidebar__root-package"><a href="../reports/deprecated.html">Deprecated</a></h2>
+    <h2 class="phpdocumentor-sidebar__root-package"><a href="../reports/errors.html">Errors</a></h2>
+    <h2 class="phpdocumentor-sidebar__root-package"><a href="../reports/markers.html">Markers</a></h2>
+</aside>
+
+        <div class="nine phpdocumentor-columns phpdocumentor-content">
+            <ul class="phpdocumentor-breadcrumbs">
+    <li><a href="../index.html">Home</a></li>
+                        <li><a href="../namespaces/acdhoeaw.html">acdhOeaw</a></li>
+                    <li><a href="../namespaces/acdhoeaw-acdhrepolib.html">acdhRepoLib</a></li>
+            </ul>
+
+    <h2 class="phpdocumentor-content__title">
+        RepoTrait
+            </h2>
+    <aside class="phpdocumentor-element-found-in">
+        <abbr class="phpdocumentor-element-found-in__file" title="src/acdhOeaw/acdhRepoLib/RepoTrait.php"><a href="../files/src-acdhoeaw-acdhrepolib-repotrait.html"><abbr title="src/acdhOeaw/acdhRepoLib/RepoTrait.php">RepoTrait.php</abbr></a></abbr>
+        :
+        <span class="phpdocumentor-element-found-in__line">36</span>
+    </aside>
+
+    <p class="phpdocumentor-trait__summary">A common (mostly boiler plate) code for classes implementing the RepoInterface.</p>
+    <section class="phpdocumentor-trait__description"></section>
+
+    <h3>Table of Contents</h3>
+    <table class="phpdocumentor-table_of_contents">
+                    <tr>
+                <th class="phpdocumentor-heading"><a href="../classes/acdhOeaw-acdhRepoLib-RepoTrait.html#property_baseUrl">$baseUrl</a></th>
+                <td class="phpdocumentor-cell">Repository REST API base URL</td>
+                <td class="phpdocumentor-cell">string</td>
+            </tr>
+                    <tr>
+                <th class="phpdocumentor-heading"><a href="../classes/acdhOeaw-acdhRepoLib-RepoTrait.html#property_headers">$headers</a></th>
+                <td class="phpdocumentor-cell">An object providing mappings of repository REST API parameters to HTTP headers used by a given repository instance.</td>
+                <td class="phpdocumentor-cell"><a href="../classes/acdhOeaw-acdhRepoLib-Schema.html"><abbr title="\acdhOeaw\acdhRepoLib\Schema">trait:short</abbr></a></td>
+            </tr>
+                    <tr>
+                <th class="phpdocumentor-heading"><a href="../classes/acdhOeaw-acdhRepoLib-RepoTrait.html#property_schema">$schema</a></th>
+                <td class="phpdocumentor-cell">An object providing mappings of repository concepts to RDF properties used to denote them by a given repository instance.</td>
+                <td class="phpdocumentor-cell"><a href="../classes/acdhOeaw-acdhRepoLib-Schema.html"><abbr title="\acdhOeaw\acdhRepoLib\Schema">trait:short</abbr></a></td>
+            </tr>
+                    <tr>
+                <th class="phpdocumentor-heading"><a href="../classes/acdhOeaw-acdhRepoLib-RepoTrait.html#property_queryLog">$queryLog</a></th>
+                <td class="phpdocumentor-cell"></td>
+                <td class="phpdocumentor-cell">\Psr\Log\AbstractLogger</td>
+            </tr>
+                                            <tr>
+                <th class="phpdocumentor-heading"><a href="../classes/acdhOeaw-acdhRepoLib-RepoTrait.html#method_getBaseUrl">getBaseUrl()</a></th>
+                <td class="phpdocumentor-cell">Returns the repository REST API base URL.</td>
+                <td class="phpdocumentor-cell">string</td>
+            </tr>
+                    <tr>
+                <th class="phpdocumentor-heading"><a href="../classes/acdhOeaw-acdhRepoLib-RepoTrait.html#method_getSchema">getSchema()</a></th>
+                <td class="phpdocumentor-cell">Returns the `Schema` object defining repository entities to RDF property mappings.</td>
+                <td class="phpdocumentor-cell"><a href="../classes/acdhOeaw-acdhRepoLib-Schema.html"><abbr title="\acdhOeaw\acdhRepoLib\Schema">trait:short</abbr></a></td>
+            </tr>
+                    <tr>
+                <th class="phpdocumentor-heading"><a href="../classes/acdhOeaw-acdhRepoLib-RepoTrait.html#method_getHeaderName">getHeaderName()</a></th>
+                <td class="phpdocumentor-cell">Returns an HTTP header name to be used to pass a given information in the repository request.</td>
+                <td class="phpdocumentor-cell">string|null</td>
+            </tr>
+                    <tr>
+                <th class="phpdocumentor-heading"><a href="../classes/acdhOeaw-acdhRepoLib-RepoTrait.html#method_getResourceById">getResourceById()</a></th>
+                <td class="phpdocumentor-cell">Tries to find a repository resource with a given id.</td>
+                <td class="phpdocumentor-cell"><a href="../classes/acdhOeaw-acdhRepoLib-RepoResource.html"><abbr title="\acdhOeaw\acdhRepoLib\RepoResource">trait:short</abbr></a></td>
+            </tr>
+                    <tr>
+                <th class="phpdocumentor-heading"><a href="../classes/acdhOeaw-acdhRepoLib-RepoTrait.html#method_setQueryLog">setQueryLog()</a></th>
+                <td class="phpdocumentor-cell">Sets a search queries logger</td>
+                <td class="phpdocumentor-cell">void</td>
+            </tr>
+                            </table>
+
+            <section>
+            <h3 class="phpdocumentor-properties__header">Properties</h3>
+                            <a id="property_baseUrl"></a>
+<article
+        class="
+            phpdocumentor-property
+            phpdocumentor-property--private
+                                "
+>
+    <h4 class="phpdocumentor-property__name">$baseUrl</h4>
+    <aside class="phpdocumentor-element-found-in">
+        <abbr class="phpdocumentor-element-found-in__file" title="src/acdhOeaw/acdhRepoLib/RepoTrait.php"><a href="../files/src-acdhoeaw-acdhrepolib-repotrait.html"><abbr title="src/acdhOeaw/acdhRepoLib/RepoTrait.php">RepoTrait.php</abbr></a></abbr>
+        :
+        <span class="phpdocumentor-element-found-in__line">43</span>
+    </aside>
+            <p class="phpdocumentor-summary">Repository REST API base URL</p>
+        <code class="phpdocumentor-signature phpdocumentor-code ">
+        <span class="phpdocumentor-signature__visibility">private</span>
+                <span class="phpdocumentor-signature__type">string</span>
+        <span class="phpdocumentor-signature__name">$baseUrl</span>
+            </code>
+    </article>
+                            <a id="property_headers"></a>
+<article
+        class="
+            phpdocumentor-property
+            phpdocumentor-property--private
+                                "
+>
+    <h4 class="phpdocumentor-property__name">$headers</h4>
+    <aside class="phpdocumentor-element-found-in">
+        <abbr class="phpdocumentor-element-found-in__file" title="src/acdhOeaw/acdhRepoLib/RepoTrait.php"><a href="../files/src-acdhoeaw-acdhrepolib-repotrait.html"><abbr title="src/acdhOeaw/acdhRepoLib/RepoTrait.php">RepoTrait.php</abbr></a></abbr>
+        :
+        <span class="phpdocumentor-element-found-in__line">50</span>
+    </aside>
+            <p class="phpdocumentor-summary">An object providing mappings of repository REST API parameters to HTTP headers used by a given repository instance.</p>
+        <code class="phpdocumentor-signature phpdocumentor-code ">
+        <span class="phpdocumentor-signature__visibility">private</span>
+                <span class="phpdocumentor-signature__type"><a href="../classes/acdhOeaw-acdhRepoLib-Schema.html"><abbr title="\acdhOeaw\acdhRepoLib\Schema">Schema</abbr></a></span>
+        <span class="phpdocumentor-signature__name">$headers</span>
+            </code>
+    </article>
+                            <a id="property_schema"></a>
+<article
+        class="
+            phpdocumentor-property
+            phpdocumentor-property--private
+                                "
+>
+    <h4 class="phpdocumentor-property__name">$schema</h4>
+    <aside class="phpdocumentor-element-found-in">
+        <abbr class="phpdocumentor-element-found-in__file" title="src/acdhOeaw/acdhRepoLib/RepoTrait.php"><a href="../files/src-acdhoeaw-acdhrepolib-repotrait.html"><abbr title="src/acdhOeaw/acdhRepoLib/RepoTrait.php">RepoTrait.php</abbr></a></abbr>
+        :
+        <span class="phpdocumentor-element-found-in__line">57</span>
+    </aside>
+            <p class="phpdocumentor-summary">An object providing mappings of repository concepts to RDF properties used to denote them by a given repository instance.</p>
+        <code class="phpdocumentor-signature phpdocumentor-code ">
+        <span class="phpdocumentor-signature__visibility">private</span>
+                <span class="phpdocumentor-signature__type"><a href="../classes/acdhOeaw-acdhRepoLib-Schema.html"><abbr title="\acdhOeaw\acdhRepoLib\Schema">Schema</abbr></a></span>
+        <span class="phpdocumentor-signature__name">$schema</span>
+            </code>
+    </article>
+                            <a id="property_queryLog"></a>
+<article
+        class="
+            phpdocumentor-property
+            phpdocumentor-property--private
+                                "
+>
+    <h4 class="phpdocumentor-property__name">$queryLog</h4>
+    <aside class="phpdocumentor-element-found-in">
+        <abbr class="phpdocumentor-element-found-in__file" title="src/acdhOeaw/acdhRepoLib/RepoTrait.php"><a href="../files/src-acdhoeaw-acdhrepolib-repotrait.html"><abbr title="src/acdhOeaw/acdhRepoLib/RepoTrait.php">RepoTrait.php</abbr></a></abbr>
+        :
+        <span class="phpdocumentor-element-found-in__line">63</span>
+    </aside>
+        <code class="phpdocumentor-signature phpdocumentor-code ">
+        <span class="phpdocumentor-signature__visibility">private</span>
+                <span class="phpdocumentor-signature__type"><abbr title="\Psr\Log\AbstractLogger">AbstractLogger</abbr></span>
+        <span class="phpdocumentor-signature__name">$queryLog</span>
+            </code>
+    </article>
+                                            </section>
+    
+            <section>
+            <h3 class="phpdocumentor-methods__header">Methods</h3>
+                            <a id="method_getBaseUrl"></a>
+<article
+        class="
+            phpdocumentor-method
+            phpdocumentor-method--public
+                                                        "
+>
+    <h4 class="phpdocumentor-method__name">getBaseUrl()</h4>
+    <aside class="phpdocumentor-element-found-in">
+        <abbr class="phpdocumentor-element-found-in__file" title="src/acdhOeaw/acdhRepoLib/RepoTrait.php"><a href="../files/src-acdhoeaw-acdhrepolib-repotrait.html"><abbr title="src/acdhOeaw/acdhRepoLib/RepoTrait.php">RepoTrait.php</abbr></a></abbr>
+        :
+        <span class="phpdocumentor-element-found-in__line">70</span>
+    </aside>
+        <p class="phpdocumentor-summary">Returns the repository REST API base URL.</p>
+        <code class="phpdocumentor-signature phpdocumentor-code ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+                                <span class="phpdocumentor-signature__name">getBaseUrl</span>(
+                )
+        : <span class="phpdocumentor-signature__response_type">string</span>
+    </code>
+
+    
+    
+        
+            <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">string</span>
+            
+</article>
+                            <a id="method_getSchema"></a>
+<article
+        class="
+            phpdocumentor-method
+            phpdocumentor-method--public
+                                                        "
+>
+    <h4 class="phpdocumentor-method__name">getSchema()</h4>
+    <aside class="phpdocumentor-element-found-in">
+        <abbr class="phpdocumentor-element-found-in__file" title="src/acdhOeaw/acdhRepoLib/RepoTrait.php"><a href="../files/src-acdhoeaw-acdhrepolib-repotrait.html"><abbr title="src/acdhOeaw/acdhRepoLib/RepoTrait.php">RepoTrait.php</abbr></a></abbr>
+        :
+        <span class="phpdocumentor-element-found-in__line">79</span>
+    </aside>
+        <p class="phpdocumentor-summary">Returns the `Schema` object defining repository entities to RDF property mappings.</p>
+        <code class="phpdocumentor-signature phpdocumentor-code ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+                                <span class="phpdocumentor-signature__name">getSchema</span>(
+                )
+        : <span class="phpdocumentor-signature__response_type"><a href="../classes/acdhOeaw-acdhRepoLib-Schema.html"><abbr title="\acdhOeaw\acdhRepoLib\Schema">Schema</abbr></a></span>
+    </code>
+
+    
+    
+        
+            <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type"><a href="../classes/acdhOeaw-acdhRepoLib-Schema.html"><abbr title="\acdhOeaw\acdhRepoLib\Schema">Schema</abbr></a></span>
+            
+</article>
+                            <a id="method_getHeaderName"></a>
+<article
+        class="
+            phpdocumentor-method
+            phpdocumentor-method--public
+                                                        "
+>
+    <h4 class="phpdocumentor-method__name">getHeaderName()</h4>
+    <aside class="phpdocumentor-element-found-in">
+        <abbr class="phpdocumentor-element-found-in__file" title="src/acdhOeaw/acdhRepoLib/RepoTrait.php"><a href="../files/src-acdhoeaw-acdhrepolib-repotrait.html"><abbr title="src/acdhOeaw/acdhRepoLib/RepoTrait.php">RepoTrait.php</abbr></a></abbr>
+        :
+        <span class="phpdocumentor-element-found-in__line">89</span>
+    </aside>
+        <p class="phpdocumentor-summary">Returns an HTTP header name to be used to pass a given information in the repository request.</p>
+        <code class="phpdocumentor-signature phpdocumentor-code ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+                                <span class="phpdocumentor-signature__name">getHeaderName</span>(
+                    <span class="phpdocumentor-signature__argument">
+                            <span class="phpdocumentor-signature__argument__name">$purpose</span> :
+                <span class="phpdocumentor-signature__argument__return-type">string</span>
+                            </span>
+                )
+        : <span class="phpdocumentor-signature__response_type">string|null</span>
+    </code>
+
+    
+            <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+        <dl class="phpdocumentor-argument-list">
+                            <dt class="phpdocumentor-argument-list__entry">
+                    <span class="phpdocumentor-signature__argument__name">$purpose</span>
+                    : <span class="phpdocumentor-signature__argument__return-type">string</span>
+                                    </dt>
+                <dd class="phpdocumentor-argument-list__definition"><section class="phpdocumentor-description"></section></dd>
+                    </dl>
+    
+        
+            <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">string|null</span>
+            
+</article>
+                            <a id="method_getResourceById"></a>
+<article
+        class="
+            phpdocumentor-method
+            phpdocumentor-method--public
+                                                        "
+>
+    <h4 class="phpdocumentor-method__name">getResourceById()</h4>
+    <aside class="phpdocumentor-element-found-in">
+        <abbr class="phpdocumentor-element-found-in__file" title="src/acdhOeaw/acdhRepoLib/RepoTrait.php"><a href="../files/src-acdhoeaw-acdhrepolib-repotrait.html"><abbr title="src/acdhOeaw/acdhRepoLib/RepoTrait.php">RepoTrait.php</abbr></a></abbr>
+        :
+        <span class="phpdocumentor-element-found-in__line">103</span>
+    </aside>
+        <p class="phpdocumentor-summary">Tries to find a repository resource with a given id.</p>
+        <code class="phpdocumentor-signature phpdocumentor-code ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+                                <span class="phpdocumentor-signature__name">getResourceById</span>(
+                    <span class="phpdocumentor-signature__argument">
+                            <span class="phpdocumentor-signature__argument__name">$id</span> :
+                <span class="phpdocumentor-signature__argument__return-type">string</span>
+                            </span>
+                    <span class="phpdocumentor-signature__argument">
+            [,                 <span class="phpdocumentor-signature__argument__name">$class</span> :
+                <span class="phpdocumentor-signature__argument__return-type">string</span>
+                 = <span class="phpdocumentor-signature__argument__default-value">null</span> ]            </span>
+                )
+        : <span class="phpdocumentor-signature__response_type"><a href="../classes/acdhOeaw-acdhRepoLib-RepoResource.html"><abbr title="\acdhOeaw\acdhRepoLib\RepoResource">RepoResource</abbr></a></span>
+    </code>
+
+        <section class="phpdocumentor-description"><p>Throws an error on failure.</p></section>
+    
+            <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+        <dl class="phpdocumentor-argument-list">
+                            <dt class="phpdocumentor-argument-list__entry">
+                    <span class="phpdocumentor-signature__argument__name">$id</span>
+                    : <span class="phpdocumentor-signature__argument__return-type">string</span>
+                                    </dt>
+                <dd class="phpdocumentor-argument-list__definition"><section class="phpdocumentor-description"></section></dd>
+                            <dt class="phpdocumentor-argument-list__entry">
+                    <span class="phpdocumentor-signature__argument__name">$class</span>
+                    : <span class="phpdocumentor-signature__argument__return-type">string</span>
+                     = <span class="phpdocumentor-signature__argument__default-value">null</span>                </dt>
+                <dd class="phpdocumentor-argument-list__definition"><section class="phpdocumentor-description"><p>an optional class of the resulting object representing the resource
+(to be used by extension libraries)</p></section></dd>
+                    </dl>
+    
+        
+            <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type"><a href="../classes/acdhOeaw-acdhRepoLib-RepoResource.html"><abbr title="\acdhOeaw\acdhRepoLib\RepoResource">RepoResource</abbr></a></span>
+            
+</article>
+                            <a id="method_setQueryLog"></a>
+<article
+        class="
+            phpdocumentor-method
+            phpdocumentor-method--public
+                                                        "
+>
+    <h4 class="phpdocumentor-method__name">setQueryLog()</h4>
+    <aside class="phpdocumentor-element-found-in">
+        <abbr class="phpdocumentor-element-found-in__file" title="src/acdhOeaw/acdhRepoLib/RepoTrait.php"><a href="../files/src-acdhoeaw-acdhrepolib-repotrait.html"><abbr title="src/acdhOeaw/acdhRepoLib/RepoTrait.php">RepoTrait.php</abbr></a></abbr>
+        :
+        <span class="phpdocumentor-element-found-in__line">113</span>
+    </aside>
+        <p class="phpdocumentor-summary">Sets a search queries logger</p>
+        <code class="phpdocumentor-signature phpdocumentor-code ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+                                <span class="phpdocumentor-signature__name">setQueryLog</span>(
+                    <span class="phpdocumentor-signature__argument">
+                            <span class="phpdocumentor-signature__argument__name">$log</span> :
+                <span class="phpdocumentor-signature__argument__return-type"><abbr title="\Psr\Log\AbstractLogger">AbstractLogger</abbr></span>
+                            </span>
+                )
+        : <span class="phpdocumentor-signature__response_type">void</span>
+    </code>
+
+    
+            <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+        <dl class="phpdocumentor-argument-list">
+                            <dt class="phpdocumentor-argument-list__entry">
+                    <span class="phpdocumentor-signature__argument__name">$log</span>
+                    : <span class="phpdocumentor-signature__argument__return-type"><abbr title="\Psr\Log\AbstractLogger">AbstractLogger</abbr></span>
+                                    </dt>
+                <dd class="phpdocumentor-argument-list__definition"><section class="phpdocumentor-description"></section></dd>
+                    </dl>
+    
+        
+    
+</article>
+                                            </section>
+                <div data-search-results class="phpdocumentor-search-results phpdocumentor-search-results--hidden">
+
+                <h2>Search results</h2>
+                <ul class="phpdocumentor-search-results__entries">
+
+                </ul>
+            </div>
+        </div>
+    </div>
+</main>
+
+</body>
+</html>
