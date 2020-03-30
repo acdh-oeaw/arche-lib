@@ -268,7 +268,7 @@ To make it easy to remove a given RDF property from resources metadata a special
 
 ```php
 $repo = \acdhOeaw\acdhRepoLib\Repo::factory('config.yaml');
-$repo->getResourceById('https://my.id', '\acdhOeaw\acdhRepoDisserv\RepoResource');
+$repo->getResourceById('https://my.id', '\acdhOeaw\arche\disserv\RepoResource');
 $meta = $repo->getGraph();
 $meta->addResource($repo->getSchema()->delete, 'https://unwanted.property');
 $repo->updateMetadata();
@@ -284,7 +284,7 @@ The acdh-repo-lib is different. It provides only a new repository solution API w
 As in the new solution objects representing repository resources are instantiated directly it's enough to call its constructor to get a specialized object,  e.g.:
 ```php
 $repo = \acdhOeaw\acdhRepoLib\Repo::factory('config.yaml');
-$res = new \acdhOeaw\acdhRepoDisserv\RepoResource('https://my.url', $repo);
+$res = new \acdhOeaw\arche\disserv\RepoResource('https://my.url', $repo);
 $res->getDissServices();
 ```
 
@@ -293,10 +293,10 @@ you should use the `$class` property, e.g.:
 ```php
 $repo = \acdhOeaw\acdhRepoLib\Repo::factory('config.yaml');
 
-$repo->getResourceById('https://my.id', '\acdhOeaw\acdhRepoDisserv\RepoResource');
+$repo->getResourceById('https://my.id', '\acdhOeaw\arche\disserv\RepoResource');
 
 $term = new \acdhOeaw\acdhRepoLib\SearchTerm('https://my.property', 'my value');
 $config = new \acdhOeaw\acdhRepoLib\SearchConfig();
-$config->class = '\acdhOeaw\acdhRepoDisserv\RepoResource';
+$config->class = '\acdhOeaw\arche\disserv\RepoResource';
 $results = $repo->getResourcesBySearchTerms([$term], $config);
 ```
