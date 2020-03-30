@@ -2,9 +2,7 @@
 
 name: document
 
-on: 
-  push:
-    tags-ignore: docs
+on: push
 
 jobs:
   document:
@@ -25,4 +23,3 @@ jobs:
         git commit -a -m 'Documentation updated'
         git tag docs
         git push origin docs
-        git branch -v
