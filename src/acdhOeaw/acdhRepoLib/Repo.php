@@ -92,10 +92,6 @@ class Repo implements RepoInterface {
         }
         echo "Configuration found at $cfgPath\n";
         $cfg     = json_decode(json_encode(yaml_parse_file($cfgPath)));
-        $repoUrl = ($cfg->rest->urlBase ?? '') . ($cfg->rest->pathBase ?? '');
-        if (empty($repoUrl)) {
-            exit("Repository URL not set. Please reaview your config.yaml.\n");
-        }
 
         if (isset($cfg->repositories)) {
             echo "\nWhat's the repository you want to ingest to? (type a number)\n";
