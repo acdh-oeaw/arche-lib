@@ -97,16 +97,35 @@ class Repo implements RepoInterface {
             exit("Repository URL not set. Please reaview your config.yaml.\n");
         }
 
-        echo "\nIs repository URL $repoUrl correct? (type 'yes' to continue)\n";
+        if (isset($cfg->repositories)) {
+            echo "\nWhat's the repository you want to ingest to? (type a number)\n";
+            foreach ($cfg->repositories as $k => $v) {
+                echo ($k + 1) . "\t" . $v->urlBase . $v->pathBase . "\n";
+            }
+            $line = ((int) trim(fgets(STDIN))) - 1;
+            $urlBase  = $cfg->repositories[$line]->urlBase ?? '';
+            $pathBase = $cfg->repositories[$line]->pathBase ?? '';
+        } else {
+            $urlBase  = $cfg->rest->urlBase ?? '';
+            $pathBase = $cfg->rest->pathBase ?? '';
+        }
+        if (empty($urlBase . $pathBase)) {
+            exit("Repository URL not set. Please reaview your config.yaml.\n");
+        }
+        echo "\nIs repository URL $urlBase$pathBase correct? (type 'yes' to continue)\n";
         $line   = trim(fgets(STDIN));
         if ($line !== 'yes') {
             exit("Wrong repository URL\n");
         }
+        $cfg->rest->urlBase  = $urlBase;
+        $cfg->rest->pathBase = $pathBase;
+
         $user = $cfg->auth->httpBasic->user ?? '';
         if (empty($user)) {
             echo "\nWhat's your login? (login not set in the config.yaml)\n";
             $user = trim(fgets(STDIN));
         }
+
         echo "\nWhat's your password?\n";
         system('stty -echo');
         $pswd = trim(fgets(STDIN));
