@@ -80,6 +80,49 @@ class Repo implements RepoInterface {
         return new Repo($baseUrl, $schema, $headers, $options);
     }
 
+    static public function factoryInteractive(string $cfgPath = '.'): self {
+        if (!file_exists($cfgPath) || !is_file($cfgPath)) {
+            while (file_exists($cfgPath) && !file_exists($cfgPath . '/config.yaml')) {
+                $cfgPath .= '/..';
+            }
+            $cfgPath .= '/config.yaml';
+            if (!file_exists($cfgPath) || !is_file($cfgPath)) {
+                exit("No config.yaml found.\n");
+            }
+        }
+        echo "Configuration found at $cfgPath\n";
+        $cfg     = json_decode(json_encode(yaml_parse_file($cfgPath)));
+        $repoUrl = ($cfg->rest->urlBase ?? '') . ($cfg->rest->pathBase ?? '');
+        if (empty($repoUrl)) {
+            exit("Repository URL not set. Please reaview your config.yaml.\n");
+        }
+
+        echo "\nIs repository URL $repoUrl correct? (type 'yes' to continue)\n";
+        $line   = trim(fgets(STDIN));
+        if ($line !== 'yes') {
+            exit("Wrong repository URL\n");
+        }
+        $user = $cfg->auth->httpBasic->user ?? '';
+        if (empty($user)) {
+            echo "\nWhat's your login? (login not set in the config.yaml)\n";
+            $user = trim(fgets(STDIN));
+        }
+        echo "\nWhat's your password?\n";
+        system('stty -echo');
+        $pswd = trim(fgets(STDIN));
+        system('stty echo');
+
+        $cfg->auth = (object) ['httpBasic' => ['user' => $user, 'password' => $pswd]];
+        $tmpfile = tempnam('/tmp', '');
+        yaml_emit_file($tmpfile, json_decode(json_encode($cfg), true));
+        try {
+            $repo = Repo::factory($tmpfile);
+        } finally {
+            unlink($tmpfile);
+        }
+        return $repo;
+    }    
+    
     /**
      * The Guzzle client object used to send HTTP requests
      * 
