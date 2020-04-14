@@ -60,10 +60,10 @@ class BinaryPayload {
     /**
      * Creates a binary payload object.
      * 
-     * @param string|null $data data as a string or a path to the file
-     * @param string|null $filePath file name (allows to provide the file name when 
-     *   data are provided as string or to overwrite the file name passed to the repository
-     *   when data are read from a file)
+     * @param string|null $data data as a string (pass null for creating a payload 
+     *   from a file)
+     * @param string|null $filePath path to a file (when creating a payload from a file)
+     *   or a filename to be stored in the metadata (when creating a payload from string)
      * @param string|null $mimeType mime type of the data; if not provided it will be guessed 
      *   from the file name and/or data content
      */

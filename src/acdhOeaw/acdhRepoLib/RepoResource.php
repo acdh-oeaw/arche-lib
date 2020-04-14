@@ -38,10 +38,11 @@ use GuzzleHttp\Psr7\Response;
 class RepoResource implements RepoResourceInterface {
 
     use RepoResourceTrait;
-    
+
     const UPDATE_ADD       = 'add';
     const UPDATE_OVERWRITE = 'overwrite';
     const UPDATE_MERGE     = 'merge';
+    const DELETE_STEP      = 1000;
 
     /**
      *
@@ -113,10 +114,11 @@ class RepoResource implements RepoResourceInterface {
      *      (see the `$parentProperty` parameter), both directly and in a reverse order (reverse in RDF terms)
      * @return void
      */
-    public function updateMetadata(string $updateMode = self::UPDATE_MERGE, string $readMode = self::META_RESOURCE): void {
+    public function updateMetadata(string $updateMode = self::UPDATE_MERGE,
+                                   string $readMode = self::META_RESOURCE): void {
         if (!$this->metaSynced) {
             $updateModeHeader = $this->getRepo()->getHeaderName('metadataWriteMode');
-            $readModeHeader    = $this->getRepo()->getHeaderName('metadataReadMode');
+            $readModeHeader   = $this->getRepo()->getHeaderName('metadataReadMode');
             $headers          = [
                 'Content-Type'    => 'application/n-triples',
                 'Accept'          => 'application/n-triples',
@@ -149,21 +151,28 @@ class RepoResource implements RepoResourceInterface {
         }
 
         if ($references) {
-            $query  = "SELECT id FROM relations WHERE target_id = ?";
-            $refRes = $this->repo->getResourcesBySqlQuery($query, [$this->getId()], new SearchConfig());
-            foreach ($refRes as $res) {
-                /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
-                $res->loadMetadata(false, self::META_RESOURCE);
-                $meta = $res->getMetadata();
-                foreach ($meta->propertyUris() as $p) {
-                    $meta->deleteResource($p, $this->getUri());
-                    if (null === $meta->getResource($p)) {
-                        $meta->addResource($this->repo->getSchema()->delete, $p);
+            $query             = "SELECT id FROM relations WHERE target_id = ? ORDER BY id";
+            $cfg               = new SearchConfig();
+            $cfg->metadataMode = RepoResourceInterface::META_RESOURCE;
+            $cfg->offset       = 0;
+            $cfg->limit        = self::DELETE_STEP;
+            do {
+                $refRes = $this->repo->getResourcesBySqlQuery($query, [$this->getId()], $cfg);
+                foreach ($refRes as $res) {
+                    /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
+                    $res->loadMetadata(false, self::META_RESOURCE);
+                    $meta = $res->getMetadata();
+                    foreach ($meta->propertyUris() as $p) {
+                        $meta->deleteResource($p, $this->getUri());
+                        if (null === $meta->getResource($p)) {
+                            $meta->addResource($this->repo->getSchema()->delete, $p);
+                        }
                     }
+                    $res->setMetadata($meta);
+                    $res->updateMetadata();
                 }
-                $res->setMetadata($meta);
-                $res->updateMetadata();
-            }
+                $cfg->offset += self::DELETE_STEP;
+            } while (count($refRes) > 0);
         }
 
         $this->metadata = null;
@@ -183,12 +192,20 @@ class RepoResource implements RepoResourceInterface {
      */
     public function deleteRecursively(string $property, bool $tombstone = false,
                                       bool $references = false): void {
-        $query  = "SELECT id FROM relations WHERE property = ? AND target_id = ?";
-        $refRes = $this->repo->getResourcesBySqlQuery($query, [$property, $this->getId()], new SearchConfig());
-        foreach ($refRes as $res) {
-            /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
-            $res->deleteRecursively($property, $tombstone, $references);
-        }
+        $query             = "SELECT id FROM relations WHERE property = ? AND target_id = ? ORDER BY id";
+        $param             = [$property, $this->getId()];
+        $cfg               = new SearchConfig();
+        $cfg->metadataMode = RepoResourceInterface::META_RESOURCE;
+        $cfg->offset       = 0;
+        $cfg->limit        = self::DELETE_STEP;
+        do {
+            $refRes = $this->repo->getResourcesBySqlQuery($query, $param, $cfg);
+            foreach ($refRes as $res) {
+                /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
+                $res->deleteRecursively($property, $tombstone, $references);
+            }
+            $cfg->offset += self::DELETE_STEP;
+        } while (count($refRes) > 0);
         $this->delete($tombstone, $references);
     }
 
