@@ -192,21 +192,20 @@ class RepoResource implements RepoResourceInterface {
      */
     public function deleteRecursively(string $property, bool $tombstone = false,
                                       bool $references = false): void {
-        $query             = "SELECT id FROM relations WHERE property = ? AND target_id = ? ORDER BY id";
-        $param             = [$property, $this->getId()];
+        $query             = "SELECT id FROM get_relatives(?, ?, 999999, 0) ORDER BY n DESC, id";
+        $param             = [$this->getId(), $property];
         $cfg               = new SearchConfig();
         $cfg->metadataMode = RepoResourceInterface::META_RESOURCE;
         $cfg->offset       = 0;
         $cfg->limit        = self::DELETE_STEP;
         do {
-            $refRes = $this->repo->getResourcesBySqlQuery($query, $param, $cfg);
-            foreach ($refRes as $res) {
+            $resources = $this->repo->getResourcesBySqlQuery($query, $param, $cfg);
+            foreach ($resources as $res) {
                 /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
-                $res->deleteRecursively($property, $tombstone, $references);
+                $res->delete($tombstone, $references);
             }
             $cfg->offset += self::DELETE_STEP;
-        } while (count($refRes) > 0);
-        $this->delete($tombstone, $references);
+        } while (count($resources) > 0);
     }
 
     /**
