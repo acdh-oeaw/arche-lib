@@ -171,8 +171,8 @@ class RepoResource implements RepoResourceInterface {
                     $res->setMetadata($meta);
                     $res->updateMetadata();
                 }
-                $cfg->offset += self::DELETE_STEP;
-            } while (count($refRes) > 0);
+                // don't increment offset - every query excludes resources with references which were already removed
+            } while (count($refRes) > 1);
         }
 
         $this->metadata = null;
@@ -204,8 +204,8 @@ class RepoResource implements RepoResourceInterface {
                 /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
                 $res->delete($tombstone, $references);
             }
-            $cfg->offset += self::DELETE_STEP;
-        } while (count($resources) > 0);
+            // don't increment offset - every query excludes resources which were already removed
+        } while (count($resources) > 1);
     }
 
     /**
