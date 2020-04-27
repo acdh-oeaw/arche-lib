@@ -147,8 +147,8 @@ class RepoDb implements RepoInterface {
         if ($id === false) {
             throw new NotFound();
         }
-        if ($query->fetchColumn() !== false) {
-            throw new AmbiguousMatch();
+        if (($id2 = $query->fetchColumn()) !== false) {
+            throw new AmbiguousMatch("Both resource $id and $id2 match the search");
         }
         $url   = $this->getBaseUrl() . $id;
         $class = $class ?? self::$resourceClass;

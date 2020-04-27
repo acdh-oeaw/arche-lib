@@ -44,7 +44,7 @@ use acdhOeaw\acdhRepoLib\exception\AmbiguousMatch;
 class Repo implements RepoInterface {
 
     use RepoTrait;
-    
+
     /**
      * A class used to instantiate objects representing repository resources.
      * 
@@ -91,14 +91,14 @@ class Repo implements RepoInterface {
             }
         }
         echo "Configuration found at $cfgPath\n";
-        $cfg     = json_decode(json_encode(yaml_parse_file($cfgPath)));
+        $cfg = json_decode(json_encode(yaml_parse_file($cfgPath)));
 
         if (isset($cfg->repositories)) {
             echo "\nWhat's the repository you want to ingest to? (type a number)\n";
             foreach ($cfg->repositories as $k => $v) {
                 echo ($k + 1) . "\t" . $v->urlBase . $v->pathBase . "\n";
             }
-            $line = ((int) trim(fgets(STDIN))) - 1;
+            $line     = ((int) trim(fgets(STDIN))) - 1;
             $urlBase  = $cfg->repositories[$line]->urlBase ?? '';
             $pathBase = $cfg->repositories[$line]->pathBase ?? '';
         } else {
@@ -109,7 +109,7 @@ class Repo implements RepoInterface {
             exit("Repository URL not set. Please reaview your config.yaml.\n");
         }
         echo "\nIs repository URL $urlBase$pathBase correct? (type 'yes' to continue)\n";
-        $line   = trim(fgets(STDIN));
+        $line = trim(fgets(STDIN));
         if ($line !== 'yes') {
             exit("Wrong repository URL\n");
         }
@@ -128,7 +128,7 @@ class Repo implements RepoInterface {
         system('stty echo');
 
         $cfg->auth = (object) ['httpBasic' => ['user' => $user, 'password' => $pswd]];
-        $tmpfile = tempnam('/tmp', '');
+        $tmpfile   = tempnam('/tmp', '');
         yaml_emit_file($tmpfile, json_decode(json_encode($cfg), true));
         try {
             $repo = Repo::factory($tmpfile);
@@ -136,8 +136,8 @@ class Repo implements RepoInterface {
             unlink($tmpfile);
         }
         return $repo;
-    }    
-    
+    }
+
     /**
      * The Guzzle client object used to send HTTP requests
      * 
@@ -274,7 +274,10 @@ class Repo implements RepoInterface {
                 $class = $class ?? self::$resourceClass;
                 return new $class($matches[0]->getUri(), $this);
             default:
-                throw new AmbiguousMatch();
+                $uris  = implode(', ', array_map(function($x) {
+                        return $x->getUri();
+                    }, $matches));
+                throw new AmbiguousMatch("Many resources match the search: $uris");
         }
     }
 
@@ -286,8 +289,7 @@ class Repo implements RepoInterface {
      * @param \acdhOeaw\acdhRepoLib\SearchConfig $config
      * @return \acdhOeaw\acdhRepoLib\RepoResourceInterface[]
      */
-    public function getResourcesBySqlQuery(string $query,
-                                           array $parameters,
+    public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): array {
         $headers = [
             'Accept'       => 'application/n-triples',
