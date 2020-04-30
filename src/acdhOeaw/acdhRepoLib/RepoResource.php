@@ -163,8 +163,9 @@ class RepoResource implements RepoResourceInterface {
                     $res->loadMetadata(false, self::META_RESOURCE);
                     $meta = $res->getMetadata();
                     foreach ($meta->propertyUris() as $p) {
+                        $existed = $meta->get($p) !== null;
                         $meta->deleteResource($p, $this->getUri());
-                        if (null === $meta->getResource($p)) {
+                        if ($existed && null === $meta->get($p)) {
                             $meta->addResource($this->repo->getSchema()->delete, $p);
                         }
                     }
