@@ -1,7 +1,9 @@
-[![Build Status](https://travis-ci.org/zozlak/acdh-repo-lib.svg?branch=master)](https://travis-ci.org/zozlak/acdh-repo-lib)
-[![Coverage Status](https://coveralls.io/repos/github/zozlak/acdh-repo-lib/badge.svg?branch=master)](https://coveralls.io/github/zozlak/acdh-repo-lib?branch=master)
-
 # ACDH-repo-lib
+
+[![Latest Stable Version](https://poser.pugx.org/acdh-oeaw/arche-lib/v/stable)](https://packagist.org/packages/acdh-oeaw/arche-lib)
+![Build status](https://github.com/acdh-oeaw/arche-lib/workflows/phpunit/badge.svg?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/acdh-oeaw/arche-lib/badge.svg?branch=master)](https://coveralls.io/github/acdh-oeaw/arche-lib?branch=master)
+[![License](https://poser.pugx.org/acdh-oeaw/arche-lib/license)](https://packagist.org/packages/acdh-oeaw/arche-lib)
 
 A library providing PHP bindings for the ACDH repository solution.
 
