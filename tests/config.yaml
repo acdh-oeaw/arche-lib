@@ -1,6 +1,6 @@
 rest:
     urlBase: http://127.0.0.1
-    pathBase: /rest/
+    pathBase: /api/
     verifyCert: false
     headers:
         metadataReadMode: X-METADATA-READ-MODE
@@ -34,4 +34,3 @@ auth:
 transactionController:
     # transaction timeout in s
     timeout: 15
-
