@@ -128,8 +128,8 @@ class SearchTest extends TestBase {
         $date1         = (string) $result[0]->getMetadata()->getLiteral('https://date.prop');
         $date2         = (string) $result[1]->getMetadata()->getLiteral('https://date.prop');
         $expected      = [
-            '2019-01-01T00:00:00Z' => 'Lorem #ipsum# dolor',
-            '2019-02-01T00:00:00Z' => 'Lorem #ipsum# dolor|eleifend #ipsum#',
+            '2019-01-01' => 'Lorem #ipsum# dolor',
+            '2019-02-01' => 'Lorem #ipsum# dolor|eleifend #ipsum#',
         ];
         $this->assertEquals($expected[$date1], $ftsHighlight1);
         $this->assertEquals($expected[$date2], $ftsHighlight2);
