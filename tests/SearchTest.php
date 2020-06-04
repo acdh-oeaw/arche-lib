@@ -60,6 +60,7 @@ class SearchTest extends TestBase {
         $meta1->add('https://date.prop', new \EasyRdf\Literal('2019-02-01', null, C::XSD_DATE));
         $res2  = self::$repo->createResource($meta2);
         $this->noteResource($res2);
+echo $res2->getMetadata()->getGraph()->serialise('turtle');
 
         self::$repo->commit();
     }
@@ -128,8 +129,8 @@ class SearchTest extends TestBase {
         $date1         = (string) $result[0]->getMetadata()->getLiteral('https://date.prop');
         $date2         = (string) $result[1]->getMetadata()->getLiteral('https://date.prop');
         $expected      = [
-            '2019-01-01' => 'Lorem #ipsum# dolor',
-            '2019-02-01' => 'Lorem #ipsum# dolor|eleifend #ipsum#',
+            '2019-01-01T00:00:00Z' => 'Lorem #ipsum# dolor',
+            '2019-02-01T00:00:00Z' => 'Lorem #ipsum# dolor|eleifend #ipsum#',
         ];
         $this->assertEquals($expected[$date1], $ftsHighlight1);
         $this->assertEquals($expected[$date2], $ftsHighlight2);
