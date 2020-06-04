@@ -57,7 +57,7 @@ class SearchTest extends TestBase {
             'https://number.prop'        => 20,
             'https://lorem.ipsum'        => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur non dolor non neque venenatis aliquet vitae venenatis est. Aenean eleifend ipsum eu placerat sagittis. Aenean ullamcorper dignissim enim, ut congue turpis tristique eu.',
         ]);
-        $meta1->add('https://date.prop', new \EasyRdf\Literal('2019-02-01', null, C::XSD_DATE));
+        $meta2->add('https://date.prop', new \EasyRdf\Literal('2019-02-01', null, C::XSD_DATE));
         $res2  = self::$repo->createResource($meta2);
         $this->noteResource($res2);
 echo $res2->getMetadata()->getGraph()->serialise('turtle');
