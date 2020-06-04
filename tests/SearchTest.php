@@ -47,7 +47,7 @@ class SearchTest extends TestBase {
             'https://number.prop'        => 150,
             'https://lorem.ipsum'        => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed iaculis nisl enim, malesuada tempus nisl ultrices ut. Duis egestas at arcu in blandit. Nulla eget sem urna. Sed hendrerit enim ut ultrices luctus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur non dolor non neque venenatis aliquet vitae venenatis est.',
         ]);
-        $meta1->add('https://date.prop', new \EasyRdf\Literal\Date('2019-01-01'));
+        $meta1->add('https://date.prop', new \EasyRdf\Literal('2019-01-01', null, C::XSD_DATE));
         $res1  = self::$repo->createResource($meta1);
         $this->noteResource($res1);
 
@@ -57,7 +57,7 @@ class SearchTest extends TestBase {
             'https://number.prop'        => 20,
             'https://lorem.ipsum'        => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur non dolor non neque venenatis aliquet vitae venenatis est. Aenean eleifend ipsum eu placerat sagittis. Aenean ullamcorper dignissim enim, ut congue turpis tristique eu.',
         ]);
-        $meta1->add('https://date.prop', new \EasyRdf\Literal\Date('2019-02-01'));
+        $meta1->add('https://date.prop', new \EasyRdf\Literal('2019-02-01', null, C::XSD_DATE));
         $res2  = self::$repo->createResource($meta2);
         $this->noteResource($res2);
 
@@ -140,7 +140,7 @@ class SearchTest extends TestBase {
      */
     public function testSearchRelatives() {
         $query                          = "SELECT id FROM metadata WHERE property = ? AND value = ?";
-        $param                          = ['https://date.prop', '2019-02-01T00:00:00Z'];
+        $param                          = ['https://date.prop', '2019-02-01'];
         $config                         = new SearchConfig();
         $config->metadataMode           = RepoResource::META_RELATIVES;
         $config->metadataParentProperty = self::$repo->getSchema()->parent;
@@ -148,9 +148,9 @@ class SearchTest extends TestBase {
         $result = self::$repo->getResourcesBySqlQuery($query, $param, $config);
         $this->assertEquals(1, count($result));
         $meta   = $result[0]->getGraph();
-        $this->assertEquals('2019-02-01T00:00:00Z', (string) $meta->getLiteral('https://date.prop'));
+        $this->assertEquals('2019-02-01', (string) $meta->getLiteral('https://date.prop'));
         $metaP  = $meta->getResource(self::$repo->getSchema()->parent);
-        $this->assertEquals('2019-01-01T00:00:00Z', (string) $metaP->getLiteral('https://date.prop'));
+        $this->assertEquals('2019-01-01', (string) $metaP->getLiteral('https://date.prop'));
     }
 
     /**
@@ -166,13 +166,13 @@ class SearchTest extends TestBase {
         $result         = self::$repo->getResourcesBySqlQuery($query, $param, $config);
         $this->assertEquals(1, count($result));
         $meta           = $result[0]->getGraph();
-        $this->assertEquals('2019-01-01T00:00:00Z', (string) $meta->getLiteral('https://date.prop'));
+        $this->assertEquals('2019-01-01', (string) $meta->getLiteral('https://date.prop'));
 
         $config->offset = 1;
         $result         = self::$repo->getResourcesBySqlQuery($query, $param, $config);
         $this->assertEquals(1, count($result));
         $meta           = $result[0]->getGraph();
-        $this->assertEquals('2019-02-01T00:00:00Z', (string) $meta->getLiteral('https://date.prop'));
+        $this->assertEquals('2019-02-01', (string) $meta->getLiteral('https://date.prop'));
     }
 
 }
