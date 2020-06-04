@@ -60,7 +60,6 @@ class SearchTest extends TestBase {
         $meta2->add('https://date.prop', new \EasyRdf\Literal('2019-02-01', null, C::XSD_DATE));
         $res2  = self::$repo->createResource($meta2);
         $this->noteResource($res2);
-echo $res2->getMetadata()->getGraph()->serialise('turtle');
 
         self::$repo->commit();
     }
