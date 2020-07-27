@@ -45,6 +45,30 @@ class RepoResource implements RepoResourceInterface {
     const DELETE_STEP      = 1000;
 
     /**
+     * Creates a repository resource object from the PSR-7 response object
+     * returning the metadata.
+     * 
+     * @param Response $response PSR-7 repository response object
+     * @param string $uri resource URI (if not provided, a Location HTTP header
+     *   from the response will be used)
+     * @return \self
+     */
+    static public function factory(Response $response, string $uri = null): self {
+
+        $uri   = $uri ?? $response->getHeader('Location')[0];
+        $graph = new Graph();
+        $graph->parse((string) $response->getBody());
+
+        /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
+        $class           = get_called_class();
+        $res             = new $class($uri, $this);
+        $res->metadata   = $graph->resource($uri);
+        $res->metaSynced = true;
+
+        return $res;
+    }
+
+    /**
      *
      * @var acdhOeaw\acdhRepoLib\Repo
      */

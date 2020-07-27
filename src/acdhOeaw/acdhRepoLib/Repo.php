@@ -183,17 +183,19 @@ class Repo implements RepoInterface {
     public function createResource(Resource $metadata,
                                    BinaryPayload $payload = null,
                                    string $class = null): RepoResource {
-        $headers  = ['Content-Type' => 'application/n-triples'];
-        $graph    = new Graph();
-        $metadata = $body     = $metadata->copy([], '/^$/', $this->baseUrl, $graph);
-        $body     = $graph->serialise('application/n-triples');
-        $req      = new Request('post', $this->baseUrl . 'metadata', $headers, $body);
-        $resp     = $this->sendRequest($req);
+        $readModeHeader = $this->getHeaderName('metadataReadMode');
+        $headers        = [
+            'Content-Type'  => 'application/n-triples',
+            $readModeHeader => RepoResource::META_RESOURCE,
+        ];
+        $graph          = new Graph();
+        $metadata       = $body           = $metadata->copy([], '/^$/', $this->baseUrl, $graph);
+        $body           = $graph->serialise('application/n-triples');
+        $req            = new Request('post', $this->baseUrl . 'metadata', $headers, $body);
+        $resp           = $this->sendRequest($req);
 
-        $uri   = $resp->getHeader('Location')[0];
-        $class = $class ?? self::$resourceClass;
-        /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
-        $res   = new $class($uri, $this);
+        $class          = $class ?? self::$resourceClass;
+        $res            = $class::factory($resp);
 
         if ($payload !== null) {
             $res->updateContent($payload);
