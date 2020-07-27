@@ -48,12 +48,13 @@ class RepoResource implements RepoResourceInterface {
      * Creates a repository resource object from the PSR-7 response object
      * returning the metadata.
      * 
+     * @param Repo repository connection object
      * @param Response $response PSR-7 repository response object
      * @param string $uri resource URI (if not provided, a Location HTTP header
      *   from the response will be used)
      * @return \self
      */
-    static public function factory(Response $response, string $uri = null): self {
+    static public function factory(Repo $repo, Response $response, string $uri = null): self {
 
         $uri   = $uri ?? $response->getHeader('Location')[0];
         $graph = new Graph();
@@ -61,7 +62,7 @@ class RepoResource implements RepoResourceInterface {
 
         /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
         $class           = get_called_class();
-        $res             = new $class($uri, $this);
+        $res             = new $class($uri, $repo);
         $res->metadata   = $graph->resource($uri);
         $res->metaSynced = true;
 

@@ -195,7 +195,7 @@ class Repo implements RepoInterface {
         $resp           = $this->sendRequest($req);
 
         $class          = $class ?? self::$resourceClass;
-        $res            = $class::factory($resp);
+        $res            = $class::factory($this, $resp);
 
         if ($payload !== null) {
             $res->updateContent($payload);
