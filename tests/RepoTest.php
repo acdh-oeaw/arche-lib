@@ -236,7 +236,7 @@ class RepoTest extends TestBase {
         self::$repo->commit();
 
         try {
-            $res1->loadMetadata();
+            $res1->loadMetadata(true);
             $this->assertTrue(false, 'No exception');
         } catch (Deleted $e) {
             $this->assertEquals(410, $e->getCode());
