@@ -65,7 +65,7 @@ class RepoResource implements RepoResourceInterface {
         $body = (string) $response->getBody();
         if (!empty($body)) {
             $graph           = new Graph();
-            $graph->parse();
+            $graph->parse($body);
             $res->metadata   = $graph->resource($uri);
             $res->metaSynced = true;
         }
