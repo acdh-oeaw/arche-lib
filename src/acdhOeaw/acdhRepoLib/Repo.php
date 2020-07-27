@@ -186,6 +186,7 @@ class Repo implements RepoInterface {
         $readModeHeader = $this->getHeaderName('metadataReadMode');
         $headers        = [
             'Content-Type'  => 'application/n-triples',
+            'Accept'        => 'application/n-triples',
             $readModeHeader => RepoResource::META_RESOURCE,
         ];
         $graph          = new Graph();
@@ -194,8 +195,8 @@ class Repo implements RepoInterface {
         $req            = new Request('post', $this->baseUrl . 'metadata', $headers, $body);
         $resp           = $this->sendRequest($req);
 
-        $class          = $class ?? self::$resourceClass;
-        $res            = $class::factory($this, $resp);
+        $class = $class ?? self::$resourceClass;
+        $res   = $class::factory($this, $resp);
 
         if ($payload !== null) {
             $res->updateContent($payload);
