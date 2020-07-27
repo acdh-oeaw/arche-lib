@@ -54,17 +54,21 @@ class RepoResource implements RepoResourceInterface {
      *   from the response will be used)
      * @return \self
      */
-    static public function factory(Repo $repo, Response $response, string $uri = null): self {
+    static public function factory(Repo $repo, Response $response,
+                                   string $uri = null): self {
 
         $uri   = $uri ?? $response->getHeader('Location')[0];
-        $graph = new Graph();
-        $graph->parse((string) $response->getBody());
-
         /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
-        $class           = get_called_class();
-        $res             = new $class($uri, $repo);
-        $res->metadata   = $graph->resource($uri);
-        $res->metaSynced = true;
+        $class = get_called_class();
+        $res   = new $class($uri, $repo);
+
+        $body = (string) $response->getBody();
+        if (!empty($body)) {
+            $graph           = new Graph();
+            $graph->parse();
+            $res->metadata   = $graph->resource($uri);
+            $res->metaSynced = true;
+        }
 
         return $res;
     }
