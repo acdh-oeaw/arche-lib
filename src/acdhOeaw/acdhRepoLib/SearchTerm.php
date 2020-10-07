@@ -38,7 +38,7 @@ use acdhOeaw\acdhRepoLib\exception\RepoLibException;
  */
 class SearchTerm {
 
-    const DATETIME_REGEX    = '/^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9](T[0-9][0-9](:[0-9][0-9])?(:[0-9][0-9])?([.][0-9]+)?Z?)?$/';
+    const DATETIME_REGEX    = '/^-?[0-9]{4,}-[0-9][0-9]-[0-9][0-9](T[0-9][0-9](:[0-9][0-9])?(:[0-9][0-9])?([.][0-9]+)?Z?)?$/';
     const TYPE_NUMBER       = 'number';
     const TYPE_DATE         = 'date';
     const TYPE_DATETIME     = 'datetime';
@@ -173,7 +173,8 @@ class SearchTerm {
      *   stored only as literals, even if they are resources in the RDF graph
      * @return \acdhOeaw\acdhRepoLib\QueryPart
      */
-    public function getSqlQuery(string $baseUrl, string $idProp, array $nonRelationProperties): QueryPart {
+    public function getSqlQuery(string $baseUrl, string $idProp,
+                                array $nonRelationProperties): QueryPart {
         $type = self::$operators[$this->operator];
         // if type not enforced by the operator, try the provided one
         if ($type === null) {
@@ -242,7 +243,8 @@ class SearchTerm {
         return new QueryPart($query, $param);
     }
 
-    private function getSqlQueryMeta(string $type, string $baseUrl, string $idProp): QueryPart {
+    private function getSqlQueryMeta(string $type, string $baseUrl,
+                                     string $idProp): QueryPart {
         $where = $param = [];
         if (!empty($this->property)) {
             $where[] = 'property = ?';
@@ -262,9 +264,25 @@ class SearchTerm {
             if ($column === self::COLUMN_STRING && strlen($this->value) < self::STRING_MAX_LENGTH) {
                 $column = "substring(" . $column . ", 1, " . self::STRING_MAX_LENGTH . ")";
             }
-
-            $where[] = $column . ' ' . $this->operator . ' ?';
-            $param[] = $this->value;
+            if (substr($column, 0, 7) !== 'value_t') {
+                $where[] = $column . ' ' . $this->operator . ' ?';
+                $param[] = $this->value;
+            } else {
+                // dates require special handling taking into account they might be out of timestamp range
+                $valueN = (int) $this->value;
+                if ($valueN >= -4713) {
+                    $valueT = $this->value;
+                    if (substr($valueT, 0, 1) === '-') {
+                        $valueT = substr($valueT, 1) . ' BC';
+                    }
+                    $where[] = '(value_t IS NOT NULL AND value_t ' . $this->operator . ' ? OR value_t IS NULL AND value_n ' . $this->operator . ' ?)';
+                    $param[] = $valueT;
+                    $param[] = $valueN;
+                } else {
+                    $where[] = 'value_n ' . $this->operator . ' ?';
+                    $param[] = $valueN;
+                }
+            }
         }
         if (count($where) === 0) {
             throw new RepoLibException('Empty search term', 400);
@@ -276,7 +294,7 @@ class SearchTerm {
             WHERE $where
         ";
         if ($otherTables) {
-            $query   .= "
+            $query .= "
               UNION
                 SELECT DISTINCT id
                 FROM (SELECT id, ? AS property, '' AS lang, ids AS value FROM identifiers) t
@@ -286,7 +304,7 @@ class SearchTerm {
                 FROM (SELECT id, property, '' AS lang, ? || target_id AS value FROM relations) t
                 WHERE $where
             ";
-            $param   = array_merge($param, [$idProp], $param, [$baseUrl], $param);
+            $param = array_merge($param, [$idProp], $param, [$baseUrl], $param);
         }
         return new QueryPart($query, $param);
     }
