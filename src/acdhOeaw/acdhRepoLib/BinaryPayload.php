@@ -144,7 +144,7 @@ class BinaryPayload {
         } else {
             $this->mimeType = \GuzzleHttp\Psr7\mimetype_from_filename(basename($path));
             if ($this->mimeType === null) {
-                $this->mimeType = @mime_content_type($this->$path);
+                $this->mimeType = @mime_content_type($path);
             }
         }
     }
