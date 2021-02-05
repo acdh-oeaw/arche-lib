@@ -18,7 +18,7 @@ jobs:
     - name: generate docs
       run: |
         rm -fR docsrepo/arche-lib/*
-        docker run --rm -v $(pwd):/data phpdoc/phpdoc -d src -t docsrepo/arche-lib
+        docker run --rm -v $(pwd):/data phpdoc/phpdoc:3 -d src -t docsrepo/arche-lib
     - name: commit docs
       run: |
         cd docsrepo
