@@ -75,9 +75,12 @@ class RepoResourceDb implements RepoResourceInterface {
      *   or e.g. reset them back to their current state in the repository)
      * @param string $mode scope of the metadata returned by the repository: 
      *   `RepoResourceInterface::META_RESOURCE` - only given resource metadata,
-     *   `RepoResourceInterface::META_NEIGHBORS` - metadata of a given resource and all the resources pointed by its metadata,
-     *   `RepoResourceInterface::META_RELATIVES` - metadata of a given resource and all resources recursively pointed to a given metadata property
-     *      (see the `$parentProperty` parameter), both directly and in a reverse order (reverse in RDF terms)
+     *   `RepoResourceInterface::META_NEIGHBORS` - metadata of a given resource, all the resources pointed by its metadata and all its children
+     *      (resource pointing to a given resource with the `$parentProperty` property),
+     *   `RepoResourceInterface::META_RELATIVES` - metadata of a given resource and all resources recursively pointing to a given metadata property
+     *      (see the `$parentProperty` parameter) in both directions (both "parents" and "children")
+     *   `RepoResourceInterface::META_PARENTS` - like META_RELATIVES but only parents are returned
+     *   
      * @param string $parentProperty RDF property name used to find related resources in the `RepoResource::META_RELATIVES` mode
      * @return void
      * @throws RepoLibException
@@ -101,6 +104,10 @@ class RepoResourceDb implements RepoResourceInterface {
                 $query = "SELECT * FROM get_relatives_metadata(?, ?)";
                 $param = [$this->id, $parentProperty];
                 break;
+            case self::META_PARENTS:
+                $query = "SELECT * FROM get_relatives_metadata(?, ?, 0)";
+                $param = [$this->id, $parentProperty];
+                break;
             default:
                 throw new RepoLibException('Bad metadata mode ' . $mode, 400);
         }
@@ -109,5 +116,4 @@ class RepoResourceDb implements RepoResourceInterface {
         $graph          = $this->repo->parsePdoStatement($query);
         $this->metadata = $graph->resource($this->getUri());
     }
-
 }

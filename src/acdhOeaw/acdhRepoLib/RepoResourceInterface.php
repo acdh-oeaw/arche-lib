@@ -37,6 +37,7 @@ interface RepoResourceInterface {
     const META_RESOURCE  = 'resource';
     const META_NEIGHBORS = 'neighbors';
     const META_RELATIVES = 'relatives';
+    const META_PARENTS   = 'parents';
 
     /**
      * Creates an object representing a repository resource.
@@ -45,7 +46,7 @@ interface RepoResourceInterface {
      * @param \acdhOeaw\acdhRepoLib\RepoInterface $repo repository connection object
      */
     public function __construct(string $url, RepoInterface $repo);
-    
+
     /**
      * Returns the repository resource URL.
      * 
@@ -128,7 +129,7 @@ interface RepoResourceInterface {
      * @see setMetadata()
      */
     public function setGraph(Resource $resource): void;
-    
+
     /**
      * Replaces resource metadata with a given RDF resource graph. A deep copy
      * of the provided metadata is stored meaning future modifications of the
@@ -142,7 +143,7 @@ interface RepoResourceInterface {
      * @see setGraph()
      */
     public function setMetadata(Resource $metadata): void;
-    
+
     /**
      * Naivly checks if the resource is of a given class.
      * 
