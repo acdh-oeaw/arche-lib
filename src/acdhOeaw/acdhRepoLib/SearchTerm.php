@@ -84,7 +84,7 @@ class SearchTerm {
     /**
      * Creates an instance of the SearchTerm class from a given $_POST vars set
      * 
-     * @param type $key
+     * @param int $key
      * @return \acdhOeaw\acdhRepoLib\SearchTerm
      */
     static public function factory($key): self {
@@ -212,6 +212,10 @@ class SearchTerm {
         if (!empty($this->property)) {
             $where   .= " AND property = ?";
             $param[] = $this->property;
+        }
+        if (!empty($this->language)) {
+            $where   .= " AND lang = ?";
+            $param[] = $this->language;
         }
         $query = "
             SELECT DISTINCT id 
