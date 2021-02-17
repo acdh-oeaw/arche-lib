@@ -270,6 +270,10 @@ class RepoDb implements RepoInterface {
                 $metaQuery = "SELECT (get_relatives_metadata(id, ?, 0)).* FROM ids";
                 $metaParam = [$config->metadataParentProperty];
                 break;
+            case RRI::META_IDS:
+                $metaQuery = "SELECT id, property, type, lang, value FROM metadata JOIN ids USING (id) WHERE property = ?";
+                $metaParam = [$this->schema->label];
+                break;
             default:
                 throw new RepoLibException('Wrong metadata read mode value ' . $config->metadataMode, 400);
         }

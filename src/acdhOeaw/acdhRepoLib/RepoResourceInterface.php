@@ -38,6 +38,7 @@ interface RepoResourceInterface {
     const META_NEIGHBORS = 'neighbors';
     const META_RELATIVES = 'relatives';
     const META_PARENTS   = 'parents';
+    const META_IDS       = 'ids';
 
     /**
      * Creates an object representing a repository resource.

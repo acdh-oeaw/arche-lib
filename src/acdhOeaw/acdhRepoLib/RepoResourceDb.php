@@ -108,6 +108,10 @@ class RepoResourceDb implements RepoResourceInterface {
                 $query = "SELECT * FROM get_relatives_metadata(?, ?, 0)";
                 $param = [$this->id, $parentProperty];
                 break;
+            case self::META_IDS:
+                $query = "SELECT id, property, type, lang, value FROM metadata WHERE id = ? AND property = ?";
+                $param = [$this->id, $this->repo->getSchema()->label];
+                break;
             default:
                 throw new RepoLibException('Bad metadata mode ' . $mode, 400);
         }
