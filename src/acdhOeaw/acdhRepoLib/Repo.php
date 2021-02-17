@@ -147,14 +147,24 @@ class Repo implements RepoInterface {
      * @param array $guzzleOptions
      * @param string $realUrl if provided, the final resource URL will be stored
      *   in this variable.
+     * @param string $metaReadModeHeader header used by the repository to denote
+     *   the metadata read mode. Providing this parameter will make the resolution
+     *   faster.
      * @return self
      */
     static public function factoryFromUrl(string $url,
                                           array $guzzleOptions = [],
-                                          string &$realUrl = null): self {
+                                          string &$realUrl = null,
+                                          string $metaReadModeHeader = null): self {
         $resolveOptions                    = $guzzleOptions;
         $resolveOptions['http_errors']     = false;
         $resolveOptions['allow_redirects'] = ['max' => 10, 'strict' => true, 'track_redirects' => true];
+        if (!empty($metaReadModeHeader)) {
+            $resolveOptions['headers'] = array_merge(
+                $resolveOptions['headers'] ?? [],
+                [$metaReadModeHeader => RepoResourceInterface::META_RESOURCE]
+            );
+        }
 
         $client    = new Client($resolveOptions);
         $resp      = $client->send(new Request('HEAD', $url));
