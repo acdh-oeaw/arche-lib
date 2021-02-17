@@ -139,6 +139,41 @@ class Repo implements RepoInterface {
     }
 
     /**
+     * Creates a Repo instance from any URL resolving to a repository resource.
+     * 
+     * It's not very fast but requires a zero config.
+     * 
+     * @param string $url
+     * @param array $guzzleOptions
+     * @param string $realUrl if provided, the final resource URL will be stored
+     *   in this variable.
+     * @return self
+     */
+    static public function factoryFromUrl(string $url,
+                                          array $guzzleOptions = [],
+                                          string &$realUrl = null): self {
+        $resolveOptions                    = $guzzleOptions;
+        $resolveOptions['http_errors']     = false;
+        $resolveOptions['allow_redirects'] = ['max' => 10, 'strict' => true, 'track_redirects' => true];
+
+        $client    = new Client($resolveOptions);
+        $resp      = $client->send(new Request('HEAD', $url));
+        $redirects = array_merge([$url], $resp->getHeader('X-Guzzle-Redirect-History'));
+        $realUrl   = array_pop($redirects);
+        $realUrl   = preg_replace('|/metadata$|', '', $realUrl);
+
+        $baseUrl = substr($realUrl, 0, strrpos($realUrl, '/'));
+        $resp    = $client->send(new Request('GET', "$baseUrl/describe"));
+        if ($resp->getStatusCode() !== 200) {
+            throw new NotFound("Provided URL doesn't resolve to an ARCHE repository", 404);
+        }
+        $config  = yaml_parse((string) $resp->getBody());
+        $schema  = new Schema(json_decode(json_encode($config['schema'])));
+        $headers = new Schema(json_decode(json_encode($config['rest']['headers'])));
+        return new Repo($baseUrl, $schema, $headers, $guzzleOptions);
+    }
+
+    /**
      * The Guzzle client object used to send HTTP requests
      * 
      * @var \GuzzleHttp\Client
@@ -444,5 +479,4 @@ class Repo implements RepoInterface {
         }
         return $objects;
     }
-
 }
