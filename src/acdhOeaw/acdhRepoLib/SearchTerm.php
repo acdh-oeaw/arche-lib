@@ -214,7 +214,7 @@ class SearchTerm {
             $param[] = $this->property;
         }
         if (!empty($this->language)) {
-            $where   .= " AND lang = ?";
+            $where   .= " AND (lang = ? OR lang IS NULL)";
             $param[] = $this->language;
         }
         $query = "
