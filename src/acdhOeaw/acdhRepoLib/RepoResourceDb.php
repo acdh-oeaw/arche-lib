@@ -73,17 +73,11 @@ class RepoResourceDb implements RepoResourceInterface {
      * @param bool $force enforce fetch from the repository 
      *   (when you want to make sure metadata are in line with ones in the repository 
      *   or e.g. reset them back to their current state in the repository)
-     * @param string $mode scope of the metadata returned by the repository: 
-     *   `RepoResourceInterface::META_RESOURCE` - only given resource metadata,
-     *   `RepoResourceInterface::META_NEIGHBORS` - metadata of a given resource, all the resources pointed by its metadata and all its children
-     *      (resource pointing to a given resource with the `$parentProperty` property),
-     *   `RepoResourceInterface::META_RELATIVES` - metadata of a given resource and all resources recursively pointing to a given metadata property
-     *      (see the `$parentProperty` parameter) in both directions (both "parents" and "children")
-     *   `RepoResourceInterface::META_PARENTS` - like META_RELATIVES but only parents are returned
-     *   
-     * @param string $parentProperty RDF property name used to find related resources in the `RepoResource::META_RELATIVES` mode
+     * @param string $mode scope of the metadata returned by the repository - see the getMetadataQuery() method
+     * @param string $parentProperty RDF property name used to find related resources - see the getMetadataQuery() method
      * @return void
      * @throws RepoLibException
+     * @see getMetadataQuery
      */
     public function loadMetadata(bool $force = false,
                                  string $mode = self::META_RESOURCE,
@@ -91,6 +85,30 @@ class RepoResourceDb implements RepoResourceInterface {
         if (!$force && $this->metadata !== null) {
             return;
         }
+        $queryQP        = $this->getMetadataQuery($mode, $parentProperty);
+        $query          = $this->repo->runQuery($query->queryString, $queryQP->param);
+        $graph          = $this->repo->parsePdoStatement($query);
+        $this->metadata = $graph->resource($this->getUri());
+    }
+
+    /**
+     * Returns a QueryPart object with an SQL query loading resource's metadata
+     * in a given mode.
+     * 
+     * @param string $mode scope of the metadata returned by the repository: 
+     *   `RepoResourceInterface::META_RESOURCE` - only given resource metadata,
+     *   `RepoResourceInterface::META_NEIGHBORS` - metadata of a given resource, all the resources pointed by its metadata and all its children
+     *      (resource pointing to a given resource with the `$parentProperty` property),
+     *   `RepoResourceInterface::META_RELATIVES` - metadata of a given resource and all resources recursively pointing to a given metadata property
+     *      (see the `$parentProperty` parameter) in both directions (both "parents" and "children")
+     *   `RepoResourceInterface::META_PARENTS` - like META_RELATIVES but only parents are returned
+     * @param string|null $parentProperty RDF property name used to find related resources in the 
+     *   `RepoResourceInterface::META_RELATIVES` and `RepoResourceInterface::META_PARENTS` modes
+     * @return QueryPart
+     * @throws RepoLibException
+     */
+    public function getMetadataQuery(string $mode = self::META_RESOURCE,
+                                     ?string $parentProperty = null): QueryPart {
         switch ($mode) {
             case self::META_RESOURCE:
                 $query = "SELECT * FROM (SELECT * FROM metadata_view WHERE id = ?) mt";
@@ -115,9 +133,7 @@ class RepoResourceDb implements RepoResourceInterface {
             default:
                 throw new RepoLibException('Bad metadata mode ' . $mode, 400);
         }
-        $authQP         = $this->repo->getMetadataAuthQuery();
-        $query          = $this->repo->runQuery($query . $authQP->query, array_merge($param, $authQP->param));
-        $graph          = $this->repo->parsePdoStatement($query);
-        $this->metadata = $graph->resource($this->getUri());
+        $authQP = $this->repo->getMetadataAuthQuery();
+        return new QueryPart($query . $authQP->query, array_merge($param, $authQP->param));
     }
 }
