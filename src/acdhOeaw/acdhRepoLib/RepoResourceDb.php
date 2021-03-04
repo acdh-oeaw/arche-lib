@@ -86,7 +86,7 @@ class RepoResourceDb implements RepoResourceInterface {
             return;
         }
         $queryQP        = $this->getMetadataQuery($mode, $parentProperty);
-        $query          = $this->repo->runQuery($query->queryString, $queryQP->param);
+        $query          = $this->repo->runQuery($queryQP->query, $queryQP->param);
         $graph          = $this->repo->parsePdoStatement($query);
         $this->metadata = $graph->resource($this->getUri());
     }
