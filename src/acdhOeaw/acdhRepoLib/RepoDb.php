@@ -345,17 +345,21 @@ class RepoDb implements RepoInterface {
             }
             $options = substr($options, 2);
 
+            $join       = 'JOIN ids USING (id)';
+            $idSrc      = 'fts';
             $where      = '';
             $whereParam = [];
-            if (!empty($cfg->ftsProperty)) {
+            if (!empty($cfg->ftsProperty) && $cfg->ftsProperty !== SearchTerm::PROPERTY_BINARY) {
                 $where        = "WHERE property = ?";
                 $whereParam[] = $cfg->ftsProperty;
+                $join         = "JOIN metadata m USING (mid) JOIN ids ON m.id = ids.id";
+                $idSrc        = 'm';
             }
 
             $query = "
               UNION
-                SELECT id, ? AS property, ? AS type, '' AS lang, ts_headline('simple', raw, websearch_to_tsquery('simple', ?), ?) AS value 
-                FROM full_text_search JOIN ids USING (id)
+                SELECT $idSrc.id, ? AS property, ? AS type, '' AS lang, ts_headline('simple', raw, websearch_to_tsquery('simple', ?), ?) AS value 
+                FROM full_text_search fts $join
                 $where
             ";
             $prop  = $this->getSchema()->searchFts;

@@ -38,6 +38,7 @@ use acdhOeaw\acdhRepoLib\exception\RepoLibException;
  */
 class SearchTerm {
 
+    const PROPERTY_BINARY   = 'BINARY';
     const DATETIME_REGEX    = '/^-?[0-9]{4,}-[0-9][0-9]-[0-9][0-9](T[0-9][0-9](:[0-9][0-9])?(:[0-9][0-9])?([.][0-9]+)?Z?)?$/';
     const TYPE_NUMBER       = 'number';
     const TYPE_DATE         = 'date';
@@ -209,17 +210,24 @@ class SearchTerm {
     private function getSqlQueryFts(): QueryPart {
         $param = [$this->value];
         $where = '';
-        if (!empty($this->property)) {
-            $where   .= " AND property = ?";
-            $param[] = $this->property;
-        }
+        $join  = '';
         if (!empty($this->language)) {
             $where   .= " AND (lang = ? OR lang IS NULL)";
             $param[] = $this->language;
+            $join    = 'LEFT JOIN metadata m USING (mid)';
+        }
+        if (!empty($this->property)) {
+            if ($this->property === self::PROPERTY_BINARY) {
+                $where .= " AND mid IS NULL";
+            } else {
+                $where   .= " AND property = ?";
+                $param[] = $this->property;
+                $join    = 'INNER JOIN metadata m USING (mid)';
+            }
         }
         $query = "
-            SELECT DISTINCT id 
-            FROM full_text_search 
+            SELECT DISTINCT COALESCE(m.id, fts.id) AS id
+            FROM full_text_search fts $join
             WHERE websearch_to_tsquery('simple', ?) @@ segments $where
         ";
         return new QueryPart($query, $param);
@@ -327,5 +335,4 @@ class SearchTerm {
         }
         return http_build_query($terms);
     }
-
 }
