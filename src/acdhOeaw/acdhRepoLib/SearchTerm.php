@@ -211,12 +211,9 @@ class SearchTerm {
         $param  = [$this->value];
         $where  = '';
         $join   = '';
-        $select = 'fts.id';
         if (!empty($this->language)) {
             $where   .= " AND (lang = ? OR lang IS NULL)";
             $param[] = $this->language;
-            $join    = 'LEFT JOIN metadata m USING (mid)';
-            $select  = 'COALESCE(m.id, fts.id) AS id';
         }
         if (!empty($this->property)) {
             if ($this->property === self::PROPERTY_BINARY) {
@@ -224,13 +221,11 @@ class SearchTerm {
             } else {
                 $where   .= " AND property = ?";
                 $param[] = $this->property;
-                $join    = 'INNER JOIN metadata m USING (mid)';
-                $select  = 'COALESCE(m.id, fts.id) AS id';
             }
         }
         $query = "
-            SELECT DISTINCT $select
-            FROM full_text_search fts $join
+            SELECT DISTINCT COALESCE(m.id, fts.id) AS id
+            FROM full_text_search fts LEFT JOIN metadata m USING (mid)
             WHERE websearch_to_tsquery('simple', ?) @@ segments $where
         ";
         return new QueryPart($query, $param);
