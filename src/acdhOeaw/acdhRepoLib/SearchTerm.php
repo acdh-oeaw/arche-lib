@@ -208,13 +208,15 @@ class SearchTerm {
     }
 
     private function getSqlQueryFts(): QueryPart {
-        $param = [$this->value];
-        $where = '';
-        $join  = '';
+        $param  = [$this->value];
+        $where  = '';
+        $join   = '';
+        $select = 'fts.id';
         if (!empty($this->language)) {
             $where   .= " AND (lang = ? OR lang IS NULL)";
             $param[] = $this->language;
             $join    = 'LEFT JOIN metadata m USING (mid)';
+            $select  = 'COALESCE(m.id, fts.id) AS id';
         }
         if (!empty($this->property)) {
             if ($this->property === self::PROPERTY_BINARY) {
@@ -223,10 +225,11 @@ class SearchTerm {
                 $where   .= " AND property = ?";
                 $param[] = $this->property;
                 $join    = 'INNER JOIN metadata m USING (mid)';
+                $select  = 'COALESCE(m.id, fts.id) AS id';
             }
         }
         $query = "
-            SELECT DISTINCT COALESCE(m.id, fts.id) AS id
+            SELECT DISTINCT $select
             FROM full_text_search fts $join
             WHERE websearch_to_tsquery('simple', ?) @@ segments $where
         ";
