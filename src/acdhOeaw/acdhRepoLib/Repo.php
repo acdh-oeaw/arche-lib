@@ -172,7 +172,7 @@ class Repo implements RepoInterface {
         $realUrl   = array_pop($redirects);
         $realUrl   = preg_replace('|/metadata$|', '', $realUrl);
 
-        $baseUrl = substr($realUrl, 0, strrpos($realUrl, '/'));
+        $baseUrl = substr($realUrl, 0, strrpos($realUrl, '/') + 1);
         $resp    = $client->send(new Request('GET', "$baseUrl/describe"));
         if ($resp->getStatusCode() !== 200) {
             throw new NotFound("Provided URL doesn't resolve to an ARCHE repository", 404);
