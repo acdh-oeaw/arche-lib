@@ -210,7 +210,6 @@ class SearchTerm {
     private function getSqlQueryFts(): QueryPart {
         $param  = [$this->value];
         $where  = '';
-        $join   = '';
         if (!empty($this->language)) {
             $where   .= " AND (lang = ? OR lang IS NULL)";
             $param[] = $this->language;

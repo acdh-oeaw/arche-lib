@@ -190,9 +190,9 @@ class RepoDb implements RepoInterface {
      */
     public function getGraphBySearchTerms(array $searchTerms,
                                           SearchConfig $config): Graph {
-        $query = $this->getPdoStatementBySearchTerms($searchTerms, $config);
-        $graph = $this->parsePdoStatement($query);
-        $config->count = (int)((string) $graph->resource($this->getBaseUrl())->getLiteral($this->getSchema()->searchCount));
+        $query         = $this->getPdoStatementBySearchTerms($searchTerms, $config);
+        $graph         = $this->parsePdoStatement($query);
+        $config->count = (int) ((string) $graph->resource($this->getBaseUrl())->getLiteral($this->getSchema()->searchCount));
         return $graph;
     }
 
@@ -205,9 +205,9 @@ class RepoDb implements RepoInterface {
      */
     public function getGraphBySqlQuery(string $query, array $parameters,
                                        SearchConfig $config): Graph {
-        $query = $this->getPdoStatementBySqlQuery($query, $parameters, $config);
-        $graph = $this->parsePdoStatement($query);
-        $config->count = (int)((string) $graph->resource($this->getBaseUrl())->getLiteral($this->getSchema()->searchCount));
+        $query         = $this->getPdoStatementBySqlQuery($query, $parameters, $config);
+        $graph         = $this->parsePdoStatement($query);
+        $config->count = (int) ((string) $graph->resource($this->getBaseUrl())->getLiteral($this->getSchema()->searchCount));
         return $graph;
     }
 
@@ -244,9 +244,10 @@ class RepoDb implements RepoInterface {
      */
     public function getPdoStatementBySqlQuery(string $query, array $parameters,
                                               SearchConfig $config): PDOStatement {
-        $authQP   = $this->getMetadataAuthQuery();
-        $pagingQP = $this->getPagingQuery($config);
-        $ftsQP    = $this->getFtsQuery($config);
+        $authQP    = $this->getMetadataAuthQuery();
+        $pagingQP  = $this->getPagingQuery($config);
+        $ftsQP     = $this->getFtsQuery($config);
+        $orderByQP = $this->getOrderByQuery($config);
 
         switch (strtolower($config->metadataMode)) {
             case RRI::META_RESOURCE:
@@ -284,8 +285,14 @@ class RepoDb implements RepoInterface {
 
         $query       = "
             WITH
-                allids AS (SELECT ID FROM " . $query . " " . $authQP->query . "),
-                ids AS (SELECT id FROM allids $pagingQP->query)
+                allids AS (
+                    SELECT id FROM ($query) t $authQP->query
+                ),
+                ids AS (
+                    SELECT id FROM allids
+                        $orderByQP->query
+                    $pagingQP->query
+                )
             $metaQuery
             UNION
             SELECT id, ?::text AS property, ?::text AS type, ''::text AS lang, ?::text AS value FROM ids
@@ -297,7 +304,7 @@ class RepoDb implements RepoInterface {
             $this->getSchema()->searchMatch, RDF::XSD_BOOLEAN, 'true',
             $this->getSchema()->searchCount, RDF::XSD_INTEGER,
         ];
-        $param       = array_merge($parameters, $authQP->param, $pagingQP->param, $metaParam, $schemaParam, $ftsQP->param);
+        $param       = array_merge($parameters, $authQP->param, $orderByQP->param, $pagingQP->param, $metaParam, $schemaParam, $ftsQP->param);
         $this->logQuery($query, $param);
 
         $query = $this->pdo->prepare($query);
@@ -376,6 +383,31 @@ class RepoDb implements RepoInterface {
             $param = array_merge([$prop, $type, $cfg->ftsQuery, $options], $whereParam);
         }
         return new QueryPart($query, $param);
+    }
+
+    private function getOrderByQuery(SearchConfig $config): QueryPart {
+        $qp = new QueryPart();
+        if (!is_array($config->orderBy) || count($config->orderBy) === 0) {
+            return $qp;
+        }
+        $lang    = !empty($config->orderByLang) ? "AND (type <> ? OR lang = ?)" : '';
+        $orderBy = '';
+        foreach ($config->orderBy as $n => $property) {
+            $desc = '';
+            if (substr($property, 0, 1) === '^') {
+                $desc     = 'DESC';
+                $property = substr($property, 1);
+            }
+            $qp->query   .= "LEFT JOIN (SELECT id, min(value) AS _ob$n FROM metadata WHERE property = ? $lang GROUP BY 1) t$n USING (id)\n";
+            $qp->param[] = $property;
+            if (!empty($config->orderByLang)) {
+                $qp->param[] = RDF::XSD_STRING;
+                $qp->param[] = $config->orderByLang;
+            }
+            $orderBy .= ($n > 0 ? ', ' : '') . "_ob$n $desc NULLS LAST";
+        }
+        $qp->query .= "ORDER BY $orderBy\n";
+        return $qp;
     }
 
     /**

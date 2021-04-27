@@ -99,12 +99,22 @@ class SearchConfig {
     public $count;
     
     /**
-     * List of metadata properties to order results by
+     * List of metadata properties to order results by.
+     * 
+     * Only literal values are used for ordering.
      * 
      * @var array<string>
      */
     public $orderBy;
 
+    /**
+     * If specified, only property values with a given language are taken into
+     * account for ordering search matches.
+     * 
+     * @var string
+     */
+    public $orderByLang;
+    
     /**
      * A full text search query used for search results highlighting.
      * 
