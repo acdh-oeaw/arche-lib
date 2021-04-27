@@ -191,7 +191,9 @@ class RepoDb implements RepoInterface {
     public function getGraphBySearchTerms(array $searchTerms,
                                           SearchConfig $config): Graph {
         $query = $this->getPdoStatementBySearchTerms($searchTerms, $config);
-        return $this->parsePdoStatement($query);
+        $graph = $this->parsePdoStatement($query);
+        $config->count = (int)((string) $graph->resource($this->getBaseUrl())->getLiteral($this->getSchema()->searchCount));
+        return $graph;
     }
 
     /**
@@ -204,7 +206,9 @@ class RepoDb implements RepoInterface {
     public function getGraphBySqlQuery(string $query, array $parameters,
                                        SearchConfig $config): Graph {
         $query = $this->getPdoStatementBySqlQuery($query, $parameters, $config);
-        return $this->parsePdoStatement($query);
+        $graph = $this->parsePdoStatement($query);
+        $config->count = (int)((string) $graph->resource($this->getBaseUrl())->getLiteral($this->getSchema()->searchCount));
+        return $graph;
     }
 
     /**
@@ -279,15 +283,20 @@ class RepoDb implements RepoInterface {
         }
 
         $query       = "
-            WITH ids AS (
-                SELECT id FROM (" . $query . ") t1 " . $authQP->query . " $pagingQP->query
-            )
+            WITH
+                allids AS (" . $query . "),
+                ids AS (SELECT id FROM allids " . $authQP->query . " $pagingQP->query)
             $metaQuery
             UNION
             SELECT id, ?::text AS property, ?::text AS type, ''::text AS lang, ?::text AS value FROM ids
+            UNION
+            SELECT null::bigint, ?::text AS property, ?::text AS type, ''::text AS lang, count(*)::text AS value FROM allids
             $ftsQP->query
         ";
-        $schemaParam = [$this->getSchema()->searchMatch, RDF::XSD_BOOLEAN, 'true'];
+        $schemaParam = [
+            $this->getSchema()->searchMatch, RDF::XSD_BOOLEAN, 'true',
+            $this->getSchema()->searchCount, RDF::XSD_INTEGER,
+        ];
         $param       = array_merge($parameters, $authQP->param, $pagingQP->param, $metaParam, $schemaParam, $ftsQP->param);
         $this->logQuery($query, $param);
 

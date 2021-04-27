@@ -45,6 +45,8 @@ class SearchConfig {
         foreach ($sc as $k => $v) {
             if (isset($_POST[$k])) {
                 $sc->$k = $_POST[$k];
+            } elseif (isset($_POST[$k . '[]'])) {
+                $sc->$k = $_POST[$k . '[]'];
             }
         }
 
@@ -86,6 +88,16 @@ class SearchConfig {
      */
     public $offset;
 
+    /**
+     * Total number of resources matching the search (despite limit/offset)
+     * 
+     * Set by RepoInterface::getGraphBy*() and RepoInterface::getResourceBy*() 
+     * methods.
+     * 
+     * @var int
+     */
+    public $count;
+    
     /**
      * A full text search query used for search results highlighting.
      * 
@@ -205,5 +217,4 @@ class SearchConfig {
     public function toQuery(): string {
         return http_build_query($this->toArray());
     }
-
 }

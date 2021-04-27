@@ -322,7 +322,7 @@ class Repo implements RepoInterface {
                 $class = $class ?? self::$resourceClass;
                 return new $class($matches[0]->getUri(), $this);
             default:
-                $uris  = implode(', ', array_map(function($x) {
+                $uris  = implode(', ', array_map(function ($x) {
                         return $x->getUri();
                     }, $matches));
                 throw new AmbiguousMatch("Many resources match the search: $uris");
@@ -351,7 +351,7 @@ class Repo implements RepoInterface {
         $body    = http_build_query($body);
         $req     = new Request('post', $this->baseUrl . 'search', $headers, $body);
         $resp    = $this->sendRequest($req);
-        return $this->parseSearchResponse($resp, $config->class);
+        return $this->parseSearchResponse($resp, $config);
     }
 
     /**
@@ -377,7 +377,7 @@ class Repo implements RepoInterface {
         $req  = new Request('post', $this->baseUrl . 'search', $headers, $body);
 
         $resp = $this->sendRequest($req);
-        return $this->parseSearchResponse($resp, $config->class);
+        return $this->parseSearchResponse($resp, $config);
     }
 
     /**
@@ -465,12 +465,11 @@ class Repo implements RepoInterface {
      * Parses search request response into an array of `RepoResource` objects.
      * 
      * @param Response $resp PSR-7 search request response
-     * @param string $class class of instantiated repo resource objects (to be used
-     *   by extension libraries)
+     * @param SearchConfig $config search configuration object
      * @return array
      */
-    private function parseSearchResponse(Response $resp, string $class = null): array {
-        $class = $class ?? self::$resourceClass;
+    private function parseSearchResponse(Response $resp, SearchConfig $config): array {
+        $class = $config->class ?? self::$resourceClass;
 
         $graph = new Graph();
         $body  = $resp->getBody();
@@ -479,6 +478,8 @@ class Repo implements RepoInterface {
         }
         $format = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
         $graph->parse($body, $format);
+
+        $config->count = (int) ((string) $graph->resource($this->getBaseUrl())->getLiteral($this->getSchema()->searchCount));
 
         $resources = $graph->resourcesMatching($this->schema->searchMatch);
         $objects   = [];
