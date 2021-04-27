@@ -284,8 +284,8 @@ class RepoDb implements RepoInterface {
 
         $query       = "
             WITH
-                allids AS (" . $query . "),
-                ids AS (SELECT id FROM allids " . $authQP->query . " $pagingQP->query)
+                allids AS (SELECT ID FROM " . $query . " " . $authQP->query . "),
+                ids AS (SELECT id FROM allids $pagingQP->query)
             $metaQuery
             UNION
             SELECT id, ?::text AS property, ?::text AS type, ''::text AS lang, ?::text AS value FROM ids

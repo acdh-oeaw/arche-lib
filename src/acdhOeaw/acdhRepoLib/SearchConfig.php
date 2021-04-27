@@ -99,6 +99,13 @@ class SearchConfig {
     public $count;
     
     /**
+     * List of metadata properties to order results by
+     * 
+     * @var array<string>
+     */
+    public $orderBy;
+
+    /**
      * A full text search query used for search results highlighting.
      * 
      * See https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES
