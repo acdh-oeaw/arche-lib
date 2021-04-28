@@ -46,6 +46,7 @@ class SearchTerm {
     const TYPE_STRING       = 'string';
     const TYPE_RELATION     = 'relation';
     const TYPE_FTS          = 'fts';
+    const OPERATOR_IN       = 'in';
     const COLUMN_STRING     = 'value';
     const STRING_MAX_LENGTH = 1000;
 
@@ -61,6 +62,7 @@ class SearchTerm {
         '>=' => null,
         '~'  => self::TYPE_STRING,
         '@@' => self::TYPE_FTS,
+        'in' => self::OPERATOR_IN,
     ];
     static private $typesToColumns = [
         RDF::XSD_STRING        => 'value',
@@ -107,7 +109,9 @@ class SearchTerm {
     /**
      * Operator to be used for the RDF triple value comparison.
      * 
-     * One of `=`, `<`, `<=`, `>`, `>=`, `~` (regular expresion match), `@@` (full text search match)
+     * One of `=`, `<`, `<=`, `>`, `>=`, `~` (regular expresion match), 
+     * `@@` (full text search match), 
+     * `in` (equals one out of coma separated list of values)
      * 
      * @var string
      * @see $value
@@ -197,19 +201,36 @@ class SearchTerm {
         }
 
         switch ($type) {
+            case self::OPERATOR_IN:
+                return $this->getSqlQueryIn($baseUrl, $idProp, $nonRelationProperties);
             case self::TYPE_FTS:
                 return $this->getSqlQueryFts();
             case self::TYPE_RELATION:
-            case RDF::XSD_ANY_URI:
+            case RDF::RDFS_RESOURCE:
                 return $this->getSqlQueryUri();
             default:
                 return $this->getSqlQueryMeta($type, $baseUrl, $idProp);
         }
     }
 
+    private function getSqlQueryIn(string $baseUrl, string $idProp,
+                                   array $nonRelationProperties): QueryPart {
+        $values = explode(',', $this->value);
+        $query  = new QueryPart();
+        foreach ($values as $n => $value) {
+            $term           = clone $this;
+            $term->operator = '=';
+            $term->value    = $value;
+            $termQuery      = $term->getSqlQuery($baseUrl, $idProp, $nonRelationProperties);
+            $query->query   .= ($n > 0 ? " UNION " : '') . $termQuery->query . "\n";
+            $query->param   = array_merge($query->param, $termQuery->param);
+        }
+        return $query;
+    }
+
     private function getSqlQueryFts(): QueryPart {
-        $param  = [$this->value];
-        $where  = '';
+        $param = [$this->value];
+        $where = '';
         if (!empty($this->language)) {
             $where   .= " AND (lang = ? OR lang IS NULL)";
             $param[] = $this->language;

@@ -105,7 +105,7 @@ class SearchConfig {
      * 
      * @var array<string>
      */
-    public $orderBy;
+    public $orderBy = [];
 
     /**
      * If specified, only property values with a given language are taken into
