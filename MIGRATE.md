@@ -175,8 +175,8 @@ The database structure is as follows:
     * value - triple value as a string
 * full_text_search - search full text search indices:
     * ftsid - row table primary identifier
-    * id - resource primary identifier
-    * property - RDF property of the metadata triple (or `BINARY` for the resource binary content)
+    * id - resource primary identifier (only for binary content)
+    * mid - metadata row identifier - foreign key to the metadata table (only for non-binary content)
     * segments - segmentized and indexed content of the metatadata triple / resource binary content
     * raw - string value of the metatadata triple / resource binary content (required for highlighting)
 
@@ -212,12 +212,28 @@ Use the search term search with `@@` as an operator.
 The `$config` parameter allows to control advanced search configuration:
 
 * paging
+* sorting
 * metadata fetch modes
 * full text search highlighting
 
 #### Paging
 
 Just set the `offset` and `limit` properties of the `SearchConfig` object.
+
+Remember paging depends on sorting.
+
+#### Sorting
+
+`orderBy` property can be set to an array of RDF properties to sort by.
+
+If descending sort order is needed, prefix the property URL with the `^`.
+
+Only literal property values are used for ordering.
+
+You can specify the desired language with the `orderByLang` property.
+It is applied to all `orderBy` properties but of course only to ones having string values.
+
+If there are many values of an indicated property for a given resource, minimum value is used for sorting.
 
 #### Metadata fetch modes
 
