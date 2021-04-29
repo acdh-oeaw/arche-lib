@@ -42,7 +42,7 @@ interface RepoResourceInterface {
     /**
      * Include metadata of all resources a given one points to and all resources
      * which point to it. If parentProperty is specified, only resources
-     * pointing to a given one with a specified property are included.
+     * pointing to a given one with a specified RDF predicate are included.
      */
     const META_NEIGHBORS         = 'neighbors';
 
