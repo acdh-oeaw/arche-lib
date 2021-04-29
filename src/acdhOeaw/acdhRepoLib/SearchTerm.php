@@ -354,7 +354,7 @@ class SearchTerm {
         $terms = [];
         foreach ($this as $k => $v) {
             if ($v !== null) {
-                $terms[$k . '[]'] = (string) $v;
+                $terms[$k . '[]'] = is_array($v) ? $v : (string) $v;
             }
         }
         return http_build_query($terms);

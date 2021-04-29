@@ -249,7 +249,8 @@ class RepoDb implements RepoInterface {
         $ftsQP     = $this->getFtsQuery($config);
         $orderByQP = $this->getOrderByQuery($config);
 
-        switch (strtolower($config->metadataMode)) {
+        $mode = strtolower($config->metadataMode);
+        switch ($mode) {
             case RRI::META_RESOURCE:
                 $metaQuery = "
                     SELECT id, property, type, lang, value
@@ -268,12 +269,16 @@ class RepoDb implements RepoInterface {
                 $metaParam = [$config->metadataParentProperty];
                 break;
             case RRI::META_RELATIVES:
-                $metaQuery = "SELECT (get_relatives_metadata(id, ?)).* FROM ids";
-                $metaParam = [$config->metadataParentProperty];
-                break;
+            case RRI::META_RELATIVES_ONLY:
+            case RRI::META_RELATIVES_REVERSE:
             case RRI::META_PARENTS:
-                $metaQuery = "SELECT (get_relatives_metadata(id, ?, 0)).* FROM ids";
-                $metaParam = [$config->metadataParentProperty];
+            case RRI::META_PARENTS_ONLY:
+            case RRI::META_PARENTS_REVERSE:
+                $max       = $mode === RRI::META_PARENTS || $mode === RRI::META_PARENTS_ONLY || $mode === RRI::META_PARENTS_REVERSE ? 0 : 999999;
+                $neighbors = $mode === RRI::META_PARENTS_ONLY || $mode === RRI::META_RELATIVES_ONLY ? false : true;
+                $reverse   = $mode === RRI::META_PARENTS_REVERSE || $mode === RRI::META_RELATIVES_REVERSE ? true : false;
+                $metaQuery = "SELECT (get_relatives_metadata(id, ?, ?, -999999, ?, ?)).* FROM ids";
+                $metaParam = [$config->metadataParentProperty, $max, $neighbors, $reverse];
                 break;
             case RRI::META_IDS:
                 $metaQuery = "SELECT id, property, type, lang, value FROM metadata JOIN ids USING (id) WHERE property = ?";

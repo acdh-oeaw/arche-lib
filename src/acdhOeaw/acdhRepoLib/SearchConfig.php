@@ -54,20 +54,19 @@ class SearchConfig {
     }
 
     /**
-     * Controls how broad metadata should be returned for resources matching the search.
+     * Controls amount of metadata included in the search results.
      * 
-     * See `RepoResource::loadMetadata()` method `$mode` parameter description.
+     * Value should be one of `RepoResourceInterface::META_*` constants.
      * 
      * @var string
-     * @see \acdhOeaw\acdhRepoLib\RepoResource::loadMetadata()
+     * @see \acdhOeaw\acdhRepoLib\RepoResourceInterface::META_RESOURCE
      */
     public $metadataMode;
 
     /**
-     * See `RepoResource::loadMetadata()` method `$parentProperty` parameter description.
+     * RDF predicate used by some of metadataModes.
      * 
-     * @var string
-     * @see \acdhOeaw\acdhRepoLib\RepoResource::loadMetadata()
+     * @var string | null
      */
     public $metadataParentProperty;
 
