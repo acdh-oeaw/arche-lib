@@ -278,7 +278,7 @@ class RepoDb implements RepoInterface {
                 $neighbors = $mode === RRI::META_PARENTS_ONLY || $mode === RRI::META_RELATIVES_ONLY ? false : true;
                 $reverse   = $mode === RRI::META_PARENTS_REVERSE || $mode === RRI::META_RELATIVES_REVERSE ? true : false;
                 $metaQuery = "SELECT (get_relatives_metadata(id, ?, ?, -999999, ?, ?)).* FROM ids";
-                $metaParam = [$config->metadataParentProperty, $max, $neighbors, $reverse];
+                $metaParam = [$config->metadataParentProperty, $max, (int) $neighbors, (int) $reverse];
                 break;
             case RRI::META_IDS:
                 $metaQuery = "SELECT id, property, type, lang, value FROM metadata JOIN ids USING (id) WHERE property = ?";
