@@ -62,7 +62,6 @@ class SearchTerm {
         '>=' => null,
         '~'  => self::TYPE_STRING,
         '@@' => self::TYPE_FTS,
-        'in' => self::OPERATOR_IN,
     ];
     static private $typesToColumns = [
         RDF::XSD_STRING        => 'value',
@@ -102,7 +101,7 @@ class SearchTerm {
     /**
      * Property to be matched by the RDF triple.
      * 
-     * @var string
+     * @var array<string> | string
      */
     public $property;
 
@@ -111,7 +110,6 @@ class SearchTerm {
      * 
      * One of `=`, `<`, `<=`, `>`, `>=`, `~` (regular expresion match), 
      * `@@` (full text search match), 
-     * `in` (equals one out of coma separated list of values)
      * 
      * @var string
      * @see $value
@@ -121,7 +119,7 @@ class SearchTerm {
     /**
      * Value to be matched by the RDF triple (with a given operator)
      * 
-     * @var mixed
+     * @var array<scalar> | scalar
      * @see $operator
      */
     public $value;
@@ -145,14 +143,14 @@ class SearchTerm {
     /**
      * Creates a search term object.
      * 
-     * @param string|null $property property to be matched by the RDF triple
-     * @param type $value value to be matched by the RDF triple (with a given operator)
+     * @param array<string>|string|null $property property to be matched by the RDF triple
+     * @param array<scalar>|scalar|null $value value to be matched by the RDF triple (with a given operator)
      * @param string $operator operator used to compare the RDF triple value
      * @param string|null $type value to be matched by the RDF triple 
      *   (one of base XSD types or one of `TYPE_...` constants defined by this class)
      * @param string|null $language language to be matched by the RDF triple
      */
-    public function __construct(?string $property = null, $value = null,
+    public function __construct($property = null, $value = null,
                                 string $operator = '=', ?string $type = null,
                                 ?string $language = null) {
         $this->property = $property;
@@ -180,6 +178,10 @@ class SearchTerm {
      */
     public function getSqlQuery(string $baseUrl, string $idProp,
                                 array $nonRelationProperties): QueryPart {
+        if (is_array($this->property) || is_array($this->value)) {
+            return $this->getSqlQueryOr($baseUrl, $idProp, $nonRelationProperties);
+        }
+
         $type = self::$operators[$this->operator];
         // if type not enforced by the operator, try the provided one
         if ($type === null) {
@@ -201,8 +203,6 @@ class SearchTerm {
         }
 
         switch ($type) {
-            case self::OPERATOR_IN:
-                return $this->getSqlQueryIn($baseUrl, $idProp, $nonRelationProperties);
             case self::TYPE_FTS:
                 return $this->getSqlQueryFts();
             case self::TYPE_RELATION:
@@ -213,17 +213,23 @@ class SearchTerm {
         }
     }
 
-    private function getSqlQueryIn(string $baseUrl, string $idProp,
+    private function getSqlQueryOr(string $baseUrl, string $idProp,
                                    array $nonRelationProperties): QueryPart {
-        $values = explode(',', $this->value);
-        $query  = new QueryPart();
-        foreach ($values as $n => $value) {
-            $term           = clone $this;
-            $term->operator = '=';
-            $term->value    = $value;
-            $termQuery      = $term->getSqlQuery($baseUrl, $idProp, $nonRelationProperties);
-            $query->query   .= ($n > 0 ? " UNION " : '') . $termQuery->query . "\n";
-            $query->param   = array_merge($query->param, $termQuery->param);
+        $properties = is_array($this->property) ? $this->property : [$this->property];
+        $values     = is_array($this->value) ? $this->value : [$this->value];
+        $query      = new QueryPart();
+        $n          = 0;
+        foreach ($properties as $property) {
+            foreach ($values as $value) {
+                $term           = clone $this;
+                $term->operator = '=';
+                $term->property = $property;
+                $term->value    = $value;
+                $termQuery      = $term->getSqlQuery($baseUrl, $idProp, $nonRelationProperties);
+                $query->query   .= ($n > 0 ? " UNION " : '') . $termQuery->query . "\n";
+                $query->param   = array_merge($query->param, $termQuery->param);
+                $n++;
+            }
         }
         return $query;
     }
