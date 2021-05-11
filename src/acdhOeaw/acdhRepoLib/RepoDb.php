@@ -278,7 +278,9 @@ class RepoDb implements RepoInterface {
                 $neighbors = $mode === RRI::META_PARENTS_ONLY || $mode === RRI::META_RELATIVES_ONLY ? false : true;
                 $reverse   = $mode === RRI::META_PARENTS_REVERSE || $mode === RRI::META_RELATIVES_REVERSE ? true : false;
                 $metaQuery = "SELECT (get_relatives_metadata(id, ?, ?, -999999, ?, ?)).* FROM ids";
-                $metaParam = [$config->metadataParentProperty, $max, (int) $neighbors, (int) $reverse];
+                $metaParam = [
+                    $config->metadataParentProperty, $max, (int) $neighbors, (int) $reverse
+                ];
                 break;
             case RRI::META_IDS:
                 $metaQuery = "SELECT id, property, type, lang, value FROM metadata JOIN ids USING (id) WHERE property = ?";
@@ -457,9 +459,11 @@ class RepoDb implements RepoInterface {
                 case 'URI':
                     $resource->addResource($triple->property, $triple->value);
                     break;
+                case 'GEOM':
+                    $triple->type = RDF::XSD_STRING;
                 default:
-                    $type    = empty($triple->lang) & $triple->type !== RDF::XSD_STRING ? $triple->type : null;
-                    $literal = new Literal($triple->value, !empty($triple->lang) ? $triple->lang : null, $type);
+                    $type         = empty($triple->lang) & $triple->type !== RDF::XSD_STRING ? $triple->type : null;
+                    $literal      = new Literal($triple->value, !empty($triple->lang) ? $triple->lang : null, $type);
                     $resource->add($triple->property, $literal);
             }
         }
