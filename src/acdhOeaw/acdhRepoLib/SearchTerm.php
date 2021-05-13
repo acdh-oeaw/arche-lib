@@ -46,6 +46,7 @@ class SearchTerm {
     const TYPE_STRING       = 'string';
     const TYPE_RELATION     = 'relation';
     const TYPE_FTS          = 'fts';
+    const TYPE_SPATIAL      = 'spatial';
     const OPERATOR_IN       = 'in';
     const COLUMN_STRING     = 'value';
     const STRING_MAX_LENGTH = 1000;
@@ -62,6 +63,9 @@ class SearchTerm {
         '>=' => null,
         '~'  => self::TYPE_STRING,
         '@@' => self::TYPE_FTS,
+        '&&' => self::TYPE_SPATIAL,
+        '&>' => self::TYPE_SPATIAL,
+        '&<' => self::TYPE_SPATIAL,
     ];
     static private $typesToColumns = [
         RDF::XSD_STRING        => 'value',
@@ -160,7 +164,7 @@ class SearchTerm {
         $this->value    = $value;
         $this->language = $language;
 
-        if (!in_array($this->operator, array_keys(self::$operators))) {
+        if (!in_array(substr($this->operator, 0, 2), array_keys(self::$operators))) {
             throw new RepoLibException('Unknown operator ' . $this->operator, 400);
         }
         if (!in_array($this->type, array_keys(self::$typesToColumns)) && $this->type !== null) {
@@ -183,7 +187,7 @@ class SearchTerm {
             return $this->getSqlQueryOr($baseUrl, $idProp, $nonRelationProperties);
         }
 
-        $type = self::$operators[$this->operator];
+        $type = self::$operators[substr($this->operator, 0, 2)]; // substr for spatial operators with distance
         // if type not enforced by the operator, try the provided one
         if ($type === null) {
             $type = $this->type;
@@ -206,6 +210,8 @@ class SearchTerm {
         switch ($type) {
             case self::TYPE_FTS:
                 return $this->getSqlQueryFts();
+            case self::TYPE_SPATIAL:
+                return $this->getSqlQuerySpatial();
             case self::TYPE_RELATION:
             case RDF::RDFS_RESOURCE:
                 return $this->getSqlQueryUri();
@@ -280,6 +286,34 @@ class SearchTerm {
         return new QueryPart($query, $param);
     }
 
+    private function getSqlQuerySpatial(): QueryPart {
+        $param      = [$this->value];
+        $valueQuery = 'st_geomfromtext(?, 4326)';
+        switch (substr($this->operator, 1, 1)) {
+            case '&':
+                $dist = (int) substr($this->operator, 2);
+                if ($dist > 0) {
+                    $func    = "st_dwithin(geom, $valueQuery::geography, ?, false)";
+                    $param[] = $dist;
+                } else {
+                    $func = "st_intersects(geom, $valueQuery)";
+                }
+                break;
+            case '>':
+                $func = "st_contains(geom::geometry, $valueQuery)";
+                break;
+            case '<':
+                $func = "st_contains($valueQuery, geom::geometry)";
+                break;
+        }
+        $query = "
+            SELECT DISTINCT COALESCE(m.id, ss.id) AS id
+            FROM spatial_search ss LEFT JOIN metadata m USING (mid)
+            WHERE $func
+        ";
+        return new QueryPart($query, $param);
+    }
+
     private function getSqlQueryMeta(string $type, string $baseUrl,
                                      string $idProp): QueryPart {
         $where = $param = [];
@@ -305,7 +339,7 @@ class SearchTerm {
                 $where[] = $column . ' ' . $this->operator . ' ?';
                 $param[] = $this->value;
             } else {
-                // dates require special handling taking into account they might be out of timestamp range
+                // dates require special handling taking into account they might be out of the timestamp range
                 $valueN = (int) $this->value;
                 if ($valueN >= -4713) {
                     $valueT = $this->value;
