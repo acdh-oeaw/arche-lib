@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib;
+namespace acdhOeaw\arche\lib;
 
 use EasyRdf\Resource;
 use zozlak\RdfConstants as RDF;
@@ -51,7 +51,7 @@ trait RepoResourceTrait {
 
     /**
      *
-     * @var \acdhOeaw\acdhRepoLib\RepoInterface
+     * @var \acdhOeaw\arche\lib\RepoInterface
      */
     private $repo;
 
@@ -73,7 +73,7 @@ trait RepoResourceTrait {
     /**
      * Returns repository connection object associated with the given resource object.
      * 
-     * @return \acdhOeaw\acdhRepoLib\Repo
+     * @return \acdhOeaw\arche\lib\Repo
      */
     public function getRepo(): RepoInterface {
         return $this->repo;

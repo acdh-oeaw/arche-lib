@@ -24,18 +24,18 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib\exception;
+namespace acdhOeaw\arche\lib\exception;
 
 use Throwable;
 
 /**
- * Description of AmbiguousMatch
+ * Description of Deleted
  *
  * @author zozlak
  */
-class AmbiguousMatch extends RepoLibException {
+class Deleted extends RepoLibException {
 
-    public function __construct(string $message = "", int $code = 500,
+    public function __construct(string $message = "", int $code = 410,
                                 Throwable $previous = NULL) {
         parent::__construct($message, $code, $previous);
     }

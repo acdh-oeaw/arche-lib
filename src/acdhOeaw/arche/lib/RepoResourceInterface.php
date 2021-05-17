@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib;
+namespace acdhOeaw\arche\lib;
 
 use EasyRdf\Resource;
 
@@ -95,7 +95,7 @@ interface RepoResourceInterface {
      * Creates an object representing a repository resource.
      * 
      * @param string $url URL of the resource
-     * @param \acdhOeaw\acdhRepoLib\RepoInterface $repo repository connection object
+     * @param \acdhOeaw\arche\lib\RepoInterface $repo repository connection object
      */
     public function __construct(string $url, RepoInterface $repo);
 
@@ -109,7 +109,7 @@ interface RepoResourceInterface {
     /**
      * Returns repository connection object associated with the given resource object.
      * 
-     * @return \acdhOeaw\acdhRepoLib\Repo
+     * @return \acdhOeaw\arche\lib\Repo
      */
     public function getRepo(): RepoInterface;
 

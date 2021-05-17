@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib;
+namespace acdhOeaw\arche\lib;
 
 /**
  * Description of SchemaTest

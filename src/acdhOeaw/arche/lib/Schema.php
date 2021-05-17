@@ -24,20 +24,43 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib\exception;
-
-use Throwable;
+namespace acdhOeaw\arche\lib;
 
 /**
- * Description of Deleted
+ * A container for configuration properties.
+ * 
+ * Assures deep copies of complex configuration objects being returned to prevent
+ * surprising configuration modifications.
  *
  * @author zozlak
  */
-class Deleted extends RepoLibException {
+class Schema {
 
-    public function __construct(string $message = "", int $code = 410,
-                                Throwable $previous = NULL) {
-        parent::__construct($message, $code, $previous);
+    private $schema;
+
+    /**
+     * Creates the Schema object.
+     * 
+     * @param object $schema object with configuration properties
+     */
+    public function __construct(object $schema) {
+        $this->schema = $schema;
+    }
+
+    /**
+     * Magic method implementing accessing properties.
+     * 
+     * @param type $name configuration property to be returned
+     * @return mixed
+     */
+    public function __get($name) {
+        if (!isset($this->schema->$name)) {
+            return null;
+        } elseif (is_object($this->schema->$name)) {
+            return json_decode(json_encode($this->schema->$name));
+        } else {
+            return $this->schema->$name;
+        }
     }
 
 }

@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib;
+namespace acdhOeaw\arche\lib;
 
 /**
  * Interface for metadata access authorization.
@@ -37,7 +37,7 @@ interface AuthInterface {
 
     /**
      * 
-     * @return \acdhOeaw\acdhRepoLib\QueryPart
+     * @return \acdhOeaw\arche\lib\QueryPart
      */
     public function getMetadataAuthQuery(): QueryPart;
 }

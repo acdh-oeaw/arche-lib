@@ -24,54 +24,20 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib;
+namespace acdhOeaw\arche\lib\exception;
+
+use Throwable;
 
 /**
- * Simple container for an SQL query and its parameters
+ * Description of AmbiguousMatch
  *
  * @author zozlak
  */
-class QueryPart {
+class AmbiguousMatch extends RepoLibException {
 
-    static private $n = 1;
-
-    /**
-     *
-     * @var string
-     */
-    public $query;
-
-    /**
-     *
-     * @var array
-     */
-    public $param;
-
-    /**
-     * 
-     * @param string $query
-     * @param array $param
-     */
-    public function __construct(string $query = '', array $param = []) {
-        $this->query = $query;
-        $this->param = $param;
-    }
-
-    /**
-     * Pastes the join code and the query if the query is not empty.
-     * 
-     * If the query is empty, returns an empty string.
-     * 
-     * @param string $type left side of the join clause, e.g. `LEFT JOIN`
-     * @param string $clause right side of the join clause, e.g. `USING(id)`
-     * @return string
-     */
-    public function join(string $type, string $clause): string {
-        if (empty($this->query)) {
-            return '';
-        }
-        self::$n++;
-        return $type . " (" . $this->query . ") _t" . self::$n . " " . $clause;
+    public function __construct(string $message = "", int $code = 500,
+                                Throwable $previous = NULL) {
+        parent::__construct($message, $code, $previous);
     }
 
 }

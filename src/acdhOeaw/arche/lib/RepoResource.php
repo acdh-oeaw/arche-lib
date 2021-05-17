@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib;
+namespace acdhOeaw\arche\lib;
 
 use EasyRdf\Graph;
 use GuzzleHttp\Psr7\Request;
@@ -58,7 +58,7 @@ class RepoResource implements RepoResourceInterface {
                                    string $uri = null): self {
 
         $uri   = $uri ?? $response->getHeader('Location')[0];
-        /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
+        /* @var $res \acdhOeaw\arche\lib\RepoResource */
         $class = get_called_class();
         $res   = new $class($uri, $repo);
 
@@ -71,7 +71,7 @@ class RepoResource implements RepoResourceInterface {
 
     /**
      *
-     * @var acdhOeaw\acdhRepoLib\Repo
+     * @var acdhOeaw\arche\lib\Repo
      */
     private $repo;
 
@@ -85,7 +85,7 @@ class RepoResource implements RepoResourceInterface {
      * Creates an object representing a repository resource.
      * 
      * @param string $url URL of the resource
-     * @param \acdhOeaw\acdhRepoLib\RepoInterface $repo repository connection object
+     * @param \acdhOeaw\arche\lib\RepoInterface $repo repository connection object
      */
     public function __construct(string $url, RepoInterface $repo) {
         $this->url  = $url;
@@ -105,7 +105,7 @@ class RepoResource implements RepoResourceInterface {
     /**
      * Updates repository resource binary content with a given payload.
      * 
-     * @param \acdhOeaw\acdhRepoLib\BinaryPayload $content new content
+     * @param \acdhOeaw\arche\lib\BinaryPayload $content new content
      * @return void
      */
     public function updateContent(BinaryPayload $content): void {
@@ -184,7 +184,7 @@ class RepoResource implements RepoResourceInterface {
             do {
                 $refRes = $this->repo->getResourcesBySqlQuery($query, [$this->getId()], $cfg);
                 foreach ($refRes as $res) {
-                    /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
+                    /* @var $res \acdhOeaw\arche\lib\RepoResource */
                     $res->loadMetadata(false, self::META_RESOURCE);
                     $meta = $res->getMetadata();
                     foreach ($meta->propertyUris() as $p) {
@@ -227,7 +227,7 @@ class RepoResource implements RepoResourceInterface {
         do {
             $resources = $this->repo->getResourcesBySqlQuery($query, $param, $cfg);
             foreach ($resources as $res) {
-                /* @var $res \acdhOeaw\acdhRepoLib\RepoResource */
+                /* @var $res \acdhOeaw\arche\lib\RepoResource */
                 $res->delete($tombstone, $references);
             }
             // don't increment offset - every query excludes resources which were already removed

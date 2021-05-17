@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib;
+namespace acdhOeaw\arche\lib;
 
 /**
  * Stores the repository search configuration, e.g. full text search options and pagination options.
@@ -59,7 +59,7 @@ class SearchConfig {
      * Value should be one of `RepoResourceInterface::META_*` constants.
      * 
      * @var string
-     * @see \acdhOeaw\acdhRepoLib\RepoResourceInterface::META_RESOURCE
+     * @see \acdhOeaw\arche\lib\RepoResourceInterface::META_RESOURCE
      */
     public $metadataMode;
 
@@ -216,7 +216,7 @@ class SearchConfig {
      * Returns HTTP request headers setting metadata read mode and metadata parent property
      * according to the search config settings.
      * 
-     * @param \acdhOeaw\acdhRepoLib\Repo $repo
+     * @param \acdhOeaw\arche\lib\Repo $repo
      * @return type
      */
     public function getHeaders(Repo $repo) {

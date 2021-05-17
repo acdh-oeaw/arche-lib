@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib;
+namespace acdhOeaw\arche\lib;
 
 use Psr\Log\AbstractLogger;
 
@@ -45,14 +45,14 @@ trait RepoTrait {
     /**
      * An object providing mappings of repository REST API parameters to HTTP headers used by a given repository instance.
      * 
-     * @var \acdhOeaw\acdhRepoLib\Schema
+     * @var \acdhOeaw\arche\lib\Schema
      */
     private $headers;
 
     /**
      * An object providing mappings of repository concepts to RDF properties used to denote them by a given repository instance.
      * 
-     * @var \acdhOeaw\acdhRepoLib\Schema
+     * @var \acdhOeaw\arche\lib\Schema
      */
     private $schema;
 
@@ -74,7 +74,7 @@ trait RepoTrait {
     /**
      * Returns the `Schema` object defining repository entities to RDF property mappings.
      * 
-     * @return \acdhOeaw\acdhRepoLib\Schema
+     * @return \acdhOeaw\arche\lib\Schema
      */
     public function getSchema(): Schema {
         return $this->schema;
@@ -98,7 +98,7 @@ trait RepoTrait {
      * @param string $id
      * @param string $class an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
-     * @return \acdhOeaw\acdhRepoLib\RepoResource
+     * @return \acdhOeaw\arche\lib\RepoResource
      */
     public function getResourceById(string $id, string $class = null): RepoResourceInterface {
         return $this->getResourceByIds([$id], $class);

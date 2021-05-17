@@ -24,9 +24,9 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib;
+namespace acdhOeaw\arche\lib;
 
-use acdhOeaw\acdhRepoLib\exception\RepoLibException;
+use acdhOeaw\arche\lib\exception\RepoLibException;
 
 /**
  * Provides a read-only access to the repository resource's metadata.
@@ -45,7 +45,7 @@ class RepoResourceDb implements RepoResourceInterface {
 
     /**
      *
-     * @var \acdhOeaw\acdhRepoLib\RepoDb
+     * @var \acdhOeaw\arche\lib\RepoDb
      */
     private $repo;
 
@@ -53,7 +53,7 @@ class RepoResourceDb implements RepoResourceInterface {
      * Creates an object representing a repository resource.
      * 
      * @param string $urlOrId either a resource URL or just the numeric id
-     * @param \acdhOeaw\acdhRepoLib\RepoInterface $repo repository connection object
+     * @param \acdhOeaw\arche\lib\RepoInterface $repo repository connection object
      */
     public function __construct(string $urlOrId, RepoInterface $repo) {
         if (!$repo instanceof RepoDb) {

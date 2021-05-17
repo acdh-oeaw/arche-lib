@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib;
+namespace acdhOeaw\arche\lib;
 
 use Generator;
 use EasyRdf\Graph;
@@ -33,9 +33,9 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Exception\RequestException;
-use acdhOeaw\acdhRepoLib\exception\Deleted;
-use acdhOeaw\acdhRepoLib\exception\NotFound;
-use acdhOeaw\acdhRepoLib\exception\AmbiguousMatch;
+use acdhOeaw\arche\lib\exception\Deleted;
+use acdhOeaw\arche\lib\exception\NotFound;
+use acdhOeaw\arche\lib\exception\AmbiguousMatch;
 
 /**
  * A repository connection class.
@@ -53,7 +53,7 @@ class Repo implements RepoInterface {
      * 
      * @var string
      */
-    static public $resourceClass = '\acdhOeaw\acdhRepoLib\RepoResource';
+    static public $resourceClass = '\acdhOeaw\arche\lib\RepoResource';
 
     /**
      * Creates a repository object instance from a given configuration file.
@@ -61,7 +61,7 @@ class Repo implements RepoInterface {
      * Automatically parses required config properties and passes them to the Repo object constructor.
      * 
      * @param string $configFile a path to the YAML config file
-     * @return \acdhOeaw\acdhRepoLib\Repo
+     * @return \acdhOeaw\arche\lib\Repo
      */
     static public function factory(string $configFile): Repo {
         $config = json_decode(json_encode(yaml_parse_file($configFile)));
@@ -202,9 +202,9 @@ class Repo implements RepoInterface {
      * Creates an repository connection object.
      * 
      * @param string $baseUrl repository REST API base URL
-     * @param \acdhOeaw\acdhRepoLib\Schema $schema mappings between repository 
+     * @param \acdhOeaw\arche\lib\Schema $schema mappings between repository 
      *   concepts and RDF properties used to denote them by a given repository instance
-     * @param \acdhOeaw\acdhRepoLib\Schema $headers mappings between repository 
+     * @param \acdhOeaw\arche\lib\Schema $headers mappings between repository 
      *   REST API parameters and HTTP headers used to pass them to a given repository instance
      * @param array $guzzleOptions Guzzle HTTP client connection options to be used 
      *   by all requests to the repository REST API (e.g. credentials)
@@ -221,10 +221,10 @@ class Repo implements RepoInterface {
      * Creates a repository resource.
      * 
      * @param Resource $metadata resource metadata
-     * @param \acdhOeaw\acdhRepoLib\BinaryPayload $payload resource binary payload (can be null)
+     * @param \acdhOeaw\arche\lib\BinaryPayload $payload resource binary payload (can be null)
      * @param string $class an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
-     * @return \acdhOeaw\acdhRepoLib\RepoResource
+     * @return \acdhOeaw\arche\lib\RepoResource
      */
     public function createResource(Resource $metadata,
                                    BinaryPayload $payload = null,
@@ -295,7 +295,7 @@ class Repo implements RepoInterface {
      * @param array $ids an array of identifiers (being strings)
      * @param string $class an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
-     * @return \acdhOeaw\acdhRepoLib\RepoResource
+     * @return \acdhOeaw\arche\lib\RepoResource
      * @throws NotFound
      * @throws AmbiguousMatch
      */
@@ -335,8 +335,8 @@ class Repo implements RepoInterface {
      * 
      * @param string $query
      * @param array $parameters
-     * @param \acdhOeaw\acdhRepoLib\SearchConfig $config
-     * \Generator<\acdhOeaw\acdhRepoLib\RepoResourceInterface>
+     * @param \acdhOeaw\arche\lib\SearchConfig $config
+     * \Generator<\acdhOeaw\arche\lib\RepoResourceInterface>
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): Generator {
@@ -359,8 +359,8 @@ class Repo implements RepoInterface {
      * Returns repository resources matching all provided search terms.
      * 
      * @param array $searchTerms
-     * @param \acdhOeaw\acdhRepoLib\SearchConfig $config
-     * \Generator<\acdhOeaw\acdhRepoLib\RepoResourceInterface>
+     * @param \acdhOeaw\arche\lib\SearchConfig $config
+     * \Generator<\acdhOeaw\arche\lib\RepoResourceInterface>
      */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator {
@@ -467,7 +467,7 @@ class Repo implements RepoInterface {
      * 
      * @param Response $resp PSR-7 search request response
      * @param SearchConfig $config search configuration object
-     * \Generator<\acdhOeaw\acdhRepoLib\RepoResourceInterface>
+     * \Generator<\acdhOeaw\arche\lib\RepoResourceInterface>
      */
     private function parseSearchResponse(Response $resp, SearchConfig $config): Generator {
         $class = $config->class ?? self::$resourceClass;

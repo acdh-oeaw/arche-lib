@@ -24,15 +24,19 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib\exception;
+namespace acdhOeaw\arche\lib\exception;
 
-use Exception;
+use Throwable;
 
 /**
- * Description of RepoLibException
+ * Description of NotFound
  *
  * @author zozlak
  */
-class RepoLibException extends Exception {
-    //put your code here
+class NotFound extends RepoLibException {
+    public function __construct(string $message = "", int $code = 404,
+                                Throwable $previous = NULL) {
+        parent::__construct($message, $code, $previous);
+    }
+
 }

@@ -24,18 +24,18 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib;
+namespace acdhOeaw\arche\lib;
 
 use Throwable;
 use PDOException;
 use RuntimeException;
 use GuzzleHttp\Exception\RequestException;
 use zozlak\logging\Log;
-use acdhOeaw\acdhRepoLib\Schema;
-use acdhOeaw\acdhRepoLib\Repo;
-use acdhOeaw\acdhRepoLib\RepoDb;
-use acdhOeaw\acdhRepoLib\RepoResourceInterface;
-use acdhOeaw\acdhRepoLib\exception\NotFound;
+use acdhOeaw\arche\lib\Schema;
+use acdhOeaw\arche\lib\Repo;
+use acdhOeaw\arche\lib\RepoDb;
+use acdhOeaw\arche\lib\RepoResourceInterface;
+use acdhOeaw\arche\lib\exception\NotFound;
 
 /**
  * Returns repository resource object having a given id.
@@ -55,7 +55,7 @@ class RepoResourceResolver {
 
     /**
      * 
-     * @var \acdhOeaw\acdhRepoLib\RepoInterface
+     * @var \acdhOeaw\arche\lib\RepoInterface
      */
     private $repo;
 

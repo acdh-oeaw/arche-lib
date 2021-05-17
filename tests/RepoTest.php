@@ -24,11 +24,11 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib;
+namespace acdhOeaw\arche\lib;
 
-use acdhOeaw\acdhRepoLib\exception\AmbiguousMatch;
-use acdhOeaw\acdhRepoLib\exception\Deleted;
-use acdhOeaw\acdhRepoLib\exception\NotFound;
+use acdhOeaw\arche\lib\exception\AmbiguousMatch;
+use acdhOeaw\arche\lib\exception\Deleted;
+use acdhOeaw\arche\lib\exception\NotFound;
 
 /**
  * Description of RepoTest
@@ -39,7 +39,7 @@ class RepoTest extends TestBase {
 
     public function testCreateFromConfig(): void {
         $repo = Repo::factory(__DIR__ . '/config.yaml');
-        $this->assertTrue(is_a($repo, 'acdhOeaw\acdhRepoLib\Repo'));
+        $this->assertTrue(is_a($repo, 'acdhOeaw\arche\lib\Repo'));
     }
 
     public function testTransactionCommit(): void {

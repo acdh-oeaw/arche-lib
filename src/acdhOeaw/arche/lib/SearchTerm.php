@@ -24,10 +24,10 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib;
+namespace acdhOeaw\arche\lib;
 
 use zozlak\RdfConstants as RDF;
-use acdhOeaw\acdhRepoLib\exception\RepoLibException;
+use acdhOeaw\arche\lib\exception\RepoLibException;
 
 /**
  * Describes a single search condition.
@@ -92,7 +92,7 @@ class SearchTerm {
      * Creates an instance of the SearchTerm class from a given $_POST vars set
      * 
      * @param int $key
-     * @return \acdhOeaw\acdhRepoLib\SearchTerm
+     * @return \acdhOeaw\arche\lib\SearchTerm
      */
     static public function factory($key): self {
         $property = $_POST['property'][$key] ?? null;
@@ -179,7 +179,7 @@ class SearchTerm {
      * @param string $idProp RDF property denoting identifiers
      * @param array $nonRelationProperties list of properties which are internally
      *   stored only as literals, even if they are resources in the RDF graph
-     * @return \acdhOeaw\acdhRepoLib\QueryPart
+     * @return \acdhOeaw\arche\lib\QueryPart
      */
     public function getSqlQuery(string $baseUrl, string $idProp,
                                 array $nonRelationProperties): QueryPart {

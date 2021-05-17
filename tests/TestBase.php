@@ -24,13 +24,13 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib;
+namespace acdhOeaw\arche\lib;
 
 use EasyRdf\Graph;
 use EasyRdf\Resource;
 use GuzzleHttp\Exception\ClientException;
-use acdhOeaw\acdhRepoLib\exception\Deleted;
-use acdhOeaw\acdhRepoLib\exception\NotFound;
+use acdhOeaw\arche\lib\exception\Deleted;
+use acdhOeaw\arche\lib\exception\NotFound;
 
 /**
  * Description of TestBase
@@ -41,7 +41,7 @@ class TestBase extends \PHPUnit\Framework\TestCase {
 
     /**
      *
-     * @var \acdhOeaw\acdhRepoLib\Repo
+     * @var \acdhOeaw\arche\lib\Repo
      */
     static protected $repo;
     static protected $config;

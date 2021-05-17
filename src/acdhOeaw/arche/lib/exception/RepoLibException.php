@@ -24,43 +24,15 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\acdhRepoLib;
+namespace acdhOeaw\arche\lib\exception;
+
+use Exception;
 
 /**
- * A container for configuration properties.
- * 
- * Assures deep copies of complex configuration objects being returned to prevent
- * surprising configuration modifications.
+ * Description of RepoLibException
  *
  * @author zozlak
  */
-class Schema {
-
-    private $schema;
-
-    /**
-     * Creates the Schema object.
-     * 
-     * @param object $schema object with configuration properties
-     */
-    public function __construct(object $schema) {
-        $this->schema = $schema;
-    }
-
-    /**
-     * Magic method implementing accessing properties.
-     * 
-     * @param type $name configuration property to be returned
-     * @return mixed
-     */
-    public function __get($name) {
-        if (!isset($this->schema->$name)) {
-            return null;
-        } elseif (is_object($this->schema->$name)) {
-            return json_decode(json_encode($this->schema->$name));
-        } else {
-            return $this->schema->$name;
-        }
-    }
-
+class RepoLibException extends Exception {
+    //put your code here
 }
