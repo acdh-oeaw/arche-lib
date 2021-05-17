@@ -45,7 +45,7 @@ class TestBase extends \PHPUnit\Framework\TestCase {
 
     static public function setUpBeforeClass(): void {
         $cfgFile      = __DIR__ . '/config.yaml';
-        self::$config = new Config($cfgFile);
+        self::$config = Config::fromYaml($cfgFile);
         self::$schema = new Schema(self::$config->schema);
         self::$repo   = Repo::factory($cfgFile);
     }

@@ -66,7 +66,7 @@ class Repo implements RepoInterface {
      * @return \acdhOeaw\arche\lib\Repo
      */
     static public function factory(string $configFile): Repo {
-        $config = new Config($configFile);
+        $config = Config::fromYaml($configFile);
 
         $baseUrl            = $config->rest->urlBase . $config->rest->pathBase;
         $schema             = new Schema($config->schema);
@@ -94,7 +94,7 @@ class Repo implements RepoInterface {
             }
         }
         echo "Configuration found at $cfgPath\n";
-        $cfg = new Config($cfgPath);
+        $cfg = Config::fromYaml($cfgPath);
 
         if (isset($cfg->repositories)) {
             echo "\nWhat's the repository you want to ingest to? (type a number)\n";

@@ -79,7 +79,7 @@ class RepoDb implements RepoInterface {
      */
     static public function factory(string $configFile,
                                    string $dbSettings = 'guest'): RepoDb {
-        $config = new Config($configFile);
+        $config = Config::fromYaml($configFile);
 
         $baseUrl    = $config->rest->urlBase . $config->rest->pathBase;
         $schema     = new Schema($config->schema);

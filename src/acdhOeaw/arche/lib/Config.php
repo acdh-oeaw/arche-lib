@@ -32,6 +32,7 @@ use function GuzzleHttp\json_encode;
 
 /**
  * A container for the yaml configuration allowing to satisfy phpstan checks
+ * by mocking config properties hierarchy.
  *
  * @author zozlak
  * @property Config $auth
@@ -40,29 +41,90 @@ use function GuzzleHttp\json_encode;
  * @property Config $metadataManagment
  * @property Config $httpBasic
  * @property Config $headers
+ * @property Config $storage
+ * @property Config $logging
+ * @property Config $storage
+ * @property Config $logging
+ * @property Config $accessControl
+ * @property Config $socket
+ * @property Config $metadataManager
+ * @property Config $db
+ * @property Config | string $dbConnStr
+ * @property Config $autoAddIds
+ * @property Config $spatialSearch
+ * @property Config $create
+ * @property Config $fullTextSearch
  * @property object $schema
- * @property array<string> $nonRelationProperties
- * @property array<string> $options
- * @property int $timeout
+ * @property object $httpHeader
+ * @property object $mimeFilter
+ * @property object $sizeLimits
+ * @property object $handlers
  * @property string $pathBase
  * @property string $urlBase
- * @property string $dbConnStr
- * @property object $httpHeader
  * @property string $user;
  * @property string $password
  * @property string $metadataReadMode
+ * @property string $dir
+ * @property string $tmpDir
+ * @property string $file
+ * @property string $address
+ * @property string $path
+ * @property string $type
+ * @property string $defaultMetadataSearchMode
+ * @property string $defaultMetadataFormat
+ * @property string $defaultMetadataReadMode
+ * @property string $defaultMetadataWriteMode
+ * @property string $connStr
+ * @property string $dataCol
+ * @property string $table
+ * @property string $userCol
+ * @property string $admin
+ * @property string $guest
+ * @property string $class
+ * @property string $defaultAction
+ * @property string $hashAlgorithm
+ * @property string $defaultMime
+ * @property string $modeDir
+ * @property string $level
+ * @property string $sizeLimit
+ * @property string $tikaLocation
+ * @property string $cors
+ * @property array<string> $nonRelationProperties
+ * @property array<string> $options
+ * @property array $fixed
+ * @property array $default
+ * @property array $forbidden
+ * @property array $copying
+ * @property array $metadataFormats
+ * @property array $skipNamespaces
+ * @property array $addNamespaces
+ * @property array $denyNamespaces
+ * @property array $properties
+ * @property array $adminRoles
+ * @property array $allowedRoles
+ * @property array $assignRoles
+ * @property array $creatorRights
+ * @property array $mimeTypes
+ * @property array<object> $authMethods
+ * @property int $timeout
+ * @property int $port
+ * @property int $levels
+ * @property int $checkInterval
  * @property bool $verifyCert
+ * @property bool $enforceOnMetadata
+ * @property bool $enforceCompleteness
+ * @property bool $simplifyMetaHistory
  */
 class Config {
 
+    static public function fromYaml(string $path): Config {
+        return new self((object) json_decode(json_encode(yaml_parse_file($path))));
+    }
+
     private object $cfg;
 
-    public function __construct(string | object $config) {
-        if (is_string($config)) {
-            $this->cfg = (object) json_decode(json_encode(yaml_parse_file($config)));
-        } else {
-            $this->cfg = $config;
-        }
+    public function __construct(object $config) {
+        $this->cfg = $config;
     }
 
     public function __get(string $name): mixed {
@@ -72,8 +134,16 @@ class Config {
     public function asObject(): object {
         return $this->cfg;
     }
-    
+
+    /**
+     * 
+     * @return array<mixed>
+     */
+    public function asArray(): array {
+        return (array) json_decode(json_encode($this->cfg), true);
+    }
+
     public function asYaml(): string {
-        return yaml_emit(json_decode(json_encode($this->cfg), true));
+        return yaml_emit($this->asArray());
     }
 }
