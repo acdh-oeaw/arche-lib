@@ -151,8 +151,8 @@ class SearchTest extends TestBase {
         $this->assertEquals(1, count($result));
         $meta   = $result[0]->getGraph();
         $this->assertEquals('2019-02-01', (string) $meta->getLiteral('https://date.prop'));
-        $metaP  = $meta->getResource(self::$repo->getSchema()->parent);
-        $this->assertEquals('2019-01-01', (string) $metaP->getLiteral('https://date.prop'));
+        $parentProp = self::$repo->getSchema()->parent;
+        $this->assertEquals('2019-01-01', (string) $meta->getResource($parentProp)?->getLiteral('https://date.prop'));
     }
 
     /**
