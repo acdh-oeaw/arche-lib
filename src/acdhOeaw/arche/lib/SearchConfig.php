@@ -78,7 +78,7 @@ class SearchConfig {
      * 
      * Remember your search results must be ordered if you want get stable results.
      */
-    public int $offset = null;
+    public ?int $offset = null;
 
     /**
      * Total number of resources matching the search (despite limit/offset)
