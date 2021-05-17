@@ -71,14 +71,14 @@ class SearchConfig {
      * Maximum number of returned resources (only resources matched by the search
      * are counted - see `$metadataMode`).
      */
-    public ?int $limit = 0;
+    public ?int $limit = null;
 
     /**
      * Offset of the first returned result.
      * 
      * Remember your search results must be ordered if you want get stable results.
      */
-    public int $offset = 0;
+    public int $offset = null;
 
     /**
      * Total number of resources matching the search (despite limit/offset)
