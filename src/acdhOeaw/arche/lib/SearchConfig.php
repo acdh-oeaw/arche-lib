@@ -60,25 +60,25 @@ class SearchConfig {
      * 
      * @see \acdhOeaw\arche\lib\RepoResourceInterface::META_RESOURCE
      */
-    public string $metadataMode;
+    public ?string $metadataMode = null;
 
     /**
      * RDF predicate used by some of metadataModes.
      */
-    public ?string $metadataParentProperty;
+    public ?string $metadataParentProperty = null;
 
     /**
      * Maximum number of returned resources (only resources matched by the search
      * are counted - see `$metadataMode`).
      */
-    public int $limit;
+    public ?int $limit = 0;
 
     /**
      * Offset of the first returned result.
      * 
      * Remember your search results must be ordered if you want get stable results.
      */
-    public int $offset;
+    public int $offset = 0;
 
     /**
      * Total number of resources matching the search (despite limit/offset)
@@ -86,7 +86,7 @@ class SearchConfig {
      * Set by RepoInterface::getGraphBy*() and RepoInterface::getResourceBy*() 
      * methods.
      */
-    public int $count;
+    public ?int $count = null;
 
     /**
      * List of metadata properties to order results by.
@@ -101,7 +101,7 @@ class SearchConfig {
      * If specified, only property values with a given language are taken into
      * account for ordering search matches.
      */
-    public string $orderByLang;
+    public ?string $orderByLang = null;
 
     /**
      * A full text search query used for search results highlighting.
@@ -113,7 +113,7 @@ class SearchConfig {
      * perform an actual search (yes, technically you can search by one term
      * and highlight results using the other).
      */
-    public string $ftsQuery;
+    public ?string $ftsQuery = null;
 
     /**
      * Data to be used for full text search results highlighting.
@@ -122,53 +122,53 @@ class SearchConfig {
      * - an RDF property if a given metadata property should be used
      * - `SearchConfig::FTS_BINARY` if the resource binary content should be used
      */
-    public string $ftsProperty;
+    public ?string $ftsProperty = null;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
      */
-    public string $ftsStartSel;
+    public ?string $ftsStartSel = null;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
      */
-    public string $ftsStopSel;
+    public ?string $ftsStopSel = null;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
      */
-    public int $ftsMaxWords;
+    public ?int $ftsMaxWords = null;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
      */
-    public int $ftsMinWords;
+    public ?int $ftsMinWords = null;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
      */
-    public int $ftsShortWord;
+    public ?int $ftsShortWord = null;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
      */
-    public bool $ftsHighlightAll;
+    public ?bool $ftsHighlightAll = null;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
      */
-    public int $ftsMaxFragments;
+    public ?int $ftsMaxFragments = null;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
      */
-    public string $ftsFragmentDelimiter;
+    public ?string $ftsFragmentDelimiter = null;
 
     /**
      * An optional class of the for the objects returned as the search results
      *   (to be used by extension libraries).
      */
-    public string $class;
+    public ?string $class = null;
 
     /**
      * 

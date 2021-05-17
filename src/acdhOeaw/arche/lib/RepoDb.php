@@ -163,7 +163,7 @@ class RepoDb implements RepoInterface {
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator {
         $graph = $this->getGraphBySearchTerms($searchTerms, $config);
-        yield from $this->parseSearchGraph($graph, $config->class);
+        yield from $this->parseSearchGraph($graph, $config->class ?? RepoResourceDb::class);
     }
 
     /**
@@ -177,7 +177,7 @@ class RepoDb implements RepoInterface {
     public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): Generator {
         $graph = $this->getGraphBySqlQuery($query, $parameters, $config);
-        yield from $this->parseSearchGraph($graph, $config->class);
+        yield from $this->parseSearchGraph($graph, $config->class ?? RepoResourceDb::class);
     }
 
     /**
@@ -247,7 +247,7 @@ class RepoDb implements RepoInterface {
         $ftsQP     = $this->getFtsQuery($config);
         $orderByQP = $this->getOrderByQuery($config);
 
-        $mode = strtolower($config->metadataMode);
+        $mode = strtolower($config->metadataMode ?? '');
         switch ($mode) {
             case RRI::META_RESOURCE:
                 $metaQuery = "
