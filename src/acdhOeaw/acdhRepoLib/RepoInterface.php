@@ -26,6 +26,8 @@
 
 namespace acdhOeaw\acdhRepoLib;
 
+use Generator;
+
 /**
  *
  * @author zozlak
@@ -80,18 +82,18 @@ interface RepoInterface {
      * @param string $query
      * @param array $parameters
      * @param \acdhOeaw\acdhRepoLib\SearchConfig $config
-     * @return \acdhOeaw\acdhRepoLib\RepoResourceInterface[]
+     * @return \Generator<\acdhOeaw\acdhRepoLib\RepoResourceInterface>
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
-                                           SearchConfig $config): array;
+                                           SearchConfig $config): Generator;
 
     /**
      * Returns repository resources matching all provided search terms.
      * 
      * @param \acdhOeaw\acdhRepoLib\SearchTerm[] $searchTerms
      * @param \acdhOeaw\acdhRepoLib\SearchConfig $config
-     * @return \acdhOeaw\acdhRepoLib\RepoResourceInterface[]
+     * @return \Generator<\acdhOeaw\acdhRepoLib\RepoResourceInterface>
      */
     public function getResourcesBySearchTerms(array $searchTerms,
-                                              SearchConfig $config): array;
+                                              SearchConfig $config): Generator;
 }

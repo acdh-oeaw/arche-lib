@@ -26,6 +26,7 @@
 
 namespace acdhOeaw\acdhRepoLib;
 
+use Generator;
 use PDO;
 use PDOException;
 use PDOStatement;
@@ -160,12 +161,12 @@ class RepoDb implements RepoInterface {
      * 
      * @param array $searchTerms
      * @param \acdhOeaw\acdhRepoLib\SearchConfig $config
-     * @return \acdhOeaw\acdhRepoLib\RepoResourceInterface[]
+     * @return \Generator<\acdhOeaw\acdhRepoLib\RepoResourceInterface>
      */
     public function getResourcesBySearchTerms(array $searchTerms,
-                                              SearchConfig $config): array {
+                                              SearchConfig $config): Generator {
         $graph = $this->getGraphBySearchTerms($searchTerms, $config);
-        return $this->parseSearchGraph($graph, $config->class);
+        yield from $this->parseSearchGraph($graph, $config->class);
     }
 
     /**
@@ -174,12 +175,12 @@ class RepoDb implements RepoInterface {
      * @param string $query
      * @param array $parameters
      * @param \acdhOeaw\acdhRepoLib\SearchConfig $config
-     * @return \acdhOeaw\acdhRepoLib\RepoResourceInterface[]
+     * @return \Generator<\acdhOeaw\acdhRepoLib\RepoResourceInterface>
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
-                                           SearchConfig $config): array {
+                                           SearchConfig $config): Generator {
         $graph = $this->getGraphBySqlQuery($query, $parameters, $config);
-        return $this->parseSearchGraph($graph, $config->class);
+        yield from $this->parseSearchGraph($graph, $config->class);
     }
 
     /**
@@ -474,17 +475,15 @@ class RepoDb implements RepoInterface {
      * 
      * @param \EasyRdf\Graph $graph
      * @param string $class
-     * @return \acdhOeaw\acdhRepoLib\RepoResourceInterface[]
+     * @return \Generator<\acdhOeaw\acdhRepoLib\RepoResourceInterface>
      */
-    private function parseSearchGraph(Graph $graph, string $class): array {
+    private function parseSearchGraph(Graph $graph, string $class): Generator {
         $resources = $graph->resourcesMatching($this->schema->searchMatch);
-        $objects   = [];
         foreach ($resources as $i) {
             $obj       = new $class($i->getUri(), $this);
             $obj->setGraph($i);
-            $objects[] = $obj;
+            yield $obj;
         }
-        return $objects;
     }
 
     /**

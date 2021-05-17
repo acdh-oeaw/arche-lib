@@ -26,6 +26,7 @@
 
 namespace acdhOeaw\acdhRepoLib;
 
+use Generator;
 use EasyRdf\Graph;
 use EasyRdf\Resource;
 use GuzzleHttp\Client;
@@ -335,10 +336,10 @@ class Repo implements RepoInterface {
      * @param string $query
      * @param array $parameters
      * @param \acdhOeaw\acdhRepoLib\SearchConfig $config
-     * @return \acdhOeaw\acdhRepoLib\RepoResourceInterface[]
+     * \Generator<\acdhOeaw\acdhRepoLib\RepoResourceInterface>
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
-                                           SearchConfig $config): array {
+                                           SearchConfig $config): Generator {
         $headers = [
             'Accept'       => 'application/n-triples',
             'Content-Type' => 'application/x-www-form-urlencoded',
@@ -351,7 +352,7 @@ class Repo implements RepoInterface {
         $body    = http_build_query($body);
         $req     = new Request('post', $this->baseUrl . 'search', $headers, $body);
         $resp    = $this->sendRequest($req);
-        return $this->parseSearchResponse($resp, $config);
+        yield from $this->parseSearchResponse($resp, $config);
     }
 
     /**
@@ -359,10 +360,10 @@ class Repo implements RepoInterface {
      * 
      * @param array $searchTerms
      * @param \acdhOeaw\acdhRepoLib\SearchConfig $config
-     * @return \acdhOeaw\acdhRepoLib\RepoResourceInterface[]
+     * \Generator<\acdhOeaw\acdhRepoLib\RepoResourceInterface>
      */
     public function getResourcesBySearchTerms(array $searchTerms,
-                                              SearchConfig $config): array {
+                                              SearchConfig $config): Generator {
         $headers = [
             'Accept'       => 'application/n-triples',
             'Content-Type' => 'application/x-www-form-urlencoded',
@@ -377,7 +378,7 @@ class Repo implements RepoInterface {
         $req  = new Request('post', $this->baseUrl . 'search', $headers, $body);
 
         $resp = $this->sendRequest($req);
-        return $this->parseSearchResponse($resp, $config);
+        yield from $this->parseSearchResponse($resp, $config);
     }
 
     /**
@@ -466,9 +467,9 @@ class Repo implements RepoInterface {
      * 
      * @param Response $resp PSR-7 search request response
      * @param SearchConfig $config search configuration object
-     * @return array
+     * \Generator<\acdhOeaw\acdhRepoLib\RepoResourceInterface>
      */
-    private function parseSearchResponse(Response $resp, SearchConfig $config): array {
+    private function parseSearchResponse(Response $resp, SearchConfig $config): Generator {
         $class = $config->class ?? self::$resourceClass;
 
         $graph = new Graph();
@@ -482,12 +483,10 @@ class Repo implements RepoInterface {
         $config->count = (int) ((string) $graph->resource($this->getBaseUrl())->getLiteral($this->getSchema()->searchCount));
 
         $resources = $graph->resourcesMatching($this->schema->searchMatch);
-        $objects   = [];
         foreach ($resources as $i) {
             $obj       = new $class($i->getUri(), $this);
             $obj->setGraph($i);
-            $objects[] = $obj;
+            yield $obj;
         }
-        return $objects;
     }
 }
