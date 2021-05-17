@@ -30,12 +30,14 @@ use Generator;
 use EasyRdf\Graph;
 use EasyRdf\Resource;
 use GuzzleHttp\Client;
-use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Exception\RequestException;
+use Psr\Http\Message\ResponseInterface;
 use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
 use acdhOeaw\arche\lib\exception\AmbiguousMatch;
+use function GuzzleHttp\json_decode;
+use function GuzzleHttp\json_encode;
 
 /**
  * A repository connection class.
@@ -53,7 +55,7 @@ class Repo implements RepoInterface {
      * 
      * @var string
      */
-    static public $resourceClass = '\acdhOeaw\arche\lib\RepoResource';
+    static public $resourceClass = RepoResource::class;
 
     /**
      * Creates a repository object instance from a given configuration file.
@@ -64,7 +66,7 @@ class Repo implements RepoInterface {
      * @return \acdhOeaw\arche\lib\Repo
      */
     static public function factory(string $configFile): Repo {
-        $config = json_decode(json_encode(yaml_parse_file($configFile)));
+        $config = new Config($configFile);
 
         $baseUrl            = $config->rest->urlBase . $config->rest->pathBase;
         $schema             = new Schema($config->schema);
@@ -92,14 +94,14 @@ class Repo implements RepoInterface {
             }
         }
         echo "Configuration found at $cfgPath\n";
-        $cfg = json_decode(json_encode(yaml_parse_file($cfgPath)));
+        $cfg = new Config($cfgPath);
 
         if (isset($cfg->repositories)) {
             echo "\nWhat's the repository you want to ingest to? (type a number)\n";
             foreach ($cfg->repositories as $k => $v) {
                 echo ($k + 1) . "\t" . $v->urlBase . $v->pathBase . "\n";
             }
-            $line     = ((int) trim(fgets(STDIN))) - 1;
+            $line     = ((int) trim((string) fgets(STDIN))) - 1;
             $urlBase  = $cfg->repositories[$line]->urlBase ?? '';
             $pathBase = $cfg->repositories[$line]->pathBase ?? '';
         } else {
@@ -110,7 +112,7 @@ class Repo implements RepoInterface {
             exit("Repository URL not set. Please reaview your config.yaml.\n");
         }
         echo "\nIs repository URL $urlBase$pathBase correct? (type 'yes' to continue)\n";
-        $line = trim(fgets(STDIN));
+        $line = trim((string) fgets(STDIN));
         if ($line !== 'yes') {
             exit("Wrong repository URL\n");
         }
@@ -120,17 +122,17 @@ class Repo implements RepoInterface {
         $user = $cfg->auth->httpBasic->user ?? '';
         if (empty($user)) {
             echo "\nWhat's your login? (login not set in the config.yaml)\n";
-            $user = trim(fgets(STDIN));
+            $user = trim((string) fgets(STDIN));
         }
 
         echo "\nWhat's your password?\n";
         system('stty -echo');
-        $pswd = trim(fgets(STDIN));
+        $pswd = trim((string) fgets(STDIN));
         system('stty echo');
 
-        $cfg->auth = (object) ['httpBasic' => ['user' => $user, 'password' => $pswd]];
-        $tmpfile   = tempnam('/tmp', '');
-        yaml_emit_file($tmpfile, json_decode(json_encode($cfg), true));
+        $cfg->auth = new Config((object) ['httpBasic' => ['user' => $user, 'password' => $pswd]]);
+        $tmpfile   = (string) tempnam('/tmp', '');
+        file_put_contents($tmpfile, $cfg->asYaml());
         try {
             $repo = Repo::factory($tmpfile);
         } finally {
@@ -145,7 +147,7 @@ class Repo implements RepoInterface {
      * It's not very fast but requires a zero config.
      * 
      * @param string $url
-     * @param array $guzzleOptions
+     * @param array<mixed> $guzzleOptions
      * @param string $realUrl if provided, the final resource URL will be stored
      *   in this variable.
      * @param string $metaReadModeHeader header used by the repository to denote
@@ -170,17 +172,17 @@ class Repo implements RepoInterface {
         $client    = new Client($resolveOptions);
         $resp      = $client->send(new Request('HEAD', $url));
         $redirects = array_merge([$url], $resp->getHeader('X-Guzzle-Redirect-History'));
-        $realUrl   = array_pop($redirects);
-        $realUrl   = preg_replace('|/metadata$|', '', $realUrl);
+        $realUrl   = (string) array_pop($redirects);
+        $realUrl   = (string) preg_replace('|/metadata$|', '', $realUrl);
 
         $baseUrl = substr($realUrl, 0, strrpos($realUrl, '/') + 1);
-        $resp    = $client->send(new Request('GET', "$baseUrl/describe"));
+        $resp    = $client->send(new Request('GET', "$baseUrl/describe", ['Accept' => 'application/json']));
         if ($resp->getStatusCode() !== 200) {
             throw new NotFound("Provided URL doesn't resolve to an ARCHE repository", 404);
         }
-        $config  = yaml_parse((string) $resp->getBody());
-        $schema  = new Schema(json_decode(json_encode($config['schema'])));
-        $headers = new Schema(json_decode(json_encode($config['rest']['headers'])));
+        $config  = new Config((object) json_decode((string) $resp->getBody()));
+        $schema  = new Schema($config->schema);
+        $headers = new Schema($config->rest->headers);
         return new Repo($baseUrl, $schema, $headers, $guzzleOptions);
     }
 
@@ -194,7 +196,7 @@ class Repo implements RepoInterface {
     /**
      * Current transaction id
      * 
-     * @var string
+     * @var ?string
      */
     private $txId;
 
@@ -206,7 +208,7 @@ class Repo implements RepoInterface {
      *   concepts and RDF properties used to denote them by a given repository instance
      * @param \acdhOeaw\arche\lib\Schema $headers mappings between repository 
      *   REST API parameters and HTTP headers used to pass them to a given repository instance
-     * @param array $guzzleOptions Guzzle HTTP client connection options to be used 
+     * @param array<mixed> $guzzleOptions Guzzle HTTP client connection options to be used 
      *   by all requests to the repository REST API (e.g. credentials)
      */
     public function __construct(string $baseUrl, Schema $schema,
@@ -259,12 +261,12 @@ class Repo implements RepoInterface {
      * Handles most common errors which can be returned by the repository.
      * 
      * @param Request $request a PSR-7 HTTP request
-     * @return Response
+     * @return ResponseInterface
      * @throws Deleted
      * @throws NotFound
      * @throws RequestException
      */
-    public function sendRequest(Request $request): Response {
+    public function sendRequest(Request $request): ResponseInterface {
         if (!empty($this->txId)) {
             $request = $request->withHeader($this->getHeaderName('transactionId'), $this->txId);
         }
@@ -292,7 +294,7 @@ class Repo implements RepoInterface {
      * If more then one resources matches the search or there is no resource
      * matching the search, an error is thrown.
      * 
-     * @param array $ids an array of identifiers (being strings)
+     * @param array<string> $ids an array of identifiers (being strings)
      * @param string $class an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
      * @return \acdhOeaw\arche\lib\RepoResource
@@ -334,9 +336,9 @@ class Repo implements RepoInterface {
      * Performs a search
      * 
      * @param string $query
-     * @param array $parameters
+     * @param array<mixed> $parameters
      * @param \acdhOeaw\arche\lib\SearchConfig $config
-     * \Generator<\acdhOeaw\arche\lib\RepoResourceInterface>
+     * \Generator<int, \acdhOeaw\arche\lib\RepoResource, void, void>
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): Generator {
@@ -358,9 +360,9 @@ class Repo implements RepoInterface {
     /**
      * Returns repository resources matching all provided search terms.
      * 
-     * @param array $searchTerms
+     * @param array<SearchTerm> $searchTerms
      * @param \acdhOeaw\arche\lib\SearchConfig $config
-     * \Generator<\acdhOeaw\arche\lib\RepoResourceInterface>
+     * \Generator<int, \acdhOeaw\arche\lib\RepoResource, void, void>
      */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator {
@@ -465,28 +467,28 @@ class Repo implements RepoInterface {
     /**
      * Parses search request response into an array of `RepoResource` objects.
      * 
-     * @param Response $resp PSR-7 search request response
+     * @param ResponseInterface $resp PSR-7 search request response
      * @param SearchConfig $config search configuration object
-     * \Generator<\acdhOeaw\arche\lib\RepoResourceInterface>
+     * @return \Generator<int, \acdhOeaw\arche\lib\RepoResource, void, void>
      */
-    private function parseSearchResponse(Response $resp, SearchConfig $config): Generator {
+    private function parseSearchResponse(ResponseInterface $resp,
+                                         SearchConfig $config): Generator {
         $class = $config->class ?? self::$resourceClass;
 
         $graph = new Graph();
         $body  = $resp->getBody();
-        if (empty($body)) {
-            return [];
-        }
-        $format = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
-        $graph->parse($body, $format);
+        if (!empty($body)) {
+            $format = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
+            $graph->parse($body, $format);
 
-        $config->count = (int) ((string) $graph->resource($this->getBaseUrl())->getLiteral($this->getSchema()->searchCount));
+            $config->count = (int) ((string) $graph->resource($this->getBaseUrl())->getLiteral($this->getSchema()->searchCount));
 
-        $resources = $graph->resourcesMatching($this->schema->searchMatch);
-        foreach ($resources as $i) {
-            $obj       = new $class($i->getUri(), $this);
-            $obj->setGraph($i);
-            yield $obj;
+            $resources = $graph->resourcesMatching($this->schema->searchMatch);
+            foreach ($resources as $i) {
+                $obj = new $class($i->getUri(), $this);
+                $obj->setGraph($i);
+                yield $obj;
+            }
         }
     }
 }

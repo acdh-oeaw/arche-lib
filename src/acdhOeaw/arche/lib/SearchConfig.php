@@ -38,11 +38,11 @@ class SearchConfig {
     /**
      * Creates an instance of the SearchConfig class form the POST data.
      * 
-     * @return \self
+     * @return SearchConfig
      */
-    static public function factory(): self {
+    static public function factory(): SearchConfig {
         $sc = new SearchConfig();
-        foreach ($sc as $k => $v) {
+        foreach ((array) $sc as $k => $v) {
             if (isset($_POST[$k])) {
                 $sc->$k = $_POST[$k];
             } elseif (isset($_POST[$k . '[]'])) {
@@ -58,45 +58,36 @@ class SearchConfig {
      * 
      * Value should be one of `RepoResourceInterface::META_*` constants.
      * 
-     * @var string
      * @see \acdhOeaw\arche\lib\RepoResourceInterface::META_RESOURCE
      */
-    public $metadataMode;
+    public string $metadataMode;
 
     /**
      * RDF predicate used by some of metadataModes.
-     * 
-     * @var string | null
      */
-    public $metadataParentProperty;
+    public ?string $metadataParentProperty;
 
     /**
      * Maximum number of returned resources (only resources matched by the search
      * are counted - see `$metadataMode`).
-     * 
-     * @var int
      */
-    public $limit;
+    public int $limit;
 
     /**
      * Offset of the first returned result.
      * 
      * Remember your search results must be ordered if you want get stable results.
-     * 
-     * @var int 
      */
-    public $offset;
+    public int $offset;
 
     /**
      * Total number of resources matching the search (despite limit/offset)
      * 
      * Set by RepoInterface::getGraphBy*() and RepoInterface::getResourceBy*() 
      * methods.
-     * 
-     * @var int
      */
-    public $count;
-    
+    public int $count;
+
     /**
      * List of metadata properties to order results by.
      * 
@@ -104,16 +95,14 @@ class SearchConfig {
      * 
      * @var array<string>
      */
-    public $orderBy = [];
+    public array $orderBy = [];
 
     /**
      * If specified, only property values with a given language are taken into
      * account for ordering search matches.
-     * 
-     * @var string
      */
-    public $orderByLang;
-    
+    public string $orderByLang;
+
     /**
      * A full text search query used for search results highlighting.
      * 
@@ -123,10 +112,8 @@ class SearchConfig {
      * Remember this query is applied only to the search results and is not used to
      * perform an actual search (yes, technically you can search by one term
      * and highlight results using the other).
-     * 
-     * @var string 
      */
-    public $ftsQuery;
+    public string $ftsQuery;
 
     /**
      * Data to be used for full text search results highlighting.
@@ -134,77 +121,62 @@ class SearchConfig {
      * - `null` if both resource metadata and binary content should be used;
      * - an RDF property if a given metadata property should be used
      * - `SearchConfig::FTS_BINARY` if the resource binary content should be used
-     * 
-     * @var string
      */
-    public $ftsProperty;
+    public string $ftsProperty;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
-     * 
-     * @var string
      */
-    public $ftsStartSel;
+    public string $ftsStartSel;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
-     * 
-     * @var string
      */
-    public $ftsStopSel;
+    public string $ftsStopSel;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
-     * 
-     * @var int
      */
-    public $ftsMaxWords;
+    public int $ftsMaxWords;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
-     * 
-     * @var int
      */
-    public $ftsMinWords;
+    public int $ftsMinWords;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
-     * 
-     * @var int
      */
-    public $ftsShortWord;
+    public int $ftsShortWord;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
-     * 
-     * @var bool
      */
-    public $ftsHighlightAll;
+    public bool $ftsHighlightAll;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
-     * 
-     * @var int
      */
-    public $ftsMaxFragments;
+    public int $ftsMaxFragments;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
-     * 
-     * @var string
      */
-    public $ftsFragmentDelimiter;
+    public string $ftsFragmentDelimiter;
 
     /**
      * An optional class of the for the objects returned as the search results
      *   (to be used by extension libraries).
-     * @var string
      */
-    public $class;
+    public string $class;
 
+    /**
+     * 
+     * @return array<mixed>
+     */
     public function toArray(): array {
         $a = [];
-        foreach ($this as $k => $v) {
+        foreach ((array) $this as $k => $v) {
             if (!in_array($k, ['class', 'metadataMode', 'metadataParentProperty']) && !empty($v)) {
                 $a[$k] = $v;
             }
@@ -217,9 +189,9 @@ class SearchConfig {
      * according to the search config settings.
      * 
      * @param \acdhOeaw\arche\lib\Repo $repo
-     * @return type
+     * @return array<string>
      */
-    public function getHeaders(Repo $repo) {
+    public function getHeaders(Repo $repo): array {
         $h = [];
         if (!empty($this->metadataMode)) {
             $h[$repo->getHeaderName('metadataReadMode')] = $this->metadataMode;

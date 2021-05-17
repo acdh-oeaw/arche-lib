@@ -26,6 +26,7 @@
 
 namespace acdhOeaw\arche\lib;
 
+use zozlak\queryPart\QueryPart;
 use acdhOeaw\arche\lib\exception\RepoLibException;
 
 /**
@@ -37,17 +38,8 @@ class RepoResourceDb implements RepoResourceInterface {
 
     use RepoResourceTrait;
 
-    /**
-     *
-     * @var int
-     */
-    private $id;
-
-    /**
-     *
-     * @var \acdhOeaw\arche\lib\RepoDb
-     */
-    private $repo;
+    private int $id;
+    private RepoDb $repo;
 
     /**
      * Creates an object representing a repository resource.
@@ -62,9 +54,10 @@ class RepoResourceDb implements RepoResourceInterface {
         if (!is_numeric($urlOrId)) {
             $urlOrId = preg_replace('/^.*[^0-9]/', '', $urlOrId);
         }
-        $this->id   = (int) $urlOrId;
-        $this->repo = $repo;
-        $this->url  = $this->repo->getBaseUrl() . $this->id;
+        $this->id      = (int) $urlOrId;
+        $this->repo    = $repo;
+        $this->repoInt = $repo;
+        $this->url     = $this->repo->getBaseUrl() . $this->id;
     }
 
     /**

@@ -26,6 +26,8 @@
 
 namespace acdhOeaw\arche\lib;
 
+use zozlak\queryPart\QueryPart;
+
 /**
  * Interface for metadata access authorization.
  * 
@@ -37,7 +39,7 @@ interface AuthInterface {
 
     /**
      * 
-     * @return \acdhOeaw\arche\lib\QueryPart
+     * @return QueryPart
      */
     public function getMetadataAuthQuery(): QueryPart;
 }

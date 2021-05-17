@@ -174,7 +174,7 @@ interface RepoResourceInterface {
      * New metadata are not automatically written back to the repository.
      * Use the updateMetadata() method to write them back.
      * 
-     * @param EasyRdf\Resource $resource
+     * @param \EasyRdf\Resource $resource
      * @return void
      * @see updateMetadata()
      * @see setMetadata()
@@ -189,7 +189,7 @@ interface RepoResourceInterface {
      * New metadata are not automatically written back to the repository.
      * Use the `updateMetadata()` method to write them back.
      * 
-     * @param EasyRdf\Resource $metadata
+     * @param \EasyRdf\Resource $metadata
      * @see updateMetadata()
      * @see setGraph()
      */
@@ -201,7 +201,7 @@ interface RepoResourceInterface {
      * Naivly means that a given rdfs:type triple must exist in the resource
      * metadata.
      * 
-     * @param type $class
+     * @param string $class
      * @return bool
      */
     public function isA(string $class): bool;
@@ -209,7 +209,7 @@ interface RepoResourceInterface {
     /**
      * Returns all RDF types (classes) of a given repository resource.
      * 
-     * @return string[]
+     * @return array<string>
      */
     public function getClasses(): array;
 }

@@ -27,8 +27,10 @@
 namespace acdhOeaw\arche\lib;
 
 use EasyRdf\Graph;
+use EasyRdf\Resource;
 use GuzzleHttp\Psr7\Request;
-use GuzzleHttp\Psr7\Response;
+use Psr\Http\Message\ResponseInterface;
+use acdhOeaw\arche\lib\exception\RepoLibException;
 
 /**
  * Description of RepoResource
@@ -48,14 +50,14 @@ class RepoResource implements RepoResourceInterface {
      * Creates a repository resource object from the PSR-7 response object
      * returning the metadata.
      * 
-     * @param Repo repository connection object
-     * @param Response $response PSR-7 repository response object
+     * @param Repo $repo connection object
+     * @param ResponseInterface $response PSR-7 repository response object
      * @param string $uri resource URI (if not provided, a Location HTTP header
      *   from the response will be used)
-     * @return \self
+     * @return RepoResource
      */
-    static public function factory(Repo $repo, Response $response,
-                                   string $uri = null): self {
+    static public function factory(Repo $repo, ResponseInterface $response,
+                                   string $uri = null): RepoResource {
 
         $uri   = $uri ?? $response->getHeader('Location')[0];
         /* @var $res \acdhOeaw\arche\lib\RepoResource */
@@ -69,17 +71,7 @@ class RepoResource implements RepoResourceInterface {
         return $res;
     }
 
-    /**
-     *
-     * @var acdhOeaw\arche\lib\Repo
-     */
-    private $repo;
-
-    /**
-     *
-     * @var string
-     */
-    private $url;
+    private Repo $repo;
 
     /**
      * Creates an object representing a repository resource.
@@ -88,16 +80,20 @@ class RepoResource implements RepoResourceInterface {
      * @param \acdhOeaw\arche\lib\RepoInterface $repo repository connection object
      */
     public function __construct(string $url, RepoInterface $repo) {
-        $this->url  = $url;
-        $this->repo = $repo;
+        if (!$repo instanceof Repo) {
+            throw new RepoLibException('The RepoResource object can be created only with a Repo repository connection handle');
+        }
+        $this->url     = $url;
+        $this->repo    = $repo;
+        $this->repoInt = $repo;
     }
 
     /**
      * Returns repository resource binary content.
      * 
-     * @return Response PSR-7 response containing resource's binary content
+     * @return ResponseInterface PSR-7 response containing resource's binary content
      */
-    public function getContent(): Response {
+    public function getContent(): ResponseInterface {
         $request = new Request('get', $this->url);
         return $this->repo->sendRequest($request);
     }
@@ -142,8 +138,8 @@ class RepoResource implements RepoResourceInterface {
     public function updateMetadata(string $updateMode = self::UPDATE_MERGE,
                                    string $readMode = self::META_RESOURCE): void {
         if (!$this->metaSynced) {
-            $updateModeHeader = $this->getRepo()->getHeaderName('metadataWriteMode');
-            $readModeHeader   = $this->getRepo()->getHeaderName('metadataReadMode');
+            $updateModeHeader = $this->repo->getHeaderName('metadataWriteMode');
+            $readModeHeader   = $this->repo->getHeaderName('metadataReadMode');
             $headers          = [
                 'Content-Type'    => 'application/n-triples',
                 'Accept'          => 'application/n-triples',
@@ -182,8 +178,9 @@ class RepoResource implements RepoResourceInterface {
             $cfg->offset       = 0;
             $cfg->limit        = self::DELETE_STEP;
             do {
+                $key    = null;
                 $refRes = $this->repo->getResourcesBySqlQuery($query, [$this->getId()], $cfg);
-                foreach ($refRes as $res) {
+                foreach ($refRes as $key => $res) {
                     /* @var $res \acdhOeaw\arche\lib\RepoResource */
                     $res->loadMetadata(false, self::META_RESOURCE);
                     $meta = $res->getMetadata();
@@ -198,10 +195,10 @@ class RepoResource implements RepoResourceInterface {
                     $res->updateMetadata();
                 }
                 // don't increment offset - every query excludes resources with references which were already removed
-            } while (count($refRes) > 1);
+            } while ($key !== null);
         }
 
-        $this->metadata = null;
+        $this->metadata = new Resource('.');
     }
 
     /**
@@ -225,13 +222,14 @@ class RepoResource implements RepoResourceInterface {
         $cfg->offset       = 0;
         $cfg->limit        = self::DELETE_STEP;
         do {
+            $key       = null;
             $resources = $this->repo->getResourcesBySqlQuery($query, $param, $cfg);
-            foreach ($resources as $res) {
+            foreach ($resources as $key => $res) {
                 /* @var $res \acdhOeaw\arche\lib\RepoResource */
                 $res->delete($tombstone, $references);
             }
             // don't increment offset - every query excludes resources which were already removed
-        } while (count($resources) > 1);
+        } while ($key !== null);
     }
 
     /**
@@ -265,10 +263,10 @@ class RepoResource implements RepoResourceInterface {
     /**
      * Parses metadata fetched from the repository.
      * 
-     * @param \GuzzleHttp\Psr7\Response $resp response to the metadata fetch HTTP request.
+     * @param ResponseInterface $resp response to the metadata fetch HTTP request.
      * @return void
      */
-    private function parseMetadata(Response $resp): void {
+    private function parseMetadata(ResponseInterface $resp): void {
         $format           = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
         $graph            = new Graph();
         $graph->parse($resp->getBody(), $format);
@@ -284,5 +282,4 @@ class RepoResource implements RepoResourceInterface {
     protected function getId(): int {
         return (int) substr($this->getUri(), strlen($this->repo->getBaseUrl()));
     }
-
 }

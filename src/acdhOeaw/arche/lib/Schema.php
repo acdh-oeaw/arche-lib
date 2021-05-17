@@ -26,6 +26,9 @@
 
 namespace acdhOeaw\arche\lib;
 
+use function GuzzleHttp\json_decode;
+use function GuzzleHttp\json_encode;
+
 /**
  * A container for configuration properties.
  * 
@@ -33,10 +36,19 @@ namespace acdhOeaw\arche\lib;
  * surprising configuration modifications.
  *
  * @author zozlak
+ * @property string $id
+ * @property string $label
+ * @property string $parent
+ * @property string $delete
+ * @property string $binarySize
+ * @property string $searchCount
+ * @property string $searchFts
+ * @property string $searchMatch
+ * @property object $test
  */
 class Schema {
 
-    private $schema;
+    private object $schema;
 
     /**
      * Creates the Schema object.
@@ -50,10 +62,10 @@ class Schema {
     /**
      * Magic method implementing accessing properties.
      * 
-     * @param type $name configuration property to be returned
+     * @param string $name configuration property to be returned
      * @return mixed
      */
-    public function __get($name) {
+    public function __get(string $name): mixed {
         if (!isset($this->schema->$name)) {
             return null;
         } elseif (is_object($this->schema->$name)) {
@@ -62,5 +74,4 @@ class Schema {
             return $this->schema->$name;
         }
     }
-
 }

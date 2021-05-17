@@ -28,6 +28,7 @@ namespace acdhOeaw\arche\lib;
 
 use EasyRdf\Resource;
 use zozlak\RdfConstants as RDF;
+use acdhOeaw\arche\lib\exception\RepoLibException;
 
 /**
  * A common boilet plate code to be reused by all RepoResourceInterface
@@ -37,29 +38,10 @@ use zozlak\RdfConstants as RDF;
  */
 trait RepoResourceTrait {
 
-    /**
-     *
-     * @var EasyRdf\Resource
-     */
-    private $metadata;
-
-    /**
-     *
-     * @var bool
-     */
-    private $metaSynced;
-
-    /**
-     *
-     * @var \acdhOeaw\arche\lib\RepoInterface
-     */
-    private $repo;
-
-    /**
-     *
-     * @var string
-     */
-    private $url;
+    private Resource $metadata;
+    private bool $metaSynced;
+    private RepoInterface $repoInt;
+    private string $url;
 
     /**
      * Returns the repository resource URL.
@@ -73,10 +55,10 @@ trait RepoResourceTrait {
     /**
      * Returns repository connection object associated with the given resource object.
      * 
-     * @return \acdhOeaw\arche\lib\Repo
+     * @return \acdhOeaw\arche\lib\RepoInterface
      */
     public function getRepo(): RepoInterface {
-        return $this->repo;
+        return $this->repoInt;
     }
 
     /**
@@ -85,7 +67,7 @@ trait RepoResourceTrait {
      * @return string[]
      */
     public function getIds(): array {
-        $idProp = $this->repo->getSchema()->id;
+        $idProp = $this->repoInt->getSchema()->id;
         $this->loadMetadata();
         $ids    = [];
         foreach ($this->metadata->allResources($idProp) as $i) {
@@ -154,7 +136,7 @@ trait RepoResourceTrait {
      * New metadata are not automatically written back to the repository.
      * Use the `updateMetadata()` method to write them back.
      * 
-     * @param EasyRdf\Resource $metadata
+     * @param \EasyRdf\Resource $metadata
      * @see updateMetadata()
      * @see setGraph()
      */
@@ -171,7 +153,7 @@ trait RepoResourceTrait {
      * New metadata are not automatically written back to the repository.
      * Use the updateMetadata() method to write them back.
      * 
-     * @param EasyRdf\Resource $resource
+     * @param \EasyRdf\Resource $resource
      * @return void
      * @see updateMetadata()
      * @see setMetadata()
@@ -187,7 +169,7 @@ trait RepoResourceTrait {
      * Naivly means that a given rdfs:type triple must exist in the resource
      * metadata.
      * 
-     * @param type $class
+     * @param string $class
      * @return bool
      */
     public function isA(string $class): bool {

@@ -41,8 +41,8 @@ class RepoResourceTest extends TestBase {
         self::$repo->begin();
         $meta1 = $this->getMetadata([
             C::RDF_TYPE                  => ['https://class/1', 'https://class/2'],
-            self::$config->schema->id    => ['https://an.unique.id/1', 'https://an.unique.id/2'],
-            self::$config->schema->label => 'sample label for the first resource',
+            self::$schema->id    => ['https://an.unique.id/1', 'https://an.unique.id/2'],
+            self::$schema->label => 'sample label for the first resource',
             'https://date.prop'          => '2019-01-01',
             'https://number.prop'        => 150,
             'https://lorem.ipsum'        => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed iaculis nisl enim, malesuada tempus nisl ultrices ut. Duis egestas at arcu in blandit. Nulla eget sem urna. Sed hendrerit enim ut ultrices luctus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur non dolor non neque venenatis aliquet vitae venenatis est.',
@@ -55,7 +55,7 @@ class RepoResourceTest extends TestBase {
     /**
      * @group RepoResource
      */
-    public function testGetClasses() {
+    public function testGetClasses(): void {
         $res     = self::$repo->getResourceById('https://an.unique.id/1');
         $classes = $res->getClasses();
         $this->assertEquals(2, count($classes));
@@ -70,7 +70,7 @@ class RepoResourceTest extends TestBase {
     /**
      * @group RepoResource
      */
-    public function testGetIds() {
+    public function testGetIds(): void {
         $res = self::$repo->getResourceById('https://an.unique.id/1');
         $ids = $res->getIds();
         $this->assertEquals(3, count($ids));
@@ -79,7 +79,7 @@ class RepoResourceTest extends TestBase {
         }
     }
 
-    public function testHasBinaryContent() {
+    public function testHasBinaryContent(): void {
         $res = self::$repo->getResourceById('https://an.unique.id/1');
         $this->assertFalse($res->hasBinaryContent());
         
@@ -91,7 +91,7 @@ class RepoResourceTest extends TestBase {
         $this->assertTrue($res->hasBinaryContent());
     }
     
-    public function testGetContent() {
+    public function testGetContent(): void {
         $res = self::$repo->getResourceById('https://an.unique.id/1');
         $this->assertFalse($res->hasBinaryContent());
         

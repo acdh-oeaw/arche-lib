@@ -69,7 +69,7 @@ interface RepoInterface {
      * If more then one resources matches the search or there is no resource
      * matching the search, an error is thrown.
      * 
-     * @param array $ids an array of identifiers (being strings)
+     * @param array<string> $ids an array of identifiers (being strings)
      * @param string $class an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
      * @return \acdhOeaw\arche\lib\RepoResource
@@ -80,9 +80,9 @@ interface RepoInterface {
      * Performs a search
      * 
      * @param string $query
-     * @param array $parameters
+     * @param array<mixed> $parameters
      * @param \acdhOeaw\arche\lib\SearchConfig $config
-     * @return \Generator<\acdhOeaw\arche\lib\RepoResourceInterface>
+     * @return \Generator<int, \acdhOeaw\arche\lib\RepoResource, void, void>
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): Generator;
@@ -92,8 +92,9 @@ interface RepoInterface {
      * 
      * @param \acdhOeaw\arche\lib\SearchTerm[] $searchTerms
      * @param \acdhOeaw\arche\lib\SearchConfig $config
-     * @return \Generator<\acdhOeaw\arche\lib\RepoResourceInterface>
+     * @return \Generator<int, \acdhOeaw\arche\lib\RepoResource, void, void>
      */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator;
+    
 }

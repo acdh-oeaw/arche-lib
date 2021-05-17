@@ -27,6 +27,7 @@
 namespace acdhOeaw\arche\lib;
 
 use zozlak\RdfConstants as RDF;
+use zozlak\queryPart\QueryPart;
 use acdhOeaw\arche\lib\exception\RepoLibException;
 
 /**
@@ -53,9 +54,9 @@ class SearchTerm {
 
     /**
      * List of operators and data types they enforce
-     * @var array
+     * @var array<string, string|null>
      */
-    static private $operators      = [
+    static private array $operators = [
         '='  => null,
         '>'  => null,
         '<'  => null,
@@ -67,7 +68,12 @@ class SearchTerm {
         '&>' => self::TYPE_SPATIAL,
         '&<' => self::TYPE_SPATIAL,
     ];
-    static private $typesToColumns = [
+
+    /**
+     * 
+     * @var array<string, string>
+     */
+    static private array $typesToColumns = [
         RDF::XSD_STRING        => 'value',
         RDF::XSD_BOOLEAN       => 'value_n',
         RDF::XSD_DECIMAL       => 'value_n',
@@ -108,7 +114,7 @@ class SearchTerm {
      * 
      * @var array<string> | string
      */
-    public $property;
+    public null | array | string $property;
 
     /**
      * Operator to be used for the RDF triple value comparison.
@@ -116,34 +122,29 @@ class SearchTerm {
      * One of `=`, `<`, `<=`, `>`, `>=`, `~` (regular expresion match), 
      * `@@` (full text search match), 
      * 
-     * @var string
      * @see $value
      */
-    public $operator;
+    public ?string $operator;
 
     /**
      * Value to be matched by the RDF triple (with a given operator)
      * 
-     * @var array<scalar> | scalar
+     * @var array<scalar> | string | int | float | bool
      * @see $operator
      */
-    public $value;
+    public null | array | string | int | float | bool $value;
 
     /**
      * Data type to be matched by the RDF triple.
      * 
      * Should be one of main XSD data types or one of `TYPE_...` constants defined by this class.
-     * 
-     * @var string
      */
-    public $type;
+    public ?string $type;
 
     /**
      * Language to be matched by the RDF triple
-     * 
-     * @var string
      */
-    public $language;
+    public ?string $language;
 
     /**
      * Creates a search term object.
@@ -177,9 +178,9 @@ class SearchTerm {
      * 
      * @param string $baseUrl repository base URL
      * @param string $idProp RDF property denoting identifiers
-     * @param array $nonRelationProperties list of properties which are internally
+     * @param array<string> $nonRelationProperties list of properties which are internally
      *   stored only as literals, even if they are resources in the RDF graph
-     * @return \acdhOeaw\arche\lib\QueryPart
+     * @return QueryPart
      */
     public function getSqlQuery(string $baseUrl, string $idProp,
                                 array $nonRelationProperties): QueryPart {
@@ -187,7 +188,7 @@ class SearchTerm {
             return $this->getSqlQueryOr($baseUrl, $idProp, $nonRelationProperties);
         }
 
-        $type = self::$operators[substr($this->operator, 0, 2)]; // substr for spatial operators with distance
+        $type = self::$operators[substr($this->operator ?? '', 0, 2)]; // substr for spatial operators with distance
         // if type not enforced by the operator, try the provided one
         if ($type === null) {
             $type = $this->type;
@@ -196,7 +197,7 @@ class SearchTerm {
         if ($type === null) {
             if (is_numeric($this->value)) {
                 $type = self::TYPE_NUMBER;
-            } elseif (preg_match(self::DATETIME_REGEX, $this->value)) {
+            } elseif (preg_match(self::DATETIME_REGEX, (string) $this->value)) {
                 $type = self::TYPE_DATETIME;
             } else {
                 $type = self::TYPE_STRING;
@@ -220,6 +221,13 @@ class SearchTerm {
         }
     }
 
+    /**
+     * 
+     * @param string $baseUrl
+     * @param string $idProp
+     * @param array<string> $nonRelationProperties
+     * @return QueryPart
+     */
     private function getSqlQueryOr(string $baseUrl, string $idProp,
                                    array $nonRelationProperties): QueryPart {
         $properties = is_array($this->property) ? $this->property : [$this->property];
@@ -287,11 +295,12 @@ class SearchTerm {
     }
 
     private function getSqlQuerySpatial(): QueryPart {
+        $func       = 'true';
         $param      = [$this->value];
         $valueQuery = 'st_geomfromtext(?, 4326)';
-        switch (substr($this->operator, 1, 1)) {
+        switch (substr($this->operator ?? '', 1, 1)) {
             case '&':
-                $dist = (int) substr($this->operator, 2);
+                $dist = (int) substr($this->operator ?? '', 2);
                 if ($dist > 0) {
                     $func    = "st_dwithin(geom, $valueQuery::geography, ?, false)";
                     $param[] = $dist;
@@ -326,13 +335,13 @@ class SearchTerm {
             $param[] = $this->language;
         }
         $otherTables = false;
-        if (!empty($this->value)) {
+        if (!empty($this->value) && is_scalar($this->value)) {
             $column      = self::$typesToColumns[$type];
             $otherTables = $column === self::COLUMN_STRING;
-            // string values stored in the database can be to long to be indexed, 
+            // string values stored in the database can be too long to be indexed, 
             // therefore the index is set only on `substring(value, 1, self::STRING_MAX_LENGTH)`
             // and to benefit from it the predicate must strictly follow the index definition
-            if ($column === self::COLUMN_STRING && strlen($this->value) < self::STRING_MAX_LENGTH) {
+            if ($column === self::COLUMN_STRING && strlen((string) $this->value) < self::STRING_MAX_LENGTH) {
                 $column = "substring(" . $column . ", 1, " . self::STRING_MAX_LENGTH . ")";
             }
             if (substr($column, 0, 7) !== 'value_t') {
@@ -342,7 +351,7 @@ class SearchTerm {
                 // dates require special handling taking into account they might be out of the timestamp range
                 $valueN = (int) $this->value;
                 if ($valueN >= -4713) {
-                    $valueT = $this->value;
+                    $valueT = (string) $this->value;
                     if (substr($valueT, 0, 1) === '-') {
                         $valueT = substr($valueT, 1) . ' BC';
                     }
@@ -387,7 +396,7 @@ class SearchTerm {
      */
     public function getFormData(): string {
         $terms = [];
-        foreach ($this as $k => $v) {
+        foreach ((array) $this as $k => $v) {
             if ($v !== null) {
                 $terms[$k . '[]'] = is_array($v) ? $v : (string) $v;
             }

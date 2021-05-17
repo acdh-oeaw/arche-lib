@@ -42,20 +42,20 @@ class SearchTest extends TestBase {
         self::$repo->begin();
 
         $meta1 = $this->getMetadata([
-            self::$config->schema->id    => 'https://an.unique.id',
-            self::$config->schema->label => 'sample label for the first resource',
-            'https://number.prop'        => 150,
-            'https://lorem.ipsum'        => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed iaculis nisl enim, malesuada tempus nisl ultrices ut. Duis egestas at arcu in blandit. Nulla eget sem urna. Sed hendrerit enim ut ultrices luctus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur non dolor non neque venenatis aliquet vitae venenatis est.',
+            self::$schema->id     => 'https://an.unique.id',
+            self::$schema->label  => 'sample label for the first resource',
+            'https://number.prop' => 150,
+            'https://lorem.ipsum' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed iaculis nisl enim, malesuada tempus nisl ultrices ut. Duis egestas at arcu in blandit. Nulla eget sem urna. Sed hendrerit enim ut ultrices luctus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur non dolor non neque venenatis aliquet vitae venenatis est.',
         ]);
         $meta1->add('https://date.prop', new \EasyRdf\Literal('2019-01-01', null, C::XSD_DATE));
         $res1  = self::$repo->createResource($meta1);
         $this->noteResource($res1);
 
         $meta2 = $this->getMetadata([
-            $relProp                     => $res1->getUri(),
-            self::$config->schema->label => 'a more original title for a resource',
-            'https://number.prop'        => 20,
-            'https://lorem.ipsum'        => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur non dolor non neque venenatis aliquet vitae venenatis est. Aenean eleifend ipsum eu placerat sagittis. Aenean ullamcorper dignissim enim, ut congue turpis tristique eu.',
+            $relProp              => $res1->getUri(),
+            self::$schema->label  => 'a more original title for a resource',
+            'https://number.prop' => 20,
+            'https://lorem.ipsum' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur non dolor non neque venenatis aliquet vitae venenatis est. Aenean eleifend ipsum eu placerat sagittis. Aenean ullamcorper dignissim enim, ut congue turpis tristique eu.',
         ]);
         $meta2->add('https://date.prop', new \EasyRdf\Literal('2019-02-01', null, C::XSD_DATE));
         $res2  = self::$repo->createResource($meta2);
@@ -67,18 +67,18 @@ class SearchTest extends TestBase {
     /**
      * @group search
      */
-    public function testSearchBySqlQuery() {
+    public function testSearchBySqlQuery(): void {
         $query  = "SELECT id FROM metadata WHERE property = ? AND value LIKE '%original%'";
-        $param  = [self::$config->schema->label];
-        $result = self::$repo->getResourcesBySqlQuery($query, $param, new SearchConfig());
+        $param  = [self::$schema->label];
+        $result = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, new SearchConfig()));
         $this->assertEquals(1, count($result));
-        $this->assertEquals('a more original title for a resource', (string) $result[0]->getMetadata()->getLiteral(self::$config->schema->label));
+        $this->assertEquals('a more original title for a resource', (string) $result[0]->getMetadata()->getLiteral(self::$schema->label));
     }
 
     /**
      * @group search
      */
-    public function testSearchBySqlQueryEmpty() {
+    public function testSearchBySqlQueryEmpty(): void {
         $result = self::$repo->getResourcesBySqlQuery("SELECT -1 AS id WHERE false", [
             ], new SearchConfig());
         $this->assertEquals([], $result);
@@ -87,28 +87,29 @@ class SearchTest extends TestBase {
     /**
      * @group search
      */
-    public function testSearchBySearchTerms() {
+    public function testSearchBySearchTerms(): void {
         $term1  = new SearchTerm('https://number.prop', 30, '<=', C::XSD_DECIMAL);
         $term2  = new SearchTerm('https://date.prop', '2019-01-15', '>=', C::XSD_DATE);
         $term3  = new SearchTerm('https://lorem.ipsum', 'ipsum', '@@');
-        $result = self::$repo->getResourcesBySearchTerms([$term1, $term2, $term3], new SearchConfig());
+        $result = iterator_to_array(self::$repo->getResourcesBySearchTerms([$term1,
+                $term2, $term3], new SearchConfig()));
         $this->assertEquals(1, count($result));
-        $this->assertEquals('a more original title for a resource', (string) $result[0]->getMetadata()->getLiteral(self::$config->schema->label));
+        $this->assertEquals('a more original title for a resource', (string) $result[0]->getMetadata()->getLiteral(self::$schema->label));
     }
 
     /**
      * @group search
      */
-    public function testSearchWrongDataType() {
+    public function testSearchWrongDataType(): void {
         $term1  = new SearchTerm('https://number.prop', 30, '<=', C::XSD_STRING);
-        $result = self::$repo->getResourcesBySearchTerms([$term1], new SearchConfig());
+        $result = iterator_to_array(self::$repo->getResourcesBySearchTerms([$term1], new SearchConfig()));
         $this->assertEquals(2, count($result));
     }
-    
+
     /**
      * @group search
      */
-    public function testSearchFtsHighlight() {
+    public function testSearchFtsHighlight(): void {
         $term                         = new SearchTerm('https://lorem.ipsum', 'ipsum', '@@');
         $config                       = new SearchConfig();
         $config->ftsQuery             = 'ipsum';
@@ -120,7 +121,8 @@ class SearchTest extends TestBase {
         $config->ftsMaxFragments      = 10;
         $config->ftsFragmentDelimiter = '|';
 
-        $result        = self::$repo->getResourcesBySearchTerms([$term], $config);
+        $result        = iterator_to_array(self::$repo->getResourcesBySearchTerms([
+                $term], $config));
         $this->assertEquals(2, count($result));
         $ftsProp       = self::$repo->getSchema()->searchFts;
         $ftsHighlight1 = (string) $result[0]->getMetadata()->getLiteral($ftsProp);
@@ -138,14 +140,14 @@ class SearchTest extends TestBase {
     /**
      * @group search
      */
-    public function testSearchRelatives() {
+    public function testSearchRelatives(): void {
         $query                          = "SELECT id FROM metadata WHERE property = ? AND value = ?";
         $param                          = ['https://date.prop', '2019-02-01'];
         $config                         = new SearchConfig();
         $config->metadataMode           = RepoResource::META_RELATIVES;
         $config->metadataParentProperty = self::$repo->getSchema()->parent;
 
-        $result = self::$repo->getResourcesBySqlQuery($query, $param, $config);
+        $result = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, $config));
         $this->assertEquals(1, count($result));
         $meta   = $result[0]->getGraph();
         $this->assertEquals('2019-02-01', (string) $meta->getLiteral('https://date.prop'));
@@ -156,23 +158,22 @@ class SearchTest extends TestBase {
     /**
      * @group search
      */
-    public function testSearchPaging() {
+    public function testSearchPaging(): void {
         $query         = "SELECT id FROM metadata WHERE property = ? ORDER BY id";
         $param         = ['https://date.prop'];
         $config        = new SearchConfig();
         $config->limit = 1;
 
         $config->offset = 0;
-        $result         = self::$repo->getResourcesBySqlQuery($query, $param, $config);
+        $result         = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, $config));
         $this->assertEquals(1, count($result));
         $meta           = $result[0]->getGraph();
         $this->assertEquals('2019-01-01', (string) $meta->getLiteral('https://date.prop'));
 
         $config->offset = 1;
-        $result         = self::$repo->getResourcesBySqlQuery($query, $param, $config);
+        $result         = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, $config));
         $this->assertEquals(1, count($result));
         $meta           = $result[0]->getGraph();
         $this->assertEquals('2019-02-01', (string) $meta->getLiteral('https://date.prop'));
     }
-
 }

@@ -12,9 +12,12 @@
         }
     ],
     "require": {
-        "guzzlehttp/guzzle": "^6",
+        "php": ">=8",
+        "guzzlehttp/guzzle": "^7",
         "acdh-oeaw/easyrdf": "*",
-        "zozlak/rdf-constants": "*"
+        "zozlak/rdf-constants": "*",
+        "zozlak/query-part": "^2",
+        "psr/log": "*"
     },
     "autoload": {
         "psr-4": {
@@ -23,6 +26,7 @@
         }
     },
     "require-dev": {
-        "phpunit/phpunit": "*"
+        "phpunit/phpunit": "*",
+        "phpstan/phpstan": "*"
     }
 }

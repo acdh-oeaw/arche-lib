@@ -27,6 +27,7 @@
 namespace acdhOeaw\arche\lib;
 
 use Psr\Log\AbstractLogger;
+use acdhOeaw\arche\lib\exception\RepoLibException;
 
 /**
  * A common (mostly boiler plate) code for classes implementing the RepoInterface.
@@ -34,33 +35,22 @@ use Psr\Log\AbstractLogger;
  * @author zozlak
  */
 trait RepoTrait {
-    
+
     /**
      * Repository REST API base URL
-     * 
-     * @var string
      */
-    private $baseUrl;
+    private string $baseUrl;
 
     /**
      * An object providing mappings of repository REST API parameters to HTTP headers used by a given repository instance.
-     * 
-     * @var \acdhOeaw\arche\lib\Schema
      */
-    private $headers;
+    private Schema $headers;
 
     /**
      * An object providing mappings of repository concepts to RDF properties used to denote them by a given repository instance.
-     * 
-     * @var \acdhOeaw\arche\lib\Schema
      */
-    private $schema;
-
-    /**
-     * 
-     * @var \Psr\Log\AbstractLogger
-     */
-    private $queryLog;
+    private Schema $schema;
+    private ?AbstractLogger $queryLog;
 
     /**
      * Returns the repository REST API base URL.
@@ -84,10 +74,10 @@ trait RepoTrait {
      * Returns an HTTP header name to be used to pass a given information in the repository request.
      * 
      * @param string $purpose
-     * @return string|null
+     * @return string
      */
-    public function getHeaderName(string $purpose): ?string {
-        return $this->headers->$purpose ?? null;
+    public function getHeaderName(string $purpose): string {
+        return $this->headers->$purpose ?? throw new RepoLibException("Unknown header name for $purpose");
     }
 
     /**
@@ -113,5 +103,4 @@ trait RepoTrait {
     public function setQueryLog(AbstractLogger $log): void {
         $this->queryLog = $log;
     }
-
 }

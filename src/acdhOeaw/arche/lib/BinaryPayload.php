@@ -27,7 +27,8 @@
 namespace acdhOeaw\arche\lib;
 
 use GuzzleHttp\Psr7\Request;
-use exception\RepoLibException;
+use acdhOeaw\arche\lib\exception\RepoLibException;
+use function GuzzleHttp\Psr7\mimetype_from_filename;
 
 /**
  * Simple container for a request binary payload
@@ -70,7 +71,7 @@ class BinaryPayload {
     public function __construct(?string $data = null, ?string $filePath = null,
                                 ?string $mimeType = null) {
         if ($data !== null) {
-            $this->createFromData($data, basename($filePath), $mimeType);
+            $this->createFromData($data, basename((string) $filePath), $mimeType);
         } elseif ($filePath !== null) {
             $this->createFromFile($filePath, $mimeType);
         }
@@ -115,7 +116,7 @@ class BinaryPayload {
         $this->data = $data;
         if (!empty($fileName)) {
             $this->fileName = $fileName;
-            $this->mimeType = \GuzzleHttp\Psr7\mimetype_from_filename($fileName);
+            $this->mimeType = mimetype_from_filename($this->fileName) ?? '';
         }
         if (!empty($mimeType)) {
             $this->mimeType = $mimeType;
@@ -142,11 +143,10 @@ class BinaryPayload {
         if (!empty($mimeType)) {
             $this->mimeType = $mimeType;
         } else {
-            $this->mimeType = \GuzzleHttp\Psr7\mimetype_from_filename(basename($path));
+            $this->mimeType = mimetype_from_filename(basename($path)) ?? '';
             if ($this->mimeType === null) {
-                $this->mimeType = @mime_content_type($path);
+                $this->mimeType = (string) @mime_content_type($path);
             }
         }
     }
-
 }

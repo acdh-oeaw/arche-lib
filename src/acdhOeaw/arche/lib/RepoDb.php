@@ -33,6 +33,7 @@ use PDOStatement;
 use EasyRdf\Graph;
 use EasyRdf\Literal;
 use zozlak\RdfConstants as RDF;
+use zozlak\queryPart\QueryPart;
 use acdhOeaw\arche\lib\RepoResourceInterface AS RRI;
 use acdhOeaw\arche\lib\exception\AmbiguousMatch;
 use acdhOeaw\arche\lib\exception\NotFound;
@@ -54,8 +55,13 @@ class RepoDb implements RepoInterface {
      * 
      * @var string
      */
-    static public $resourceClass   = '\acdhOeaw\arche\lib\RepoResourceDb';
-    static private $highlightParam = [
+    static public $resourceClass = '\acdhOeaw\arche\lib\RepoResourceDb';
+
+    /**
+     * 
+     * @var array<string>
+     */
+    static private array $highlightParam = [
         'StartSel', 'StopSel', 'MaxWords', 'MinWords',
         'ShortWord', 'HighlightAll', 'MaxFragments', 'FragmentDelimiter'
     ];
@@ -69,11 +75,11 @@ class RepoDb implements RepoInterface {
      * 
      * @param string $configFile a path to the YAML config file
      * @param string $dbSettings database connection variant to read from the config
-     * @return \acdhOeaw\arche\lib\Repo
+     * @return \acdhOeaw\arche\lib\RepoDb
      */
     static public function factory(string $configFile,
                                    string $dbSettings = 'guest'): RepoDb {
-        $config = json_decode(json_encode(yaml_parse_file($configFile)));
+        $config = new Config($configFile);
 
         $baseUrl    = $config->rest->urlBase . $config->rest->pathBase;
         $schema     = new Schema($config->schema);
@@ -84,23 +90,14 @@ class RepoDb implements RepoInterface {
         return new RepoDb($baseUrl, $schema, $headers, $pdo, (array) $nonRelProp);
     }
 
-    /**
-     *
-     * @var \PDO
-     */
-    private $pdo;
+    private PDO $pdo;
+    private ?AuthInterface $auth;
 
     /**
      *
-     * @var string[]
+     * @var array<string>
      */
-    private $nonRelationProperties;
-
-    /**
-     *
-     * @var \acdhOeaw\arche\lib\AuthInterface
-     */
-    private $auth;
+    private array $nonRelationProperties;
 
     /**
      * 
@@ -132,7 +129,7 @@ class RepoDb implements RepoInterface {
      * If more then one resources matches the search or there is no resource
      * matching the search, an error is thrown.
      * 
-     * @param array $ids an array of identifiers (being strings)
+     * @param array<string> $ids an array of identifiers (being strings)
      * @param string $class an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
      * @return \acdhOeaw\arche\lib\RepoResource
@@ -159,9 +156,9 @@ class RepoDb implements RepoInterface {
     /**
      * Returns repository resources matching all provided search terms.
      * 
-     * @param array $searchTerms
+     * @param array<SearchTerm> $searchTerms
      * @param \acdhOeaw\arche\lib\SearchConfig $config
-     * @return \Generator<\acdhOeaw\arche\lib\RepoResourceInterface>
+     * @return \Generator<int, \acdhOeaw\arche\lib\RepoResource, void, void>
      */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator {
@@ -173,9 +170,9 @@ class RepoDb implements RepoInterface {
      * Performs a search
      * 
      * @param string $query
-     * @param array $parameters
+     * @param array<mixed> $parameters
      * @param \acdhOeaw\arche\lib\SearchConfig $config
-     * @return \Generator<\acdhOeaw\arche\lib\RepoResourceInterface>
+     * @return \Generator<int, \acdhOeaw\arche\lib\RepoResource, void, void>
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): Generator {
@@ -185,7 +182,7 @@ class RepoDb implements RepoInterface {
 
     /**
      * 
-     * @param array $searchTerms
+     * @param array<SearchTerm> $searchTerms
      * @param \acdhOeaw\arche\lib\SearchConfig $config
      * @return \EasyRdf\Graph
      */
@@ -200,7 +197,7 @@ class RepoDb implements RepoInterface {
     /**
      * 
      * @param string $query
-     * @param array $parameters
+     * @param array<mixed> $parameters
      * @param \acdhOeaw\arche\lib\SearchConfig $config
      * @return \EasyRdf\Graph
      */
@@ -214,7 +211,7 @@ class RepoDb implements RepoInterface {
 
     /**
      * 
-     * @param array $searchTerms
+     * @param array<SearchTerm> $searchTerms
      * @param \acdhOeaw\arche\lib\SearchConfig $config
      * @return \PDOStatement
      */
@@ -230,7 +227,7 @@ class RepoDb implements RepoInterface {
             } else {
                 $query .= " JOIN ($qpTmp->query) t$n USING (id) ";
             }
-            $param = array_merge($param, $qpTmp->param);
+            $param = array_merge($param, (array) $qpTmp->param);
         }
         return $this->getPdoStatementBySqlQuery($query, $param, $config);
     }
@@ -238,7 +235,7 @@ class RepoDb implements RepoInterface {
     /**
      * 
      * @param string $query
-     * @param array $parameters
+     * @param array<mixed> $parameters
      * @param \acdhOeaw\arche\lib\SearchConfig $config
      * @return \PDOStatement
      * @throws RepoLibException
@@ -330,7 +327,7 @@ class RepoDb implements RepoInterface {
     /**
      * 
      * @param string $query
-     * @param array $param
+     * @param array<mixed> $param
      * @return \PDOStatement
      */
     public function runQuery(string $query, array $param): PDOStatement {
@@ -341,7 +338,7 @@ class RepoDb implements RepoInterface {
 
     /**
      * 
-     * @return \acdhOeaw\arche\lib\QueryPart
+     * @return QueryPart
      */
     public function getMetadataAuthQuery(): QueryPart {
         if ($this->auth !== null) {
@@ -354,7 +351,7 @@ class RepoDb implements RepoInterface {
      * Prepares an SQL query adding a full text search query results as 
      * metadata graph edges.
      * 
-     * @return \acdhOeaw\arche\lib\QueryPart
+     * @return QueryPart
      */
     private function getFtsQuery(SearchConfig $cfg): QueryPart {
         $query = '';
@@ -420,8 +417,8 @@ class RepoDb implements RepoInterface {
 
     /**
      * 
-     * @param \acdhOeaw\arche\lib\SearchConfig $config
-     * @return \acdhOeaw\arche\lib\QueryPart
+     * @param SearchConfig $config
+     * @return QueryPart
      */
     private function getPagingQuery(SearchConfig $config): QueryPart {
         $query = '';
@@ -475,12 +472,12 @@ class RepoDb implements RepoInterface {
      * 
      * @param \EasyRdf\Graph $graph
      * @param string $class
-     * @return \Generator<\acdhOeaw\arche\lib\RepoResourceInterface>
+     * @return \Generator<int, \acdhOeaw\arche\lib\RepoResource, void, void>
      */
     private function parseSearchGraph(Graph $graph, string $class): Generator {
         $resources = $graph->resourcesMatching($this->schema->searchMatch);
         foreach ($resources as $i) {
-            $obj       = new $class($i->getUri(), $this);
+            $obj = new $class($i->getUri(), $this);
             $obj->setGraph($i);
             yield $obj;
         }
@@ -489,7 +486,7 @@ class RepoDb implements RepoInterface {
     /**
      * 
      * @param string $query
-     * @param array $param
+     * @param array<mixed> $param
      * @return void
      */
     private function logQuery(string $query, array $param): void {

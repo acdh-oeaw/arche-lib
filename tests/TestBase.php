@@ -39,16 +39,14 @@ use acdhOeaw\arche\lib\exception\NotFound;
  */
 class TestBase extends \PHPUnit\Framework\TestCase {
 
-    /**
-     *
-     * @var \acdhOeaw\arche\lib\Repo
-     */
-    static protected $repo;
-    static protected $config;
+    static protected Repo $repo;
+    static protected Config $config;
+    static protected Schema $schema;
 
     static public function setUpBeforeClass(): void {
         $cfgFile      = __DIR__ . '/config.yaml';
-        self::$config = json_decode(json_encode(yaml_parse_file($cfgFile)));
+        self::$config = new Config($cfgFile);
+        self::$schema = new Schema(self::$config->schema);
         self::$repo   = Repo::factory($cfgFile);
     }
 
@@ -56,7 +54,11 @@ class TestBase extends \PHPUnit\Framework\TestCase {
         
     }
 
-    private $resources;
+    /**
+     * 
+     * @var array<RepoResource>
+     */
+    private array $resources;
 
     public function setUp(): void {
         $this->resources = [];
@@ -81,24 +83,29 @@ class TestBase extends \PHPUnit\Framework\TestCase {
         self::$repo->commit();
     }
 
-    protected function noteResource(RepoResource $res) {
+    protected function noteResource(RepoResource $res): void {
         $this->resources[] = $res;
     }
 
+    /**
+     * 
+     * @param array<string, scalar|array> $properties
+     * @return Resource
+     */
     protected function getMetadata(array $properties): Resource {
         $graph = new Graph();
         $res   = $graph->newBNode();
         foreach ($properties as $p => $v) {
             switch ($p) {
                 case 'id':
-                    $p = self::$config->schema->id;
+                    $p = self::$schema->id;
                     break;
                 case 'rel':
-                    $p = self::$config->schema->parent;
+                    $p = self::$schema->parent;
                     break;
                 case 'title':
                 case 'label':
-                    $p = self::$config->schema->label;
+                    $p = self::$schema->label;
                     break;
             }
             if (!is_array($v)) {
@@ -114,5 +121,4 @@ class TestBase extends \PHPUnit\Framework\TestCase {
         }
         return $res;
     }
-
 }

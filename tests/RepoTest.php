@@ -59,7 +59,7 @@ class RepoTest extends TestBase {
     /**
      * @large
      */
-    public function testTransactionProlong() {
+    public function testTransactionProlong(): void {
         self::$repo->begin();
         sleep(self::$config->transactionController->timeout - 2);
         self::$repo->prolong();
@@ -71,7 +71,7 @@ class RepoTest extends TestBase {
     /**
      * @large
      */
-    public function testTransactionExpired() {
+    public function testTransactionExpired(): void {
         self::$repo->begin();
         sleep(self::$config->transactionController->timeout + 1);
         $this->expectException('GuzzleHttp\Exception\ClientException');
@@ -79,8 +79,8 @@ class RepoTest extends TestBase {
         self::$repo->commit();
     }
 
-    public function testCreateResource() {
-        $labelProp = self::$config->schema->label;
+    public function testCreateResource(): void {
+        $labelProp = self::$schema->label;
         $metadata  = $this->getMetadata([$labelProp => 'sampleTitle']);
         $binary    = new BinaryPayload(null, __FILE__);
 
@@ -96,12 +96,12 @@ class RepoTest extends TestBase {
         $this->assertEquals('sampleTitle', (string) $res2->getMetadata()->getLiteral($labelProp));
     }
 
-    public function testUpdateMetadata() {
+    public function testUpdateMetadata(): void {
         $p1   = 'http://my.prop/1';
         $p2   = 'http://my.prop/2';
         $p3   = 'http://my.prop/3';
         $p4   = 'http://my.prop/4';
-        $pd   = self::$config->schema->delete;
+        $pd   = self::$schema->delete;
         $meta = $this->getMetadata([$p1 => 'v1', $p2 => 'v2', $p3 => 'v3']);
         self::$repo->begin();
         $res  = self::$repo->createResource($meta);
@@ -120,8 +120,8 @@ class RepoTest extends TestBase {
         self::$repo->rollback();
     }
 
-    public function testSearchById() {
-        $idProp = self::$config->schema->id;
+    public function testSearchById(): void {
+        $idProp = self::$schema->id;
         $id     = 'https://a.b/' . rand();
         $meta   = $this->getMetadata([$idProp => $id]);
         self::$repo->begin();
@@ -133,17 +133,17 @@ class RepoTest extends TestBase {
         $this->assertEquals($res1->getUri(), $res2->getUri());
     }
 
-    public function testSearchByIdNotFound() {
+    public function testSearchByIdNotFound(): void {
         $this->expectException(NotFound::class);
         self::$repo->getResourceById('https://no.such/id');
     }
-    
-    public function testSearchByIdsAmigous() {
-        $idProp = self::$config->schema->id;
-        $id1     = 'https://a.b/' . rand();
-        $id2     = 'https://a.b/' . rand();
-        $meta1   = $this->getMetadata([$idProp => $id1]);
-        $meta2   = $this->getMetadata([$idProp => $id2]);
+
+    public function testSearchByIdsAmigous(): void {
+        $idProp = self::$schema->id;
+        $id1    = 'https://a.b/' . rand();
+        $id2    = 'https://a.b/' . rand();
+        $meta1  = $this->getMetadata([$idProp => $id1]);
+        $meta2  = $this->getMetadata([$idProp => $id2]);
         self::$repo->begin();
         $res1   = self::$repo->createResource($meta1);
         $this->noteResource($res1);
@@ -154,13 +154,13 @@ class RepoTest extends TestBase {
         $this->expectException(AmbiguousMatch::class);
         self::$repo->getResourceByIds([$id1, $id2]);
     }
-    
-    public function testDeleteResource() {
+
+    public function testDeleteResource(): void {
         $relProp = 'https://some.prop';
         self::$repo->begin();
 
         $id    = 'https://a.b/' . rand();
-        $meta1 = $this->getMetadata([self::$config->schema->id => $id]);
+        $meta1 = $this->getMetadata([self::$schema->id => $id]);
         $res1  = self::$repo->createResource($meta1);
         $this->noteResource($res1);
 
@@ -178,17 +178,17 @@ class RepoTest extends TestBase {
         $res1->loadMetadata(true);
     }
 
-    public function testDeleteWithConflict() {
+    public function testDeleteWithConflict(): void {
         $relProp = 'https://some.prop';
         self::$repo->begin();
 
         $id    = 'https://a.b/' . rand();
-        $meta1 = $this->getMetadata([self::$config->schema->id => $id]);
+        $meta1 = $this->getMetadata([self::$schema->id => $id]);
         $res1  = self::$repo->createResource($meta1);
         $this->noteResource($res1);
 
         $meta2 = $this->getMetadata([$relProp => $res1->getUri()]);
-        $res2 = self::$repo->createResource($meta2);
+        $res2  = self::$repo->createResource($meta2);
         $this->noteResource($res2);
 
         $res1->delete(true, false);
@@ -197,12 +197,12 @@ class RepoTest extends TestBase {
         self::$repo->commit();
     }
 
-    public function testDeleteWithReferences() {
+    public function testDeleteWithReferences(): void {
         $relProp = 'https://some.prop';
         self::$repo->begin();
 
         $id    = 'https://a.b/' . rand();
-        $meta1 = $this->getMetadata([self::$config->schema->id => $id]);
+        $meta1 = $this->getMetadata([self::$schema->id => $id]);
         $res1  = self::$repo->createResource($meta1);
         $this->noteResource($res1);
 
@@ -219,12 +219,12 @@ class RepoTest extends TestBase {
         $res1->loadMetadata(true);
     }
 
-    public function testDeleteRecursively() {
+    public function testDeleteRecursively(): void {
         $relProp = 'https://some.prop';
         self::$repo->begin();
 
         $id    = 'https://a.b/' . rand();
-        $meta1 = $this->getMetadata([self::$config->schema->id => $id]);
+        $meta1 = $this->getMetadata([self::$schema->id => $id]);
         $res1  = self::$repo->createResource($meta1);
         $this->noteResource($res1);
 
@@ -248,5 +248,4 @@ class RepoTest extends TestBase {
             $this->assertEquals(410, $e->getCode());
         }
     }
-
 }

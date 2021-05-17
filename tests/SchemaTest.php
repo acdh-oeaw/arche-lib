@@ -32,12 +32,18 @@ namespace acdhOeaw\arche\lib;
  * @author zozlak
  */
 class SchemaTest extends \PHPUnit\Framework\TestCase {
-    public function testComplexStructure() {
-        $schema = new Schema(json_decode(json_encode(['a' => ['b' => 'c']])));
-        $x = $schema->a;
-        $this->assertEquals((object) ['b' => 'c'], $x);
-        $x->b = 'd';
-        $y = $schema->a;
-        $this->assertEquals((object) ['b' => 'c'], $y);
+
+    public function testComplexStructure(): void {
+        $tmp = json_encode(['test' => ['b' => 'c']]);
+        if (is_string($tmp)) {
+            $schema = new Schema(json_decode($tmp));
+            $x      = $schema->test;
+            if (isset($x->b)) {
+                $x->b = 'd';
+            }
+            $y = $schema->test;
+            $this->assertEquals((object) ['b' => 'd'], $x);
+            $this->assertEquals((object) ['b' => 'c'], $y);
+        }
     }
 }

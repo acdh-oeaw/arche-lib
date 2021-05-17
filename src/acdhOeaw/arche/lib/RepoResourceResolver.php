@@ -26,16 +26,18 @@
 
 namespace acdhOeaw\arche\lib;
 
+use PDO;
 use Throwable;
 use PDOException;
 use RuntimeException;
 use GuzzleHttp\Exception\RequestException;
-use zozlak\logging\Log;
+use Psr\Log\AbstractLogger;
 use acdhOeaw\arche\lib\Schema;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\RepoDb;
 use acdhOeaw\arche\lib\RepoResourceInterface;
 use acdhOeaw\arche\lib\exception\NotFound;
+use acdhOeaw\arche\lib\exception\AmbiguousMatch;
 
 /**
  * Returns repository resource object having a given id.
@@ -47,23 +49,9 @@ use acdhOeaw\arche\lib\exception\NotFound;
  */
 class RepoResourceResolver {
 
-    /**
-     * 
-     * @var object
-     */
-    private $config;
-
-    /**
-     * 
-     * @var \acdhOeaw\arche\lib\RepoInterface
-     */
-    private $repo;
-
-    /**
-     * 
-     * @var \zozlak\logging\Log
-     */
-    private $log;
+    private ?Config $config;
+    private ?RepoInterface $repo;
+    private ?AbstractLogger $log;
 
     /**
      * Sets up the resolver.
@@ -89,16 +77,15 @@ class RepoResourceResolver {
      * `$config->auth->httpBasic->user` and `$config->auth->httpBasic->password`.
      * 
      * @param ?object $config
-     * @param ?Log $log
+     * @param ?AbstractLogger $log
      */
-    public function __construct(?object $config, ?Log $log = null) {
-        $this->config = $config;
-        $this->log    = $log;
-
-        if ($this->config !== null) {
-            $schema  = new Schema($this->config->schema);
-            $headers = new Schema($this->config->rest->headers);
-            $baseUrl = $this->config->rest->urlBase . $this->config->rest->pathBase;
+    public function __construct(?object $config, ?AbstractLogger $log = null) {
+        $this->log = $log;
+        if ($config !== null) {
+            $this->config = new Config($config);
+            $schema       = new Schema($this->config->schema);
+            $headers      = new Schema($this->config->rest->headers);
+            $baseUrl      = $this->config->rest->urlBase . $this->config->rest->pathBase;
             if (!empty($this->config->dbConnStr ?? '')) {
                 $pdo        = new PDO($this->config->dbConnStr);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -121,13 +108,11 @@ class RepoResourceResolver {
      * @param bool $fallback Should fallback zero-config mode be used when
      *   a resource is not found? (valid only for non-zero-config modes - see the
      *   constructor descrription)
-     * @return type
+     * @return RepoResourceInterface
      * @throws RuntimeException
      */
     public function resolve(string $resId, bool $fallback = true): RepoResourceInterface {
-        if ($this->repo === null) {
-            $fallback = true;
-        } else {
+        if ($this->repo !== null) {
             try {
                 return $this->repo->getResourceById($resId);
             } catch (NotFound $e) {
@@ -142,9 +127,7 @@ class RepoResourceResolver {
                 throw new RuntimeException('Can not connect to the repository database', 500);
             }
         }
-        if ($fallback) {
-            return self::resolveUrl($resId);
-        }
+        return self::resolveUrl($resId);
     }
 
     /**
@@ -157,16 +140,16 @@ class RepoResourceResolver {
         if ($this->log) {
             $this->log->debug("Resolving $url using a zero-config method");
         }
-        $metaHeader = $this->config->rest->headers->metadataReadMode ?? null;
-        $realUrl = null;
-        $repo    = Repo::factoryFromUrl($url, [], $realUrl, $metaHeader);
+        $metaHeader = $this->config?->rest->headers->metadataReadMode;
+        $realUrl    = null;
+        $repo       = Repo::factoryFromUrl($url, [], $realUrl, $metaHeader);
         if ($this->log) {
             $this->log->info("$url resolved to $realUrl");
         }
         return new RepoResource($realUrl, $repo);
     }
 
-    public function handleException(Throwable $e, ?Log $log): void {
+    public function handleException(Throwable $e, ?AbstractLogger $log): void {
         if ($log !== null) {
             $log->error($e);
         }
@@ -177,7 +160,7 @@ class RepoResourceResolver {
         }
         $msg    = $e->getMessage();
         $p      = strpos($msg, "\n");
-        $reason = substr($msg, 0, $p);
+        $reason = substr($msg, 0, (int) $p);
         $body   = substr($msg, $p + 1);
         if (empty($body)) {
             $body = $reason;
