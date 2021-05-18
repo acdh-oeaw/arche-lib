@@ -35,118 +35,122 @@ use function GuzzleHttp\json_encode;
  * by mocking config properties hierarchy.
  *
  * @author zozlak
- * @property Config $auth
- * @property Config $rest
- * @property Config $transactionController
- * @property Config $metadataManagment
- * @property Config $httpBasic
- * @property Config $headers
- * @property Config $storage
- * @property Config $logging
- * @property Config $storage
- * @property Config $logging
  * @property Config $accessControl
- * @property Config $socket
- * @property Config $metadataManager
- * @property Config $db
- * @property Config $autoAddIds
- * @property Config $spatialSearch
- * @property Config $create
- * @property Config $fullTextSearch
- * @property Config $schema
- * @property Config | null $rabbitMq
- * @property Config $sizeLimits
- * @property Config $mimeFilter
- * @property Config $handlers
- * @property Config $dbConn
- * @property object $httpHeader
- * @property string $pathBase
- * @property string $urlBase
- * @property string $user;
- * @property string $password
- * @property string $metadataReadMode
- * @property string $dir
- * @property string $dbConnStr
- * @property string $tmpDir
- * @property string $file
+ * @property array  $addNamespaces
  * @property string $address
- * @property string $path
- * @property string $parent
- * @property string $id
- * @property string $searchMatch
- * @property string $label
- * @property string $delete
- * @property string $creationDate
- * @property string $modificationDate
- * @property string $creationUser
- * @property string $metadataWriteMode
- * @property string $modificationUser
- * @property string $publicRole
- * @property string $binaryModificationUser
+ * @property string $admin
+ * @property array  $adminRoles
+ * @property array  $allowedRoles
+ * @property array  $assignRoles
+ * @property Config $autoAddIds
+ * @property Config $auth
+ * @property array<Config> $authMethods
  * @property string $binaryModificationDate
- * @property string $type
- * @property string $defaultMetadataSearchMode
+ * @property string $binaryModificationUser
+ * @property string $binarySize
+ * @property string $class
+ * @property int    $checkInterval
+ * @property array<string, string> $classLoader
+ * @property string $connStr
+ * @property array  $copying
+ * @property string $cors
+ * @property Config $create
+ * @property string $creationDate
+ * @property string $creationUser
+ * @property array  $creatorRights
+ * @property string $dataCol
+ * @property Config $db
+ * @property Config $dbConn
+ * @property string $dbConnStr
+ * @property array<string, array<Config>> $default
+ * @property string $defaultAction
  * @property string $defaultMetadataFormat
  * @property string $defaultMetadataReadMode
+ * @property string $defaultMetadataSearchMode
  * @property string $defaultMetadataWriteMode
- * @property string $connStr
- * @property string $dataCol
- * @property string $table
- * @property string $userCol
- * @property string $admin
- * @property string $guest
- * @property string $class
- * @property string $defaultAction
- * @property string $hashAlgorithm
- * @property string $hash
  * @property string $defaultMime
- * @property string $modeDir
- * @property string $level
- * @property string $sizeLimit
- * @property string $tikaLocation
- * @property string $cors
- * @property string $lang
+ * @property string $delete
+ * @property array  $denyNamespaces
+ * @property string $dir
+ * @property bool   $enforceCompleteness
+ * @property bool   $enforceOnMetadata
+ * @property bool   $exceptionOnTimeout
+ * @property string $file
  * @property string $fileName
- * @property string $binarySize
- * @property string $value
- * @property string $indexing
- * @property string $host
- * @property string $read
- * @property string $queue
+ * @property array<string, array<Config>> $fixed
+ * @property array  $forbidden
+ * @property Config $fullTextSearch
  * @property string $function
+ * @property string $guest
+ * @property Config $handlers
+ * @property string $hash
+ * @property string $hashAlgorithm
+ * @property Config $headers
  * @property string $highlighting
- * @property string $transactionId
- * @property array $mime
+ * @property string $host
+ * @property Config $httpBasic
+ * @property object $httpHeader
+ * @property string $id
+ * @property string $indexing
+ * @property string $label
+ * @property string $lang
+ * @property string $level
+ * @property int    $levels
+ * @property Config $logging
+ * @property \EasyRdf\Resource $meta
+ * @property string $metadata
+ * @property array  $metadataFormats
+ * @property Config $metadataManager
+ * @property Config $metadataManagment
+ * @property string $metadataParentProperty
+ * @property string $metadataReadMode
+ * @property string $metadataWriteMode
+ * @property array  $methods
+ * @property array  $mime
+ * @property Config $mimeFilter
+ * @property array  $mimeTypes
+ * @property string $modeDir
+ * @property string $modificationDate
+ * @property string $modificationUser
+ * @property array  $namespaces
  * @property array<string> $nonRelationProperties
  * @property array<string> $options
- * @property array<string, array<Config>> $fixed
- * @property array<string, array<Config>> $default
- * @property array $forbidden
- * @property array $namespaces
- * @property array $copying
- * @property array $parameters
- * @property array $metadataFormats
- * @property array $skipNamespaces
- * @property array $addNamespaces
- * @property array $denyNamespaces
- * @property array $properties
- * @property array $adminRoles
- * @property array $allowedRoles
- * @property array $assignRoles
- * @property array $creatorRights
- * @property array $mimeTypes
- * @property array $methods
- * @property array<string, string> $classLoader
- * @property array<Config> $authMethods
- * @property int $timeout
- * @property int $port
- * @property int $levels
- * @property int $checkInterval
- * @property bool $exceptionOnTimeout
- * @property bool $verifyCert
- * @property bool $enforceOnMetadata
- * @property bool $enforceCompleteness
- * @property bool $simplifyMetaHistory
+ * @property array  $parameters
+ * @property string $parent
+ * @property string $path
+ * @property string $pathBase
+ * @property string $password
+ * @property int    $port
+ * @property string $publicRole
+ * @property array  $properties
+ * @property string $queue
+ * @property Config | null $rabbitMq
+ * @property string $read
+ * @property Config $rest
+ * @property Config $schema
+ * @property string $searchCount
+ * @property string $searchFts
+ * @property string $searchMatch
+ * @property bool   $simplifyMetaHistory
+ * @property string $sizeLimit
+ * @property Config $sizeLimits
+ * @property array  $skipNamespaces
+ * @property Config $socket
+ * @property Config $spatialSearch
+ * @property Config $storage
+ * @property string $table
+ * @property string $tikaLocation
+ * @property int    $timeout
+ * @property string $tmpDir
+ * @property Config $transactionController
+ * @property string $transactionId
+ * @property string $type
+ * @property string $uri
+ * @property string $urlBase
+ * @property string $user;
+ * @property string $userCol
+ * @property string $value
+ * @property bool   $verifyCert
  */
 class Config {
 
