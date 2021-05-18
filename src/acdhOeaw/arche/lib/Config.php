@@ -49,26 +49,41 @@ use function GuzzleHttp\json_encode;
  * @property Config $socket
  * @property Config $metadataManager
  * @property Config $db
- * @property Config | string $dbConnStr
  * @property Config $autoAddIds
  * @property Config $spatialSearch
  * @property Config $create
  * @property Config $fullTextSearch
- * @property object $schema
+ * @property Config $schema
+ * @property Config | null $rabbitMq
+ * @property Config $sizeLimits
+ * @property Config $mimeFilter
+ * @property Config $handlers
+ * @property Config $dbConn
  * @property object $httpHeader
- * @property object $mimeFilter
- * @property object $sizeLimits
- * @property object $handlers
  * @property string $pathBase
  * @property string $urlBase
  * @property string $user;
  * @property string $password
  * @property string $metadataReadMode
  * @property string $dir
+ * @property string $dbConnStr
  * @property string $tmpDir
  * @property string $file
  * @property string $address
  * @property string $path
+ * @property string $parent
+ * @property string $id
+ * @property string $searchMatch
+ * @property string $label
+ * @property string $delete
+ * @property string $creationDate
+ * @property string $modificationDate
+ * @property string $creationUser
+ * @property string $metadataWriteMode
+ * @property string $modificationUser
+ * @property string $publicRole
+ * @property string $binaryModificationUser
+ * @property string $binaryModificationDate
  * @property string $type
  * @property string $defaultMetadataSearchMode
  * @property string $defaultMetadataFormat
@@ -83,18 +98,33 @@ use function GuzzleHttp\json_encode;
  * @property string $class
  * @property string $defaultAction
  * @property string $hashAlgorithm
+ * @property string $hash
  * @property string $defaultMime
  * @property string $modeDir
  * @property string $level
  * @property string $sizeLimit
  * @property string $tikaLocation
  * @property string $cors
+ * @property string $lang
+ * @property string $fileName
+ * @property string $binarySize
+ * @property string $value
+ * @property string $indexing
+ * @property string $host
+ * @property string $read
+ * @property string $queue
+ * @property string $function
+ * @property string $highlighting
+ * @property string $transactionId
+ * @property array $mime
  * @property array<string> $nonRelationProperties
  * @property array<string> $options
- * @property array $fixed
- * @property array $default
+ * @property array<string, array<Config>> $fixed
+ * @property array<string, array<Config>> $default
  * @property array $forbidden
+ * @property array $namespaces
  * @property array $copying
+ * @property array $parameters
  * @property array $metadataFormats
  * @property array $skipNamespaces
  * @property array $addNamespaces
@@ -105,11 +135,14 @@ use function GuzzleHttp\json_encode;
  * @property array $assignRoles
  * @property array $creatorRights
  * @property array $mimeTypes
- * @property array<object> $authMethods
+ * @property array $methods
+ * @property array<string, string> $classLoader
+ * @property array<Config> $authMethods
  * @property int $timeout
  * @property int $port
  * @property int $levels
  * @property int $checkInterval
+ * @property bool $exceptionOnTimeout
  * @property bool $verifyCert
  * @property bool $enforceOnMetadata
  * @property bool $enforceCompleteness
@@ -124,13 +157,21 @@ class Config {
     private object $cfg;
 
     public function __construct(object $config) {
-        $this->cfg = $config;
+        if ($config instanceof Config) {
+            $this->cfg = $config->cfg;
+        } else {
+            $this->cfg = $config;
+        }
     }
 
     public function __get(string $name): mixed {
         return $this->cfg->$name ?? throw new RepoLibException("Unknown configuration property $name");
     }
 
+    public function __isset(string $name): bool {
+        return isset($this->cfg->$name);
+    }
+    
     public function asObject(): object {
         return $this->cfg;
     }
