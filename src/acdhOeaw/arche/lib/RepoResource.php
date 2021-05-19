@@ -52,12 +52,12 @@ class RepoResource implements RepoResourceInterface {
      * 
      * @param Repo $repo connection object
      * @param ResponseInterface $response PSR-7 repository response object
-     * @param string $uri resource URI (if not provided, a Location HTTP header
+     * @param ?string $uri resource URI (if not provided, a Location HTTP header
      *   from the response will be used)
      * @return RepoResource
      */
     static public function factory(Repo $repo, ResponseInterface $response,
-                                   string $uri = null): RepoResource {
+                                   ?string $uri = null): RepoResource {
 
         $uri   = $uri ?? $response->getHeader('Location')[0];
         /* @var $res \acdhOeaw\arche\lib\RepoResource */
