@@ -24,8 +24,11 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\arche\lib;
+namespace acdhOeaw\arche\lib\tests;
 
+use acdhOeaw\arche\lib\BinaryPayload;
+use acdhOeaw\arche\lib\Repo;
+use acdhOeaw\arche\lib\RepoResource;
 use acdhOeaw\arche\lib\exception\AmbiguousMatch;
 use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;

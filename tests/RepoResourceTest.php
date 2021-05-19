@@ -24,9 +24,10 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\arche\lib;
+namespace acdhOeaw\arche\lib\tests;
 
 use zozlak\RdfConstants as C;
+use acdhOeaw\arche\lib\BinaryPayload;
 
 /**
  * Description of RepoResourceTest
@@ -40,12 +41,12 @@ class RepoResourceTest extends TestBase {
 
         self::$repo->begin();
         $meta1 = $this->getMetadata([
-            C::RDF_TYPE                  => ['https://class/1', 'https://class/2'],
-            self::$schema->id    => ['https://an.unique.id/1', 'https://an.unique.id/2'],
-            self::$schema->label => 'sample label for the first resource',
-            'https://date.prop'          => '2019-01-01',
-            'https://number.prop'        => 150,
-            'https://lorem.ipsum'        => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed iaculis nisl enim, malesuada tempus nisl ultrices ut. Duis egestas at arcu in blandit. Nulla eget sem urna. Sed hendrerit enim ut ultrices luctus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur non dolor non neque venenatis aliquet vitae venenatis est.',
+            C::RDF_TYPE           => ['https://class/1', 'https://class/2'],
+            self::$schema->id     => ['https://an.unique.id/1', 'https://an.unique.id/2'],
+            self::$schema->label  => 'sample label for the first resource',
+            'https://date.prop'   => '2019-01-01',
+            'https://number.prop' => 150,
+            'https://lorem.ipsum' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed iaculis nisl enim, malesuada tempus nisl ultrices ut. Duis egestas at arcu in blandit. Nulla eget sem urna. Sed hendrerit enim ut ultrices luctus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur non dolor non neque venenatis aliquet vitae venenatis est.',
         ]);
         $res1  = self::$repo->createResource($meta1);
         $this->noteResource($res1);
@@ -62,7 +63,7 @@ class RepoResourceTest extends TestBase {
         foreach (['https://class/1', 'https://class/2'] as $i) {
             $this->assertTrue(in_array($i, $classes));
         }
-        
+
         $this->assertTrue($res->isA('https://class/1'));
         $this->assertFalse($res->isA('https://class/10'));
     }
@@ -82,25 +83,24 @@ class RepoResourceTest extends TestBase {
     public function testHasBinaryContent(): void {
         $res = self::$repo->getResourceById('https://an.unique.id/1');
         $this->assertFalse($res->hasBinaryContent());
-        
+
         self::$repo->begin();
         $content = new BinaryPayload(__FILE__, null, 'text/plain');
         $res->updateContent($content);
         self::$repo->commit();
-        
+
         $this->assertTrue($res->hasBinaryContent());
     }
-    
+
     public function testGetContent(): void {
         $res = self::$repo->getResourceById('https://an.unique.id/1');
         $this->assertFalse($res->hasBinaryContent());
-        
+
         self::$repo->begin();
         $content = new BinaryPayload('sample content', '/dummy/path', 'text/plain');
         $res->updateContent($content);
         self::$repo->commit();
-        
+
         $this->assertEquals('sample content', $res->getContent()->getBody());
     }
-    
 }

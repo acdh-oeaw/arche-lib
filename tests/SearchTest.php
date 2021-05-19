@@ -24,7 +24,10 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\arche\lib;
+namespace acdhOeaw\arche\lib\tests;
+use acdhOeaw\arche\lib\RepoResource;
+use acdhOeaw\arche\lib\SearchConfig;
+use acdhOeaw\arche\lib\SearchTerm;
 
 use zozlak\RdfConstants as C;
 
@@ -81,7 +84,7 @@ class SearchTest extends TestBase {
     public function testSearchBySqlQueryEmpty(): void {
         $result = self::$repo->getResourcesBySqlQuery("SELECT -1 AS id WHERE false", [
             ], new SearchConfig());
-        $this->assertEquals([], $result);
+        $this->assertEquals([], iterator_to_array($result));
     }
 
     /**

@@ -24,11 +24,15 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\arche\lib;
+namespace acdhOeaw\arche\lib\tests;
 
 use EasyRdf\Graph;
 use EasyRdf\Resource;
 use GuzzleHttp\Exception\ClientException;
+use acdhOeaw\arche\lib\Config;
+use acdhOeaw\arche\lib\Repo;
+use acdhOeaw\arche\lib\RepoResource;
+use acdhOeaw\arche\lib\Schema;
 use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
 

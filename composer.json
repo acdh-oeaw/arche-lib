@@ -30,7 +30,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "acdhOeaw\\arche\\lib\\": "tests"
+            "acdhOeaw\\arche\\lib\\tests\\": "tests"
         }
     }
 }
