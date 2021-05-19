@@ -169,10 +169,12 @@ class Config {
     }
 
     public function __get(string $name): mixed {
-        return $this->cfg->$name ?? throw new RepoLibException("Unknown configuration property $name");
+        echo "GET $name\n";
+        return $this->cfg->$name ?? null;
     }
 
     public function __isset(string $name): bool {
+        echo "ISSSET $name\n";
         return isset($this->cfg->$name);
     }
     
