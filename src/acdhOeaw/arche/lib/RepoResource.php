@@ -248,7 +248,7 @@ class RepoResource implements RepoResourceInterface {
     public function loadMetadata(bool $force = false,
                                  string $mode = self::META_RESOURCE,
                                  ?string $parentProperty = null): void {
-        if (!is_object($this->metadata) || $force) {
+        if (!isset($this->metadata) || $force) {
             $headers = [
                 'Accept'                                             => 'application/n-triples',
                 $this->repo->getHeaderName('metadataReadMode')       => $mode,

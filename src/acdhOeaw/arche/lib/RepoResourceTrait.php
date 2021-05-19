@@ -28,7 +28,6 @@ namespace acdhOeaw\arche\lib;
 
 use EasyRdf\Resource;
 use zozlak\RdfConstants as RDF;
-use acdhOeaw\arche\lib\exception\RepoLibException;
 
 /**
  * A common boilet plate code to be reused by all RepoResourceInterface
