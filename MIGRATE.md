@@ -24,7 +24,7 @@ To allow a straightforward `Repo` object creation a static method `Repo::factory
 with a configuration extracted from a given configuration file (which is now a YAML file):
 
 ```php
-use acdhOeaw\acdhRepoLib\Repo;
+use acdhOeaw\arche\lib\Repo;
 $repo = Repo::factory('path\to\config.yaml');
 ```
 
@@ -43,8 +43,8 @@ $res = $fedora->getResourceByUri('https://resource.url');
 Now you simply call the `RepoResource` object constructor:
 
 ```php
-use acdhOeaw\acdhRepoLib\Repo;
-use acdhOeaw\acdhRepoLib\RepoResource;
+use acdhOeaw\arche\lib\Repo;
+use acdhOeaw\arche\lib\RepoResource;
 $repo = Repo::factory('path/to/config.yaml');
 $res = new RepoResource('https://resource.url', $repo);
 ```
@@ -60,8 +60,8 @@ There are two important changes in regard to metadata access:
 
 In the repo-php-util `FedoraResource::getMetadata()` and `FedoraResource::setMetadata()` methods always created a deep copy of returned/taken metadata objects, e.g.:
 ```php
-use acdhOeaw\acdhRepoLib\Repo;
-use acdhOeaw\acdhRepoLib\RepoResource;
+use acdhOeaw\arche\lib\Repo;
+use acdhOeaw\arche\lib\RepoResource;
 $repo = Repo::factory('path/to/config.yaml');
 $res = new RepoResource('https://resource.url', $repo);
 $meta1 = $res->getMetadata();
@@ -76,7 +76,7 @@ If you know you will use the metadata read only (or you are aware what you are d
 This is what `RepoResource::getGraph()` and `RepoResource::setGraph()` methods are meant for, e.g.:
 
 ```php
-use acdhOeaw\acdhRepoLib\RepoResource;
+use acdhOeaw\arche\lib\RepoResource;
 // initialization code skipped
 $res = $repo->getResourceByUrl('https://very.large/collection/url');
 $res->loadMetadata();
@@ -112,8 +112,8 @@ Also `Repo::getResourcesBy...()` methods take the `$mode` and `$parentProperty` 
 You can use `RepoResource::META_RESOURCE`, `RepoResource::META_NEIGBOURS` and ``RepoResource::META_RELATIVES` constants to denote the desired metadata mode, e.g.:
 
 ```php
-use acdhOeaw\acdhRepoLib\Repo;
-use acdhOeaw\acdhRepoLib\RepoResource;
+use acdhOeaw\arche\lib\Repo;
+use acdhOeaw\arche\lib\RepoResource;
 $repo = Repo::factory('path/to/config.yaml');
 $res = new RepoResource('https://resource.url', $repo);
 $res->loadMetadata(true, RepoResource::META_NEIGBOURS);
@@ -266,9 +266,9 @@ Setting `ftsQuery` doesn't filter for resources matching it. To get this behavio
 An example search for all resources containing a given phrase in its binary content and display full text search highlighting results for all matched ones.
 
 ```php
-use acdhOeaw\acdhRepoLib\Repo;
-use acdhOeaw\acdhRepoLib\SearchConfig;
-use acdhOeaw\acdhRepoLib\SearchTerm;
+use acdhOeaw\arche\lib\Repo;
+use acdhOeaw\arche\lib\SearchConfig;
+use acdhOeaw\arche\lib\SearchTerm;
 $repo = Repo::factory('path/to/config.yaml');
 $config = new SearchConfig();
 $config->ftsQuery = 'my phrase';
@@ -283,7 +283,7 @@ foreach ($results as $res) {
 To make it easy to remove a given RDF property from resources metadata a special syntax has been introduced:
 
 ```php
-$repo = \acdhOeaw\acdhRepoLib\Repo::factory('config.yaml');
+$repo = \acdhOeaw\arche\lib\Repo::factory('config.yaml');
 $repo->getResourceById('https://my.id', '\acdhOeaw\arche\disserv\RepoResource');
 $meta = $repo->getGraph();
 $meta->addResource($repo->getSchema()->delete, 'https://unwanted.property');
@@ -299,7 +299,7 @@ The acdh-repo-lib is different. It provides only a new repository solution API w
 
 As in the new solution objects representing repository resources are instantiated directly it's enough to call its constructor to get a specialized object,  e.g.:
 ```php
-$repo = \acdhOeaw\acdhRepoLib\Repo::factory('config.yaml');
+$repo = \acdhOeaw\arche\lib\Repo::factory('config.yaml');
 $res = new \acdhOeaw\arche\disserv\RepoResource('https://my.url', $repo);
 $res->getDissServices();
 ```
@@ -307,12 +307,12 @@ $res->getDissServices();
 Things are more complex when it comes to search results. To instantiate search result repository objects with a particular class 
 you should use the `$class` property, e.g.:
 ```php
-$repo = \acdhOeaw\acdhRepoLib\Repo::factory('config.yaml');
+$repo = \acdhOeaw\arche\lib\Repo::factory('config.yaml');
 
 $repo->getResourceById('https://my.id', '\acdhOeaw\arche\disserv\RepoResource');
 
-$term = new \acdhOeaw\acdhRepoLib\SearchTerm('https://my.property', 'my value');
-$config = new \acdhOeaw\acdhRepoLib\SearchConfig();
+$term = new \acdhOeaw\arche\lib\SearchTerm('https://my.property', 'my value');
+$config = new \acdhOeaw\arche\lib\SearchConfig();
 $config->class = '\acdhOeaw\arche\disserv\RepoResource';
 $results = $repo->getResourcesBySearchTerms([$term], $config);
 ```
