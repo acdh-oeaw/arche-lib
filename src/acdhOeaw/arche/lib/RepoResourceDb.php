@@ -45,7 +45,7 @@ class RepoResourceDb implements RepoResourceInterface {
      * Creates an object representing a repository resource.
      * 
      * @param string $urlOrId either a resource URL or just the numeric id
-     * @param \acdhOeaw\arche\lib\RepoInterface $repo repository connection object
+     * @param RepoInterface $repo repository connection object
      */
     public function __construct(string $urlOrId, RepoInterface $repo) {
         if (!$repo instanceof RepoDb) {

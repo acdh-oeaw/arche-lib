@@ -98,7 +98,7 @@ class SearchTerm {
      * Creates an instance of the SearchTerm class from a given $_POST vars set
      * 
      * @param int $key
-     * @return \acdhOeaw\arche\lib\SearchTerm
+     * @return SearchTerm
      */
     static public function factory($key): self {
         $property = $_POST['property'][$key] ?? null;

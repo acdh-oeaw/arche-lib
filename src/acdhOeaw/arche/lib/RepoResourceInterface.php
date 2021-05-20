@@ -95,7 +95,7 @@ interface RepoResourceInterface {
      * Creates an object representing a repository resource.
      * 
      * @param string $url URL of the resource
-     * @param \acdhOeaw\arche\lib\RepoInterface $repo repository connection object
+     * @param RepoInterface $repo repository connection object
      */
     public function __construct(string $url, RepoInterface $repo);
 
@@ -109,14 +109,14 @@ interface RepoResourceInterface {
     /**
      * Returns repository connection object associated with the given resource object.
      * 
-     * @return \acdhOeaw\arche\lib\Repo
+     * @return RepoInterface
      */
     public function getRepo(): RepoInterface;
 
     /**
      * Returns an array with all repository resource identifiers.
      * 
-     * @return string[]
+     * @return array<string>
      */
     public function getIds(): array;
 
@@ -145,7 +145,7 @@ interface RepoResourceInterface {
      * A reference to the metadata is returned meaning adjusting the returned object
      * automatically affects the resource metadata.
      * 
-     * @return \EasyRdf\Resource
+     * @return Resource
      * @see getMetadata()
      */
     public function getGraph(): Resource;
@@ -160,7 +160,7 @@ interface RepoResourceInterface {
      * does not automatically affect the resource metadata.
      * Use the setMetadata() method to write back the changes you made.
      * 
-     * @return \EasyRdf\Resource
+     * @return Resource
      * @see setMetadata()
      * @see getGraph()
      */
@@ -174,7 +174,7 @@ interface RepoResourceInterface {
      * New metadata are not automatically written back to the repository.
      * Use the updateMetadata() method to write them back.
      * 
-     * @param \EasyRdf\Resource $resource
+     * @param Resource $resource
      * @return void
      * @see updateMetadata()
      * @see setMetadata()
@@ -189,7 +189,7 @@ interface RepoResourceInterface {
      * New metadata are not automatically written back to the repository.
      * Use the `updateMetadata()` method to write them back.
      * 
-     * @param \EasyRdf\Resource $metadata
+     * @param Resource $metadata
      * @see updateMetadata()
      * @see setGraph()
      */

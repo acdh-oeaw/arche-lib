@@ -64,7 +64,7 @@ trait RepoTrait {
     /**
      * Returns the `Schema` object defining repository entities to RDF property mappings.
      * 
-     * @return \acdhOeaw\arche\lib\Schema
+     * @return Schema
      */
     public function getSchema(): Schema {
         return $this->schema;
@@ -88,7 +88,7 @@ trait RepoTrait {
      * @param string $id
      * @param string $class an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
-     * @return \acdhOeaw\arche\lib\RepoResource
+     * @return RepoResourceInterface
      */
     public function getResourceById(string $id, string $class = null): RepoResourceInterface {
         return $this->getResourceByIds([$id], $class);

@@ -188,7 +188,7 @@ class SearchConfig {
      * Returns HTTP request headers setting metadata read mode and metadata parent property
      * according to the search config settings.
      * 
-     * @param \acdhOeaw\arche\lib\Repo $repo
+     * @param Repo $repo
      * @return array<string>
      */
     public function getHeaders(Repo $repo): array {

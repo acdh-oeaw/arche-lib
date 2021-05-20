@@ -44,7 +44,7 @@ interface RepoInterface {
     /**
      * Returns the `Schema` object defining repository entities to RDF property mappings.
      * 
-     * @return \acdhOeaw\arche\lib\Schema
+     * @return Schema
      */
     public function getSchema(): Schema;
 
@@ -56,7 +56,7 @@ interface RepoInterface {
      * @param string $id
      * @param string $class an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
-     * @return \acdhOeaw\arche\lib\RepoResource
+     * @return RepoResourceInterface
      */
     public function getResourceById(string $id, string $class = null): RepoResourceInterface;
 
@@ -72,7 +72,7 @@ interface RepoInterface {
      * @param array<string> $ids an array of identifiers (being strings)
      * @param string $class an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
-     * @return \acdhOeaw\arche\lib\RepoResource
+     * @return RepoResourceInterface
      */
     public function getResourceByIds(array $ids, string $class = null): RepoResourceInterface;
 
@@ -81,8 +81,8 @@ interface RepoInterface {
      * 
      * @param string $query
      * @param array<mixed> $parameters
-     * @param \acdhOeaw\arche\lib\SearchConfig $config
-     * @return \Generator<int, \acdhOeaw\arche\lib\RepoResource, void, void>
+     * @param SearchConfig $config
+     * @return Generator<int, RepoResourceInterface, void, void>
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): Generator;
@@ -90,9 +90,9 @@ interface RepoInterface {
     /**
      * Returns repository resources matching all provided search terms.
      * 
-     * @param \acdhOeaw\arche\lib\SearchTerm[] $searchTerms
-     * @param \acdhOeaw\arche\lib\SearchConfig $config
-     * @return \Generator<int, \acdhOeaw\arche\lib\RepoResource, void, void>
+     * @param array<SearchTerm> $searchTerms
+     * @param SearchConfig $config
+     * @return Generator<int, RepoResourceInterface, void, void>
      */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator;

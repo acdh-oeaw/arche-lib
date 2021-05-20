@@ -28,6 +28,7 @@ namespace acdhOeaw\arche\lib\tests;
 
 use zozlak\RdfConstants as C;
 use acdhOeaw\arche\lib\BinaryPayload;
+use acdhOeaw\arche\lib\RepoResource;
 
 /**
  * Description of RepoResourceTest
@@ -81,6 +82,7 @@ class RepoResourceTest extends TestBase {
     }
 
     public function testHasBinaryContent(): void {
+        /** @var RepoResource $res */
         $res = self::$repo->getResourceById('https://an.unique.id/1');
         $this->assertFalse($res->hasBinaryContent());
 
@@ -93,6 +95,7 @@ class RepoResourceTest extends TestBase {
     }
 
     public function testGetContent(): void {
+        /** @var RepoResource $res */
         $res = self::$repo->getResourceById('https://an.unique.id/1');
         $this->assertFalse($res->hasBinaryContent());
 

@@ -77,7 +77,7 @@ class RepoResource implements RepoResourceInterface {
      * Creates an object representing a repository resource.
      * 
      * @param string $url URL of the resource
-     * @param \acdhOeaw\arche\lib\RepoInterface $repo repository connection object
+     * @param RepoInterface $repo repository connection object
      */
     public function __construct(string $url, RepoInterface $repo) {
         if (!$repo instanceof Repo) {
@@ -101,7 +101,7 @@ class RepoResource implements RepoResourceInterface {
     /**
      * Updates repository resource binary content with a given payload.
      * 
-     * @param \acdhOeaw\arche\lib\BinaryPayload $content new content
+     * @param BinaryPayload $content new content
      * @return void
      */
     public function updateContent(BinaryPayload $content): void {

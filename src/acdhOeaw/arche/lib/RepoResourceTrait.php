@@ -55,7 +55,7 @@ trait RepoResourceTrait {
     /**
      * Returns repository connection object associated with the given resource object.
      * 
-     * @return \acdhOeaw\arche\lib\RepoInterface
+     * @return RepoInterface
      */
     public function getRepo(): RepoInterface {
         return $this->repoInt;
@@ -79,7 +79,7 @@ trait RepoResourceTrait {
     /**
      * Returns all RDF types (classes) of a given repository resource.
      * 
-     * @return string[]
+     * @return array<string>
      */
     public function getClasses(): array {
         $this->loadMetadata();
@@ -100,7 +100,7 @@ trait RepoResourceTrait {
      * does not automatically affect the resource metadata.
      * Use the setMetadata() method to write back the changes you made.
      * 
-     * @return \EasyRdf\Resource
+     * @return Resource
      * @see setMetadata()
      * @see setGraph()
      * @see getGraph()
@@ -119,7 +119,7 @@ trait RepoResourceTrait {
      * A reference to the metadata is returned meaning adjusting the returned object
      * automatically affects the resource metadata.
      * 
-     * @return \EasyRdf\Resource
+     * @return Resource
      * @see setGraph()
      * @see getMetadata()
      */
@@ -136,7 +136,7 @@ trait RepoResourceTrait {
      * New metadata are not automatically written back to the repository.
      * Use the `updateMetadata()` method to write them back.
      * 
-     * @param \EasyRdf\Resource $metadata
+     * @param Resource $metadata
      * @see updateMetadata()
      * @see setGraph()
      */
@@ -153,7 +153,7 @@ trait RepoResourceTrait {
      * New metadata are not automatically written back to the repository.
      * Use the updateMetadata() method to write them back.
      * 
-     * @param \EasyRdf\Resource $resource
+     * @param Resource $resource
      * @return void
      * @see updateMetadata()
      * @see setMetadata()
