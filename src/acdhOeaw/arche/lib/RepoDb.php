@@ -316,7 +316,7 @@ class RepoDb implements RepoInterface {
         try {
             $query->execute($param);
         } catch (PDOException $e) {
-            if ($this->queryLog) {
+            if (isset($this->queryLog)) {
                 $this->queryLog->error($e);
             }
             throw new RepoLibException('Bad query', 400, $e);
@@ -490,7 +490,7 @@ class RepoDb implements RepoInterface {
      * @return void
      */
     private function logQuery(string $query, array $param): void {
-        if ($this->queryLog !== null) {
+        if (isset($this->queryLog)) {
             $msg = "\tSearch query:\n";
             while (($pos = strpos($query, '?')) !== false) {
                 $msg   .= substr($query, 0, $pos) . $this->pdo->quote(array_shift($param));
