@@ -84,7 +84,7 @@ class RepoDb implements RepoInterface {
         $baseUrl    = $config->rest->urlBase . $config->rest->pathBase;
         $schema     = new Schema($config->schema);
         $headers    = new Schema($config->rest->headers);
-        $pdo        = new PDO($config->dbConnStr->$dbSettings);
+        $pdo        = new PDO($config->dbConn->$dbSettings);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $nonRelProp = $config->metadataManagment->nonRelationProperties ?? [];
         return new RepoDb($baseUrl, $schema, $headers, $pdo, (array) $nonRelProp);

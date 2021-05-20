@@ -86,8 +86,9 @@ class RepoResourceResolver {
             $schema       = new Schema($this->config->schema);
             $headers      = new Schema($this->config->rest->headers);
             $baseUrl      = $this->config->rest->urlBase . $this->config->rest->pathBase;
-            if (!empty($this->config->dbConnStr ?? '')) {
-                $pdo        = new PDO($this->config->dbConnStr);
+            $dbConnStr = $this->config->dbConnStr ?? ($this->config->dbConn->guest ?? '');
+            if (!empty($dbConnStr)) {
+                $pdo        = new PDO($dbConnStr);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 $this->repo = new RepoDb($baseUrl, $schema, $headers, $pdo);
             } else {
