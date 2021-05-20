@@ -118,7 +118,7 @@ class RepoResource implements RepoResourceInterface {
      */
     public function hasBinaryContent(): bool {
         $this->loadMetadata();
-        return (int) ((string) $this->metadata->getLiteral($this->repo->getSchema()->binarySize)) > 0;
+        return (int) ((string) $this->metadata?->getLiteral($this->repo->getSchema()->binarySize)) > 0;
     }
 
     /**
@@ -146,7 +146,7 @@ class RepoResource implements RepoResourceInterface {
                 $updateModeHeader => $updateMode,
                 $readModeHeader   => $readMode,
             ];
-            $body             = $this->metadata->getGraph()->serialise('application/n-triples');
+            $body             = $this->metadata?->getGraph()->serialise('application/n-triples');
             $req              = new Request('patch', $this->url . '/metadata', $headers, $body);
             $resp             = $this->repo->sendRequest($req);
             $this->parseMetadata($resp);
@@ -198,7 +198,7 @@ class RepoResource implements RepoResourceInterface {
             } while ($key !== null);
         }
 
-        $this->metadata = new Resource('.');
+        $this->metadata = null;
     }
 
     /**
@@ -248,7 +248,7 @@ class RepoResource implements RepoResourceInterface {
     public function loadMetadata(bool $force = false,
                                  string $mode = self::META_RESOURCE,
                                  ?string $parentProperty = null): void {
-        if (!isset($this->metadata) || $force) {
+        if ($this->metadata === null || $force) {
             $headers = [
                 'Accept'                                             => 'application/n-triples',
                 $this->repo->getHeaderName('metadataReadMode')       => $mode,

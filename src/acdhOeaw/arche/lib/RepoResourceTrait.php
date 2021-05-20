@@ -27,6 +27,7 @@
 namespace acdhOeaw\arche\lib;
 
 use EasyRdf\Resource;
+use acdhOeaw\arche\lib\exception\RepoLibException;
 use zozlak\RdfConstants as RDF;
 
 /**
@@ -37,7 +38,7 @@ use zozlak\RdfConstants as RDF;
  */
 trait RepoResourceTrait {
 
-    private Resource $metadata;
+    private ?Resource $metadata = null;
     private bool $metaSynced;
     private RepoInterface $repoInt;
     private string $url;
@@ -69,7 +70,7 @@ trait RepoResourceTrait {
         $idProp = $this->repoInt->getSchema()->id;
         $this->loadMetadata();
         $ids    = [];
-        foreach ($this->metadata->allResources($idProp) as $i) {
+        foreach ($this->metadata?->allResources($idProp) as $i) {
             $ids[] = (string) $i;
         }
         return $ids;
@@ -83,7 +84,7 @@ trait RepoResourceTrait {
     public function getClasses(): array {
         $this->loadMetadata();
         $ret = [];
-        foreach ($this->metadata->allResources(RDF::RDF_TYPE) as $i) {
+        foreach ($this->metadata?->allResources(RDF::RDF_TYPE) as $i) {
             $ret[] = $i->getUri();
         }
         return $ret;
@@ -106,7 +107,7 @@ trait RepoResourceTrait {
      */
     public function getMetadata(): Resource {
         $this->loadMetadata();
-        return $this->metadata->copy();
+        return $this->metadata?->copy() ?? throw new RepoLibException('Metadata not loaded');
     }
 
     /**
@@ -124,7 +125,7 @@ trait RepoResourceTrait {
      */
     public function getGraph(): Resource {
         $this->loadMetadata();
-        return $this->metadata;
+        return $this->metadata ?? throw new RepoLibException('Metadata not loaded');
     }
 
     /**
