@@ -129,7 +129,7 @@ class Repo implements RepoInterface {
         $pswd = trim((string) fgets(STDIN));
         system('stty echo');
 
-        $cfg->auth = new Config((object) ['httpBasic' => ['user' => $user, 'password' => $pswd]]);
+        $cfg->auth = (object) ['httpBasic' => ['user' => $user, 'password' => $pswd]];
         $tmpfile   = (string) tempnam('/tmp', '');
         file_put_contents($tmpfile, $cfg->asYaml());
         try {
