@@ -480,6 +480,7 @@ class RepoDb implements RepoInterface {
         $resources = $graph->resourcesMatching($this->schema->searchMatch);
         $objects   = [];
         foreach ($resources as $i) {
+            $i->delete($this->schema->searchMatch);
             $obj       = new $class($i->getUri(), $this);
             $obj->setGraph($i);
             $objects[] = $obj;
