@@ -477,6 +477,7 @@ class RepoDb implements RepoInterface {
     private function parseSearchGraph(Graph $graph, string $class): Generator {
         $resources = $graph->resourcesMatching($this->schema->searchMatch);
         foreach ($resources as $i) {
+            $i->delete($this->schema->searchMatch);
             $obj = new $class($i->getUri(), $this);
             $obj->setGraph($i);
             yield $obj;
