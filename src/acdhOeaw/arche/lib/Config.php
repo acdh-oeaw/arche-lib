@@ -172,10 +172,14 @@ class Config {
         return $this->cfg->$name ?? null;
     }
 
+    public function __set(string $name, mixed $value): void {
+        $this->cfg->$name = $value;
+    }
+
     public function __isset(string $name): bool {
         return isset($this->cfg->$name);
     }
-    
+
     public function asObject(): object {
         return $this->cfg;
     }
