@@ -13,7 +13,7 @@
     ],
     "require": {
         "php": ">=8",
-        "guzzlehttp/guzzle": "^7",
+        "guzzlehttp/guzzle": "^7 | ^6",
         "acdh-oeaw/easyrdf": "*",
         "zozlak/rdf-constants": "*",
         "zozlak/query-part": "^2",
