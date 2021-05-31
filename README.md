@@ -13,7 +13,7 @@ A library providing PHP bindings for the ACDH repository solution.
 
 ## Documentation
 
-https://acdh-oeaw.github.io/arche-docs/arche-lib/
+https://acdh-oeaw.github.io/arche-docs/devdocs/namespaces/acdhoeaw-arche-lib.html
 
 ## repo-php-util migration guide
 
