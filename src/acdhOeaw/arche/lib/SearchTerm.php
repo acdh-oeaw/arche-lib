@@ -295,7 +295,14 @@ class SearchTerm {
     }
 
     private function getSqlQuerySpatial(): QueryPart {
-        $func       = 'true';
+        if (!empty($this->property)) {
+            if ($this->property === self::PROPERTY_BINARY) {
+                $where .= " AND mid IS NULL";
+            } else {
+                $where   .= " AND property = ?";
+                $param[] = $this->property;
+            }
+        }
         $param      = [$this->value];
         $valueQuery = 'st_geomfromtext(?, 4326)';
         switch (substr($this->operator ?? '', 1, 1)) {
