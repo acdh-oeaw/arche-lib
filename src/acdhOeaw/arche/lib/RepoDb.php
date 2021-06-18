@@ -158,7 +158,7 @@ class RepoDb implements RepoInterface {
      * 
      * @param array<SearchTerm> $searchTerms
      * @param SearchConfig $config
-     * @return Generator<int, RepoResourceDb, void, void>
+     * @return Generator
      */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator {
@@ -172,7 +172,7 @@ class RepoDb implements RepoInterface {
      * @param string $query
      * @param array<mixed> $parameters
      * @param SearchConfig $config
-     * @return Generator<int, RepoResourceDb, void, void>
+     * @return Generator
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): Generator {
@@ -472,7 +472,7 @@ class RepoDb implements RepoInterface {
      * 
      * @param Graph $graph
      * @param string $class
-     * @return Generator<int, RepoResourceDb, void, void>
+     * @return Generator
      */
     private function parseSearchGraph(Graph $graph, string $class): Generator {
         $resources = $graph->resourcesMatching($this->schema->searchMatch);

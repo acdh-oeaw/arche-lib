@@ -122,7 +122,7 @@ class SearchTerm {
      * One of `=`, `<`, `<=`, `>`, `>=`, `~` (regular expresion match), 
      * `@@` (full text search match), 
      * 
-     * @see $value
+     * @see SearchTerm::$value
      */
     public ?string $operator;
 
@@ -130,7 +130,7 @@ class SearchTerm {
      * Value to be matched by the RDF triple (with a given operator)
      * 
      * @var array<scalar> | string | int | float | bool
-     * @see $operator
+     * @see SearchTerm::$operator
      */
     public null | array | string | int | float | bool $value;
 

@@ -337,7 +337,7 @@ class Repo implements RepoInterface {
      * @param string $query
      * @param array<mixed> $parameters
      * @param SearchConfig $config
-     * @return Generator<int, RepoResource, void, void>
+     * @return Generator
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): Generator {
@@ -361,7 +361,7 @@ class Repo implements RepoInterface {
      * 
      * @param array<SearchTerm> $searchTerms
      * @param SearchConfig $config
-     * @return Generator<int, RepoResource, void, void>
+     * @return Generator
      */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator {
@@ -468,7 +468,7 @@ class Repo implements RepoInterface {
      * 
      * @param ResponseInterface $resp PSR-7 search request response
      * @param SearchConfig $config search configuration object
-     * @return Generator<int, RepoResource, void, void>
+     * @return Generator
      */
     private function parseSearchResponse(ResponseInterface $resp,
                                          SearchConfig $config): Generator {
