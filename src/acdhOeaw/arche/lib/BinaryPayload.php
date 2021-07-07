@@ -41,7 +41,7 @@ class BinaryPayload {
 
     static public function guzzleMimetype(string $fileName): ?string {
         $f = function_exists(self::GUZZLE_PSR7_V1_MIME_FUNC) ? self::GUZZLE_PSR7_V1_MIME_FUNC : self::GUZZLE_PSR7_V2_MIME_FUNC;
-        return $f($this->fileName);
+        return $f($fileName);
     }
 
     /**
