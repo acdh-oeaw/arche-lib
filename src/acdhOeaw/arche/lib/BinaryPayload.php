@@ -28,7 +28,6 @@ namespace acdhOeaw\arche\lib;
 
 use GuzzleHttp\Psr7\Request;
 use acdhOeaw\arche\lib\exception\RepoLibException;
-use function GuzzleHttp\Psr7\mimetype_from_filename;
 
 /**
  * Simple container for a request binary payload
@@ -36,6 +35,9 @@ use function GuzzleHttp\Psr7\mimetype_from_filename;
  * @author zozlak
  */
 class BinaryPayload {
+
+    const GUZZLE_PSR7_V1_MIME_FUNC = '\GuzzleHttp\Psr7\mimetype_from_filename';
+    const GUZZLE_PSR7_V2_MIME_FUNC = '\GuzzleHttp\Psr7\MimeType::fromFilename';
 
     /**
      * A stream object or the data as a string.
@@ -116,7 +118,7 @@ class BinaryPayload {
         $this->data = $data;
         if (!empty($fileName)) {
             $this->fileName = $fileName;
-            $this->mimeType = mimetype_from_filename($this->fileName) ?? '';
+            $this->mimeType = $this->getGuzzleMimetype($this->fileName) ?? '';
         }
         if (!empty($mimeType)) {
             $this->mimeType = $mimeType;
@@ -143,10 +145,15 @@ class BinaryPayload {
         if (!empty($mimeType)) {
             $this->mimeType = $mimeType;
         } else {
-            $this->mimeType = mimetype_from_filename(basename($path)) ?? '';
+            $this->mimeType = $this->getGuzzleMimetype(basename($path)) ?? '';
             if ($this->mimeType === null) {
                 $this->mimeType = (string) @mime_content_type($path);
             }
         }
+    }
+
+    private function getGuzzleMimetype(string $fileName): ?string {
+        $f = function_exists(self::GUZZLE_PSR7_V1_MIME_FUNC) ? self::GUZZLE_PSR7_V1_MIME_FUNC : self::GUZZLE_PSR7_V2_MIME_FUNC;
+        return $f($this->fileName);
     }
 }
