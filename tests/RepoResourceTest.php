@@ -28,7 +28,11 @@ namespace acdhOeaw\arche\lib\tests;
 
 use zozlak\RdfConstants as C;
 use acdhOeaw\arche\lib\BinaryPayload;
+use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\RepoResource;
+use acdhOeaw\arche\lib\exception\AmbiguousMatch;
+use acdhOeaw\arche\lib\exception\Deleted;
+use acdhOeaw\arche\lib\exception\NotFound;
 
 /**
  * Description of RepoResourceTest
@@ -105,5 +109,211 @@ class RepoResourceTest extends TestBase {
         self::$repo->commit();
 
         $this->assertEquals('sample content', $res->getContent()->getBody());
+    }
+
+    public function testUpdateMetadata(): void {
+        $p1   = 'http://my.prop/1';
+        $p2   = 'http://my.prop/2';
+        $p3   = 'http://my.prop/3';
+        $p4   = 'http://my.prop/4';
+        $pd   = self::$schema->delete;
+        $meta = $this->getMetadata([$p1 => 'v1', $p2 => 'v2', $p3 => 'v3']);
+        self::$repo->begin();
+        $res  = self::$repo->createResource($meta);
+        $this->assertEquals('v1', (string) $res->getMetadata()->get($p1));
+        $this->assertEquals('v2', (string) $res->getMetadata()->get($p2));
+        $this->assertEquals('v3', (string) $res->getMetadata()->get($p3));
+
+        $meta = $this->getMetadata([$p3 => 'v33', $p4 => 'v4', $pd => $p1]);
+        $res->setMetadata($meta);
+        $res->updateMetadata();
+        $this->assertEquals(null, $res->getMetadata()->get($p1));
+        $this->assertEquals('v2', (string) $res->getMetadata()->get($p2));
+        $this->assertEquals('v33', (string) $res->getMetadata()->get($p3));
+        $this->assertEquals('v4', (string) $res->getMetadata()->get($p4));
+
+        self::$repo->rollback();
+    }
+
+    public function testDelete(): void {
+        self::$repo->begin();
+
+        $id    = 'https://a.b/' . rand();
+        $meta1 = $this->getMetadata([self::$schema->id => $id]);
+        $res1  = self::$repo->createResource($meta1);
+        $this->noteResource($res1);
+
+        $res1->delete(false, false);
+        self::$repo->commit();
+
+        $this->expectExceptionCode(410);
+        $res1->loadMetadata(true);
+    }
+
+    public function testDeleteTombstone(): void {
+        self::$repo->begin();
+
+        $id    = 'https://a.b/' . rand();
+        $meta1 = $this->getMetadata([self::$schema->id => $id]);
+        $res1  = self::$repo->createResource($meta1);
+        $this->noteResource($res1);
+
+        $res1->delete(true, false);
+        self::$repo->commit();
+
+        $this->expectExceptionCode(404);
+        $res1->loadMetadata(true);
+    }
+
+    public function testDeleteWithConflict(): void {
+        $relProp = 'https://some.prop';
+        self::$repo->begin();
+
+        $id    = 'https://a.b/' . rand();
+        $meta1 = $this->getMetadata([self::$schema->id => $id]);
+        $res1  = self::$repo->createResource($meta1);
+        $this->noteResource($res1);
+
+        $meta2 = $this->getMetadata([$relProp => $res1->getUri()]);
+        $res2  = self::$repo->createResource($meta2);
+        $this->noteResource($res2);
+
+        $this->expectExceptionCode(409);
+        $res1->delete(true, false);
+
+        self::$repo->commit();
+    }
+
+    public function testDeleteWithReferences(): void {
+        $relProp = 'https://some.prop';
+        self::$repo->begin();
+
+        $id    = 'https://a.b/' . rand();
+        $meta1 = $this->getMetadata([self::$schema->id => $id]);
+        $res1  = self::$repo->createResource($meta1);
+        $this->noteResource($res1);
+
+        $meta2 = $this->getMetadata([$relProp => $res1->getUri()]);
+        $res2  = self::$repo->createResource($meta2);
+        $this->noteResource($res2);
+
+        $res1->delete(true, true);
+        self::$repo->commit();
+
+        $res2->loadMetadata(true);
+        $this->assertNull($res2->getMetadata()->getResource($relProp));
+        $this->expectExceptionCode(404);
+        $res1->loadMetadata(true);
+    }
+
+    public function testDeleteRecursively(): void {
+        $relProp = 'https://some.prop';
+        self::$repo->begin();
+
+        $id    = 'https://a.b/' . rand();
+        $meta1 = $this->getMetadata([self::$schema->id => $id]);
+        $res1  = self::$repo->createResource($meta1);
+        $this->noteResource($res1);
+
+        $meta2 = $this->getMetadata([$relProp => $res1->getUri()]);
+        $res2  = self::$repo->createResource($meta2);
+        $this->noteResource($res2);
+
+        $res1->delete(false, false, $relProp);
+        self::$repo->commit();
+
+        try {
+            $res1->loadMetadata(true);
+            $this->assertTrue(false, 'No exception');
+        } catch (Deleted $e) {
+            $this->assertEquals(410, $e->getCode());
+        }
+        try {
+            $res2->loadMetadata(true);
+            $this->assertTrue(false, 'No exception');
+        } catch (Deleted $e) {
+            $this->assertEquals(410, $e->getCode());
+        }
+    }
+
+    public function testDeleteComplex(): void {
+        $relProp   = 'https://some.prop';
+        $otherProp = 'http://for/bar';
+        self::$repo->begin();
+
+        $id    = 'https://a.b/' . rand();
+        $meta1 = $this->getMetadata([self::$schema->id => $id]);
+        $res1  = self::$repo->createResource($meta1);
+        $this->noteResource($res1);
+
+        $meta2 = $this->getMetadata([$relProp => $res1->getUri()]);
+        $res2  = self::$repo->createResource($meta2);
+        $this->noteResource($res2);
+
+        $meta3 = $this->getMetadata([
+            $otherProp => $res1->getUri(),
+            $otherProp => $res2->getUri(),
+        ]);
+        $res3  = self::$repo->createResource($meta3);
+        $this->noteResource($res3);
+
+        $res1->delete(true, true, $relProp);
+        self::$repo->commit();
+
+        try {
+            $res1->loadMetadata(true);
+            $this->assertTrue(false, 'No exception');
+        } catch (NotFound $e) {
+            $this->assertEquals(404, $e->getCode());
+        }
+        try {
+            $res2->loadMetadata(true);
+            $this->assertTrue(false, 'No exception');
+        } catch (NotFound $e) {
+            $this->assertEquals(404, $e->getCode());
+        }
+        $res3->loadMetadata(true);
+        $this->assertNull($res3->getMetadata()->getResource($otherProp));
+    }
+
+    public function testMerge(): void {
+        $idProp = self::$schema->id;
+        $prop1  = 'http://a/1';
+        $prop2  = 'http://a/2';
+        $prop3  = 'http://a/3';
+        self::$repo->begin();
+
+        $id1   = 'https://a.b/' . rand();
+        $meta1 = $this->getMetadata([
+            $idProp => $id1,
+            $prop1  => 'foo1',
+            $prop2  => 'bar1',
+        ]);
+        $res1  = self::$repo->createResource($meta1);
+        $this->noteResource($res1);
+
+        $id2     = 'https://a.b/' . rand();
+        $meta2   = $this->getMetadata([
+            $idProp => $id2,
+            $prop2  => 'bar2',
+            $prop3  => 'baz2',
+        ]);
+        $res2    = self::$repo->createResource($meta2);
+        $res2url = $res2->getUri();
+        $this->noteResource($res2);
+
+        $res2->merge($id1);
+        $meta = $res2->getMetadata();
+        $this->assertEquals($res1->getUri(), $res2->getUri());
+        $ids  = array_map(function ($x) {
+            return $x->getUri();
+        }, $meta->all($idProp));
+        $this->assertContains($id1, $ids);
+        $this->assertContains($id2, $ids);
+        $this->assertCount(4, $ids);
+
+        self::$repo->commit();
+        $this->expectExceptionCode(404);
+        (new RepoResource($res2url, self::$repo))->loadMetadata();
     }
 }

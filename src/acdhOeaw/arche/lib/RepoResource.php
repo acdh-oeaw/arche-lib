@@ -27,7 +27,6 @@
 namespace acdhOeaw\arche\lib;
 
 use EasyRdf\Graph;
-use EasyRdf\Resource;
 use GuzzleHttp\Psr7\Request;
 use Psr\Http\Message\ResponseInterface;
 use acdhOeaw\arche\lib\exception\RepoLibException;
@@ -160,76 +159,37 @@ class RepoResource implements RepoResourceInterface {
      * @param bool $tombstone should tombstones be removed for deleted resources?
      * @param bool $references should references to deleted resources be removed
      *   from other resources?
+     * @param string $recursiveProperty is present, deletion continues recursively
+     *   to all resources pointing to the deleted one with this RDF property
      * @return void
      */
-    public function delete(bool $tombstone = false, bool $references = false): void {
-        $req = new Request('delete', $this->getUri());
-        $this->repo->sendRequest($req);
+    public function delete(bool $tombstone = false, bool $references = false,
+                           string $recursiveProperty = ''): void {
+        $headers = [
+            'Accept' => 'application/n-triples',
+        ];
+        if ($references) {
+            $headers[$this->repo->getHeaderName('withReferences')] = 1;
+        }
+        if (!empty($recursiveProperty)) {
+            $headers[$this->repo->getHeaderName('metadataParentProperty')] = $recursiveProperty;
+        }
+        $req  = new Request('delete', $this->getUri(), $headers);
+        $resp = $this->repo->sendRequest($req);
 
         if ($tombstone) {
-            $req = new Request('delete', $this->getUri() . '/tombstone');
-            $this->repo->sendRequest($req);
-        }
+            $format = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
 
-        if ($references) {
-            $query             = "SELECT id FROM relations WHERE target_id = ? ORDER BY id";
-            $cfg               = new SearchConfig();
-            $cfg->metadataMode = RepoResourceInterface::META_RESOURCE;
-            $cfg->offset       = 0;
-            $cfg->limit        = self::DELETE_STEP;
-            do {
-                $key    = null;
-                $refRes = $this->repo->getResourcesBySqlQuery($query, [$this->getId()], $cfg);
-                foreach ($refRes as $key => $res) {
-                    /* @var $res \acdhOeaw\arche\lib\RepoResource */
-                    $res->loadMetadata(false, self::META_RESOURCE);
-                    $meta = $res->getMetadata();
-                    foreach ($meta->propertyUris() as $p) {
-                        $existed = $meta->get($p) !== null;
-                        $meta->deleteResource($p, $this->getUri());
-                        if ($existed && null === $meta->get($p)) {
-                            $meta->addResource($this->repo->getSchema()->delete, $p);
-                        }
-                    }
-                    $res->setMetadata($meta);
-                    $res->updateMetadata();
+            $graph = new Graph();
+            $graph->parse((string) $resp->getBody(), $format);
+            foreach ($graph->resources() as $i) {
+                if (count($i->propertyUris()) > 0) {
+                    $req = new Request('delete', $i->getUri() . '/tombstone');
+                    $this->repo->sendRequest($req);
                 }
-                // don't increment offset - every query excludes resources with references which were already removed
-            } while ($key !== null);
-        }
-
-        $this->metadata = null;
-    }
-
-    /**
-     * Deletes the repository resource as well as all the resources pointing to
-     * it with a given metadata property.
-     * 
-     * The deletion is performed recursively.
-     * 
-     * @param string $property property used for the recursive deletion
-     * @param bool $tombstone should tombstones be removed for deleted resources?
-     * @param bool $references should references to deleted resources be removed
-     *   from other resources?
-     * @return void
-     */
-    public function deleteRecursively(string $property, bool $tombstone = false,
-                                      bool $references = false): void {
-        $query             = "SELECT id FROM get_relatives(?, ?, 999999, 0) ORDER BY n DESC, id";
-        $param             = [$this->getId(), $property];
-        $cfg               = new SearchConfig();
-        $cfg->metadataMode = RepoResourceInterface::META_RESOURCE;
-        $cfg->offset       = 0;
-        $cfg->limit        = self::DELETE_STEP;
-        do {
-            $key       = null;
-            $resources = $this->repo->getResourcesBySqlQuery($query, $param, $cfg);
-            foreach ($resources as $key => $res) {
-                /* @var $res \acdhOeaw\arche\lib\RepoResource */
-                $res->delete($tombstone, $references);
             }
-            // don't increment offset - every query excludes resources which were already removed
-        } while ($key !== null);
+        }
+        $this->metadata = null;
     }
 
     /**
@@ -258,6 +218,26 @@ class RepoResource implements RepoResourceInterface {
             $resp    = $this->repo->sendRequest($req);
             $this->parseMetadata($resp);
         }
+    }
+
+    /**
+     * Merges the current resource with the given one. See the corresponding 
+     * [REST endpoint description](https://app.swaggerhub.com/apis/zozlak/arche/3.0#/default/put_merge__srcResourceId___targetResourceId_)
+     * 
+     * If this action succeeds, resource's URI changes to the targetResource's one.
+     * 
+     * @param string $targetResId
+     * @return RepoResource
+     */
+    public function merge(string $targetResId): void {
+        $baseUrl   = $this->repo->getBaseUrl();
+        $srcId     = $this->getId();
+        $targetRes = $this->repo->getResourceById($targetResId);
+        $targetId  = substr($targetRes->getUri(), strlen($baseUrl));
+        $request   = new Request('PUT', $baseUrl . "merge/$srcId/$targetId");
+        $resp      = $this->repo->sendRequest($request);
+        $this->url = $targetRes->getUri();
+        $this->parseMetadata($resp);
     }
 
     /**
