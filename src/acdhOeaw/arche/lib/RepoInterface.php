@@ -58,7 +58,7 @@ interface RepoInterface {
      *   (to be used by extension libraries)
      * @return RepoResourceInterface
      */
-    public function getResourceById(string $id, string $class = null): RepoResourceInterface;
+    public function getResourceById(string $id, string $class = null);
 
     /**
      * Tries to find a single repository resource matching provided identifiers.
@@ -74,7 +74,7 @@ interface RepoInterface {
      *   (to be used by extension libraries)
      * @return RepoResourceInterface
      */
-    public function getResourceByIds(array $ids, string $class = null): RepoResourceInterface;
+    public function getResourceByIds(array $ids, string $class = null);
 
     /**
      * Performs a search
@@ -82,19 +82,19 @@ interface RepoInterface {
      * @param string $query
      * @param array<mixed> $parameters
      * @param SearchConfig $config
-     * @return Generator
+     * @return Generator<RepoResourceInterface>
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
-                                           SearchConfig $config): Generator;
+                                           SearchConfig $config);
 
     /**
      * Returns repository resources matching all provided search terms.
      * 
      * @param array<SearchTerm> $searchTerms
      * @param SearchConfig $config
-     * @return Generator
+     * @return Generator<RepoResourceInterface>
      */
     public function getResourcesBySearchTerms(array $searchTerms,
-                                              SearchConfig $config): Generator;
+                                              SearchConfig $config);
     
 }

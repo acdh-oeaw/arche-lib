@@ -28,8 +28,12 @@ namespace acdhOeaw\arche\lib;
 
 use EasyRdf\Graph;
 use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Http\Message\ResponseInterface;
 use acdhOeaw\arche\lib\exception\RepoLibException;
+use acdhOeaw\arche\lib\promise\RepoResourcePromise;
+use acdhOeaw\arche\lib\promise\ResponsePromise;
 
 /**
  * Description of RepoResource
@@ -93,8 +97,12 @@ class RepoResource implements RepoResourceInterface {
      * @return ResponseInterface PSR-7 response containing resource's binary content
      */
     public function getContent(): ResponseInterface {
+        return $this->getContentAsync()->wait();
+    }
+
+    public function getContentAsync(): ResponsePromise {
         $request = new Request('get', $this->url);
-        return $this->repo->sendRequest($request);
+        return $this->repo->sendRequestAsync($request);
     }
 
     /**
@@ -104,10 +112,16 @@ class RepoResource implements RepoResourceInterface {
      * @return void
      */
     public function updateContent(BinaryPayload $content): void {
+        $this->updateContentAsync($content)->wait();
+    }
+
+    public function updateContentAsync(BinaryPayload $content): PromiseInterface {
         $request = new Request('put', $this->url);
         $request = $content->attachTo($request);
-        $this->repo->sendRequest($request);
-        $this->loadMetadata(true);
+        $promise = $this->repo->sendRequestAsync($request)->then(function (): ?PromiseInterface {
+            return $this->loadMetadataAsync(true);
+        });
+        return $promise;
     }
 
     /**
@@ -136,6 +150,11 @@ class RepoResource implements RepoResourceInterface {
      */
     public function updateMetadata(string $updateMode = self::UPDATE_MERGE,
                                    string $readMode = self::META_RESOURCE): void {
+        $this->updateMetadataAsync($updateMode, $readMode)?->wait();
+    }
+
+    public function updateMetadataAsync(string $updateMode = self::UPDATE_MERGE,
+                                        string $readMode = self::META_RESOURCE): PromiseInterface {
         if (!$this->metaSynced) {
             $updateModeHeader = $this->repo->getHeaderName('metadataWriteMode');
             $readModeHeader   = $this->repo->getHeaderName('metadataReadMode');
@@ -147,10 +166,13 @@ class RepoResource implements RepoResourceInterface {
             ];
             $body             = $this->metadata?->getGraph()->serialise('application/n-triples');
             $req              = new Request('patch', $this->url . '/metadata', $headers, $body);
-            $resp             = $this->repo->sendRequest($req);
-            $this->parseMetadata($resp);
-            $this->metaSynced = true;
+            $promise          = $this->repo->sendRequestAsync($req)->then(function (ResponseInterface $resp): void {
+                $this->parseMetadata($resp);
+                $this->metaSynced = true;
+            });
+            return $promise;
         }
+        return null;
     }
 
     /**
@@ -165,31 +187,42 @@ class RepoResource implements RepoResourceInterface {
      */
     public function delete(bool $tombstone = false, bool $references = false,
                            string $recursiveProperty = ''): void {
+        $this->deleteAsync($tombstone, $references, $recursiveProperty)->wait();
+    }
+
+    public function deleteAsync(bool $tombstone = false,
+                                bool $references = false,
+                                string $recursiveProperty = ''): PromiseInterface {
         $headers = [
             'Accept' => 'application/n-triples',
         ];
         if ($references) {
-            $headers[$this->repo->getHeaderName('withReferences')] = 1;
+            $headers[$this->repo->getHeaderName('withReferences')] = '1';
         }
         if (!empty($recursiveProperty)) {
             $headers[$this->repo->getHeaderName('metadataParentProperty')] = $recursiveProperty;
         }
-        $req  = new Request('delete', $this->getUri(), $headers);
-        $resp = $this->repo->sendRequest($req);
+        $req            = new Request('delete', $this->getUri(), $headers);
+        $promise        = $this->repo->sendRequestAsync($req);
+        $this->metadata = null;
 
         if ($tombstone) {
-            $format = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
+            $promise = $promise->then(function (ResponseInterface $resp): PromiseInterface {
+                $format = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
 
-            $graph = new Graph();
-            $graph->parse((string) $resp->getBody(), $format);
-            foreach ($graph->resources() as $i) {
-                if (count($i->propertyUris()) > 0) {
-                    $req = new Request('delete', $i->getUri() . '/tombstone');
-                    $this->repo->sendRequest($req);
+                $graph        = new Graph();
+                $graph->parse((string) $resp->getBody(), $format);
+                $respPromises = [];
+                foreach ($graph->resources() as $i) {
+                    if (count($i->propertyUris()) > 0) {
+                        $req            = new Request('delete', $i->getUri() . '/tombstone');
+                        $respPromises[] = $this->repo->sendRequestAsync($req);
+                    }
                 }
-            }
+                return \GuzzleHttp\Promise\Utils::all($respPromises);
+            });
         }
-        $this->metadata = null;
+        return $promise;
     }
 
     /**
@@ -208,6 +241,12 @@ class RepoResource implements RepoResourceInterface {
     public function loadMetadata(bool $force = false,
                                  string $mode = self::META_RESOURCE,
                                  ?string $parentProperty = null): void {
+        $this->loadMetadataAsync($force, $mode, $parentProperty)?->wait();
+    }
+
+    public function loadMetadataAsync(bool $force = false,
+                                      string $mode = self::META_RESOURCE,
+                                      ?string $parentProperty = null): ?PromiseInterface {
         if ($this->metadata === null || $force) {
             $headers = [
                 'Accept'                                             => 'application/n-triples',
@@ -215,9 +254,12 @@ class RepoResource implements RepoResourceInterface {
                 $this->repo->getHeaderName('metadataParentProperty') => $parentProperty ?? $this->repo->getSchema()->parent,
             ];
             $req     = new Request('get', $this->url . '/metadata', $headers);
-            $resp    = $this->repo->sendRequest($req);
-            $this->parseMetadata($resp);
+            $promise = $this->repo->sendRequestAsync($req)->then(function (ResponseInterface $resp): void {
+                $this->parseMetadata($resp);
+            });
+            return $promise;
         }
+        return null;
     }
 
     /**
@@ -227,17 +269,23 @@ class RepoResource implements RepoResourceInterface {
      * If this action succeeds, resource's URI changes to the targetResource's one.
      * 
      * @param string $targetResId
-     * @return RepoResource
+     * @return void
      */
     public function merge(string $targetResId): void {
+        $this->mergeAsync($targetResId)->wait();
+    }
+
+    public function mergeAsync(string $targetResId): PromiseInterface {
         $baseUrl   = $this->repo->getBaseUrl();
         $srcId     = $this->getId();
         $targetRes = $this->repo->getResourceById($targetResId);
         $targetId  = substr($targetRes->getUri(), strlen($baseUrl));
         $request   = new Request('PUT', $baseUrl . "merge/$srcId/$targetId");
-        $resp      = $this->repo->sendRequest($request);
-        $this->url = $targetRes->getUri();
-        $this->parseMetadata($resp);
+        $promise   = $this->repo->sendRequestAsync($request)->then(function (ResponseInterface $resp) use ($targetRes): void {
+            $this->url = $targetRes->getUri();
+            $this->parseMetadata($resp);
+        });
+        return $promise;
     }
 
     /**

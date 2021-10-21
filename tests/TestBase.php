@@ -77,7 +77,7 @@ class TestBase extends \PHPUnit\Framework\TestCase {
         self::$repo->begin();
         foreach ($this->resources as $i) {
             try {
-                $i->delete(true, true, self::$schema->id);
+                $i->delete(true, true, self::$schema->parent);
             } catch (Deleted $e) {
                 
             } catch (NotFound $e) {

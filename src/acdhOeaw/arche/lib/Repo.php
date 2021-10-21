@@ -31,11 +31,17 @@ use EasyRdf\Graph;
 use EasyRdf\Resource;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Promise\RejectedPromise;
 use Psr\Http\Message\ResponseInterface;
 use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
 use acdhOeaw\arche\lib\exception\AmbiguousMatch;
+use acdhOeaw\arche\lib\promise\GeneratorPromise;
+use acdhOeaw\arche\lib\promise\ResponsePromise;
+use acdhOeaw\arche\lib\promise\RepoResourcePromise;
+use acdhOeaw\arche\lib\SearchTerm;
 use function GuzzleHttp\json_decode;
 
 /**
@@ -45,6 +51,9 @@ use function GuzzleHttp\json_decode;
  */
 class Repo implements RepoInterface {
 
+    const REJECT_SKIP    = 1;
+    const REJECT_FAIL    = 2;
+    const REJECT_INCLUDE = 3;
     use RepoTrait;
 
     /**
@@ -129,7 +138,7 @@ class Repo implements RepoInterface {
         $pswd = trim((string) fgets(STDIN));
         system('stty echo');
 
-        $cfg->auth = (object) ['httpBasic' => ['user' => $user, 'password' => $pswd]];
+        $cfg->auth = new Config((object) ['httpBasic' => ['user' => $user, 'password' => $pswd]]);
         $tmpfile   = (string) tempnam('/tmp', '');
         file_put_contents($tmpfile, $cfg->asYaml());
         try {
@@ -174,7 +183,7 @@ class Repo implements RepoInterface {
         $realUrl   = (string) array_pop($redirects);
         $realUrl   = (string) preg_replace('|/metadata$|', '', $realUrl);
 
-        $baseUrl = substr($realUrl, 0, strrpos($realUrl, '/') + 1);
+        $baseUrl = preg_replace('@([0-9]+|describe/?)$@', '', $realUrl) ?? '';
         $resp    = $client->send(new Request('GET', "$baseUrl/describe", ['Accept' => 'application/json']));
         if ($resp->getStatusCode() !== 200) {
             throw new NotFound("Provided URL doesn't resolve to an ARCHE repository", 404);
@@ -230,6 +239,12 @@ class Repo implements RepoInterface {
     public function createResource(Resource $metadata,
                                    BinaryPayload $payload = null,
                                    string $class = null): RepoResource {
+        return $this->createResourceAsync($metadata, $payload, $class)->wait();
+    }
+
+    public function createResourceAsync(Resource $metadata,
+                                        BinaryPayload $payload = null,
+                                        string $class = null): RepoResourcePromise {
         $readModeHeader = $this->getHeaderName('metadataReadMode');
         $headers        = [
             'Content-Type'  => 'application/n-triples',
@@ -240,16 +255,20 @@ class Repo implements RepoInterface {
         $metadata       = $body           = $metadata->copy([], '/^$/', $this->baseUrl, $graph);
         $body           = $graph->serialise('application/n-triples');
         $req            = new Request('post', $this->baseUrl . 'metadata', $headers, $body);
-        $resp           = $this->sendRequest($req);
+        $promise        = $this->sendRequestAsync($req)->then(function (ResponseInterface $resp) use ($payload,
+                                                                                                      $class): RepoResource | RepoResourcePromise {
+            $class = $class ?? self::$resourceClass;
+            $res   = $class::factory($this, $resp);
 
-        $class = $class ?? self::$resourceClass;
-        $res   = $class::factory($this, $resp);
-
-        if ($payload !== null) {
-            $res->updateContent($payload);
-        }
-
-        return $res;
+            if ($payload !== null) {
+                $promise = $res->updateContentAsync($payload)->then(function ()use ($res): RepoResource {
+                    return $res;
+                });
+                return new RepoResourcePromise($promise);
+            }
+            return $res;
+        });
+        return new RepoResourcePromise($promise);
     }
 
     /**
@@ -266,22 +285,74 @@ class Repo implements RepoInterface {
      * @throws RequestException
      */
     public function sendRequest(Request $request): ResponseInterface {
+        return $this->sendRequestAsync($request)->wait();
+    }
+
+    public function sendRequestAsync(Request $request): ResponsePromise {
         if (!empty($this->txId)) {
             $request = $request->withHeader($this->getHeaderName('transactionId'), $this->txId);
         }
-        try {
-            $response = $this->client->send($request);
-        } catch (RequestException $e) {
-            switch ($e->getCode()) {
-                case 410:
-                    throw new Deleted();
-                case 404:
-                    throw new NotFound();
-                default:
-                    throw $e;
+        $promise = $this->client->sendAsync($request)->otherwise(
+            function (RequestException $e) {
+                switch ($e->getCode()) {
+                    case 410:
+                        return new RejectedPromise(new Deleted());
+                    case 404:
+                        return new RejectedPromise(new NotFound());
+                    default:
+                        return new RejectedPromise($e);
+                }
+            });
+        return new ResponsePromise($promise);
+    }
+
+    /**
+     * A wrapper function for parallel repository requests execution.
+     * 
+     * It calls $func for every element of $iter to generate a set of promises,
+     * executes all of them and returns their results.
+     * 
+     * @param iterable<mixed> $iter collection of values to iterate over.
+     * @param callable $func function to apply to each $iter element with
+     *   signature `f(mixed $iterElement, Repo $thisRepoObject): GuzzleHttp\Promise\PromiseInterface`.
+     * @param int $concurrency number of promises executed in parallel
+     * @param int $rejectAction what to do with rejected promises - one of 
+     *   Repo::REJECT_SKIP (skip the silently), Repo::REJECT_FAIL (throw an error)
+     *   and Repo::REJECT_INCLUDE (include the rejection value in the results).
+     * @return array<mixed>
+     */
+    public function map(iterable $iter, callable $func, int $concurrency = 1,
+                        int $rejectAction = self::REJECT_SKIP): array {
+        $promiseIterator = function ($i, $f) {
+            foreach ($i as $j) {
+                yield $f($j, $this);
             }
-        }
-        return $response;
+        };
+        $results   = [];
+        $queue     = new \GuzzleHttp\Promise\EachPromise(
+            $promiseIterator($iter, $func),
+                             [
+            'concurrency' => $concurrency,
+            'fulfilled'   => function ($x, $i) use (&$results) {
+                $results[$i] = $x;
+            },
+            'rejected' => function ($x, $i) use (&$results, $rejectAction) {
+                switch ($rejectAction) {
+                    case self::REJECT_FAIL:
+                        throw $x instanceof \Exception ? $x : new \RuntimeException($x);
+                    case self::REJECT_INCLUDE:
+                        $results[$i] = $x;
+                        break;
+                    case self::REJECT_SKIP:
+                        break;
+                    default:
+                        throw new \RuntimeException("Unknown rejectAction");
+                }
+            },
+            ]
+        );
+        $queue->promise()->wait();
+        return $results;
     }
 
     /**
@@ -301,6 +372,20 @@ class Repo implements RepoInterface {
      * @throws AmbiguousMatch
      */
     public function getResourceByIds(array $ids, string $class = null): RepoResource {
+        return $this->getResourceByIdsAsync($ids, $class)->wait();
+    }
+
+    public function getResourceByIdAsync(string $id, string $class = null): RepoResourcePromise {
+        return $this->getResourceByIdsAsync([$id], $class);
+    }
+
+    /**
+     * 
+     * @param array<string> $ids
+     * @param string $class
+     * @return RepoResourcePromise
+     */
+    public function getResourceByIdsAsync(array $ids, string $class = null): RepoResourcePromise {
         $url          = $this->baseUrl . 'search';
         $headers      = [
             'Content-Type' => 'application/x-www-form-urlencoded',
@@ -312,23 +397,25 @@ class Repo implements RepoInterface {
             'sqlParam' => $ids,
         ]);
         $req          = new Request('post', $url, $headers, $body);
-        $resp         = $this->sendRequest($req);
-        $format       = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
-        $graph        = new Graph();
-        $graph->parse($resp->getBody(), $format);
-        $matches      = $graph->resourcesMatching($this->schema->searchMatch);
-        switch (count($matches)) {
-            case 0:
-                throw new NotFound();
-            case 1;
-                $class = $class ?? self::$resourceClass;
-                return new $class($matches[0]->getUri(), $this);
-            default:
-                $uris  = implode(', ', array_map(function ($x) {
-                        return $x->getUri();
-                    }, $matches));
-                throw new AmbiguousMatch("Many resources match the search: $uris");
-        }
+        $promise      = $this->sendRequestAsync($req)->then(function (ResponseInterface $resp) use ($class) {
+            $format  = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
+            $graph   = new Graph();
+            $graph->parse($resp->getBody(), $format);
+            $matches = $graph->resourcesMatching($this->schema->searchMatch);
+            switch (count($matches)) {
+                case 0:
+                    return new RejectedPromise(new NotFound());
+                case 1;
+                    $class = $class ?? self::$resourceClass;
+                    return new $class($matches[0]->getUri(), $this);
+                default:
+                    $uris  = implode(', ', array_map(function ($x) {
+                            return $x->getUri();
+                        }, $matches));
+                    return new RejectedPromise(new AmbiguousMatch("Many resources match the search: $uris"));
+            }
+        });
+        return new RepoResourcePromise($promise);
     }
 
     /**
@@ -337,10 +424,23 @@ class Repo implements RepoInterface {
      * @param string $query
      * @param array<mixed> $parameters
      * @param SearchConfig $config
-     * @return Generator
+     * @return Generator<RepoResource>
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): Generator {
+        return $this->getResourcesBySqlQueryAsync($query, $parameters, $config)->wait();
+    }
+
+    /**
+     * 
+     * @param string $query
+     * @param array<mixed> $parameters
+     * @param SearchConfig $config
+     * @return GeneratorPromise
+     */
+    public function getResourcesBySqlQueryAsync(string $query,
+                                                array $parameters,
+                                                SearchConfig $config): GeneratorPromise {
         $headers = [
             'Accept'       => 'application/n-triples',
             'Content-Type' => 'application/x-www-form-urlencoded',
@@ -352,8 +452,10 @@ class Repo implements RepoInterface {
         );
         $body    = http_build_query($body);
         $req     = new Request('post', $this->baseUrl . 'search', $headers, $body);
-        $resp    = $this->sendRequest($req);
-        yield from $this->parseSearchResponse($resp, $config);
+        $promise = $this->sendRequestAsync($req)->then(function (ResponseInterface $resp) use ($config): Generator {
+            yield from $this->parseSearchResponse($resp, $config);
+        });
+        return new GeneratorPromise($promise);
     }
 
     /**
@@ -361,10 +463,21 @@ class Repo implements RepoInterface {
      * 
      * @param array<SearchTerm> $searchTerms
      * @param SearchConfig $config
-     * @return Generator
+     * @return Generator<RepoResource>
      */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator {
+        return $this->getResourcesBySearchTermsAsync($searchTerms, $config)->wait();
+    }
+
+    /**
+     * 
+     * @param array<SearchTerm> $searchTerms
+     * @param SearchConfig $config
+     * @return GeneratorPromise
+     */
+    public function getResourcesBySearchTermsAsync(array $searchTerms,
+                                                   SearchConfig $config): GeneratorPromise {
         $headers = [
             'Accept'       => 'application/n-triples',
             'Content-Type' => 'application/x-www-form-urlencoded',
@@ -378,8 +491,10 @@ class Repo implements RepoInterface {
         $body .= (!empty($body) ? '&' : '') . $config->toQuery();
         $req  = new Request('post', $this->baseUrl . 'search', $headers, $body);
 
-        $resp = $this->sendRequest($req);
-        yield from $this->parseSearchResponse($resp, $config);
+        $promise = $this->sendRequestAsync($req)->then(function (ResponseInterface $resp) use ($config): Generator {
+            yield from $this->parseSearchResponse($resp, $config);
+        });
+        return new GeneratorPromise($promise);
     }
 
     /**
@@ -468,7 +583,7 @@ class Repo implements RepoInterface {
      * 
      * @param ResponseInterface $resp PSR-7 search request response
      * @param SearchConfig $config search configuration object
-     * @return Generator
+     * @return Generator<RepoResource>
      */
     private function parseSearchResponse(ResponseInterface $resp,
                                          SearchConfig $config): Generator {

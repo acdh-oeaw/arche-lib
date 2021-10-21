@@ -295,18 +295,17 @@ class SearchTerm {
     }
 
     private function getSqlQuerySpatial(): QueryPart {
-        if (!empty($this->property)) {
-            if ($this->property === self::PROPERTY_BINARY) {
-                $where .= " AND mid IS NULL";
-            } else {
-                $where   .= " AND property = ?";
-                $param[] = $this->property;
-            }
-        }
         $param      = [$this->value];
         $valueQuery = 'st_geomfromtext(?, 4326)';
         switch (substr($this->operator ?? '', 1, 1)) {
+            case '>':
+                $func = "st_contains(geom::geometry, $valueQuery)";
+                break;
+            case '<':
+                $func = "st_contains($valueQuery, geom::geometry)";
+                break;
             case '&':
+            default:
                 $dist = (int) substr($this->operator ?? '', 2);
                 if ($dist > 0) {
                     $func    = "st_dwithin(geom, $valueQuery::geography, ?, false)";
@@ -314,12 +313,6 @@ class SearchTerm {
                 } else {
                     $func = "st_intersects(geom, $valueQuery)";
                 }
-                break;
-            case '>':
-                $func = "st_contains(geom::geometry, $valueQuery)";
-                break;
-            case '<':
-                $func = "st_contains($valueQuery, geom::geometry)";
                 break;
         }
         $query = "
