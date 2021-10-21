@@ -129,7 +129,7 @@ class Repo implements RepoInterface {
         $pswd = trim((string) fgets(STDIN));
         system('stty echo');
 
-        $cfg->auth = (object) ['httpBasic' => ['user' => $user, 'password' => $pswd]];
+        $cfg->auth = new Config((object) ['httpBasic' => ['user' => $user, 'password' => $pswd]]);
         $tmpfile   = (string) tempnam('/tmp', '');
         file_put_contents($tmpfile, $cfg->asYaml());
         try {
@@ -174,7 +174,7 @@ class Repo implements RepoInterface {
         $realUrl   = (string) array_pop($redirects);
         $realUrl   = (string) preg_replace('|/metadata$|', '', $realUrl);
 
-        $baseUrl = substr($realUrl, 0, strrpos($realUrl, '/') + 1);
+        $baseUrl = preg_replace('@([0-9]+|describe/?)$@', '', $realUrl) ?? '';
         $resp    = $client->send(new Request('GET', "$baseUrl/describe", ['Accept' => 'application/json']));
         if ($resp->getStatusCode() !== 200) {
             throw new NotFound("Provided URL doesn't resolve to an ARCHE repository", 404);
@@ -337,7 +337,7 @@ class Repo implements RepoInterface {
      * @param string $query
      * @param array<mixed> $parameters
      * @param SearchConfig $config
-     * @return Generator
+     * @return Generator<RepoResource>
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): Generator {
@@ -361,7 +361,7 @@ class Repo implements RepoInterface {
      * 
      * @param array<SearchTerm> $searchTerms
      * @param SearchConfig $config
-     * @return Generator
+     * @return Generator<RepoResource>
      */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator {
@@ -468,7 +468,7 @@ class Repo implements RepoInterface {
      * 
      * @param ResponseInterface $resp PSR-7 search request response
      * @param SearchConfig $config search configuration object
-     * @return Generator
+     * @return Generator<RepoResource>
      */
     private function parseSearchResponse(ResponseInterface $resp,
                                          SearchConfig $config): Generator {

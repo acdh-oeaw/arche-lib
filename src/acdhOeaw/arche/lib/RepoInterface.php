@@ -82,7 +82,7 @@ interface RepoInterface {
      * @param string $query
      * @param array<mixed> $parameters
      * @param SearchConfig $config
-     * @return Generator
+     * @return Generator<RepoResourceInterface>
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): Generator;
@@ -92,7 +92,7 @@ interface RepoInterface {
      * 
      * @param array<SearchTerm> $searchTerms
      * @param SearchConfig $config
-     * @return Generator
+     * @return Generator<RepoResourceInterface>
      */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator;

@@ -169,7 +169,7 @@ class RepoResource implements RepoResourceInterface {
             'Accept' => 'application/n-triples',
         ];
         if ($references) {
-            $headers[$this->repo->getHeaderName('withReferences')] = 1;
+            $headers[$this->repo->getHeaderName('withReferences')] = '1';
         }
         if (!empty($recursiveProperty)) {
             $headers[$this->repo->getHeaderName('metadataParentProperty')] = $recursiveProperty;
@@ -227,7 +227,7 @@ class RepoResource implements RepoResourceInterface {
      * If this action succeeds, resource's URI changes to the targetResource's one.
      * 
      * @param string $targetResId
-     * @return RepoResource
+     * @return void
      */
     public function merge(string $targetResId): void {
         $baseUrl   = $this->repo->getBaseUrl();
