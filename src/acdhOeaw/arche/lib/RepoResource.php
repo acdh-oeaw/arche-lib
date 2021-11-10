@@ -154,7 +154,7 @@ class RepoResource implements RepoResourceInterface {
     }
 
     public function updateMetadataAsync(string $updateMode = self::UPDATE_MERGE,
-                                        string $readMode = self::META_RESOURCE): PromiseInterface {
+                                        string $readMode = self::META_RESOURCE): ?PromiseInterface {
         if (!$this->metaSynced) {
             $updateModeHeader = $this->repo->getHeaderName('metadataWriteMode');
             $readModeHeader   = $this->repo->getHeaderName('metadataReadMode');

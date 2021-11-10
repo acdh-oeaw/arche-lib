@@ -39,6 +39,7 @@ use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
 use acdhOeaw\arche\lib\exception\AmbiguousMatch;
 use acdhOeaw\arche\lib\promise\GeneratorPromise;
+use acdhOeaw\arche\lib\promise\GraphPromise;
 use acdhOeaw\arche\lib\promise\ResponsePromise;
 use acdhOeaw\arche\lib\promise\RepoResourcePromise;
 use acdhOeaw\arche\lib\SearchTerm;
@@ -441,19 +442,8 @@ class Repo implements RepoInterface {
     public function getResourcesBySqlQueryAsync(string $query,
                                                 array $parameters,
                                                 SearchConfig $config): GeneratorPromise {
-        $headers = [
-            'Accept'       => 'application/n-triples',
-            'Content-Type' => 'application/x-www-form-urlencoded',
-        ];
-        $headers = array_merge($headers, $config->getHeaders($this));
-        $body    = array_merge(
-            ['sql' => $query, 'sqlParam' => $parameters],
-            $config->toArray()
-        );
-        $body    = http_build_query($body);
-        $req     = new Request('post', $this->baseUrl . 'search', $headers, $body);
-        $promise = $this->sendRequestAsync($req)->then(function (ResponseInterface $resp) use ($config): Generator {
-            yield from $this->parseSearchResponse($resp, $config);
+        $promise = $this->getGraphBySqlQueryAsync($query, $parameters, $config)->then(function (Graph $graph) use ($config): Generator {
+            yield from $this->extractResourcesFromGraph($graph, $config);
         });
         return new GeneratorPromise($promise);
     }
@@ -478,6 +468,69 @@ class Repo implements RepoInterface {
      */
     public function getResourcesBySearchTermsAsync(array $searchTerms,
                                                    SearchConfig $config): GeneratorPromise {
+        $promise = $this->getGraphBySearchTermsAsync($searchTerms, $config)->then(function (Graph $graph) use ($config): Generator {
+            yield from $this->extractResourcesFromGraph($graph, $config);
+        });
+        return new GeneratorPromise($promise);
+    }
+
+    /**
+     * 
+     * @param string $query
+     * @param array<mixed> $parameters
+     * @param SearchConfig $config
+     * @return Graph
+     */
+    public function getGraphBySqlQuery(string $query, array $parameters,
+                                       SearchConfig $config): Graph {
+        return $this->getGraphBySqlQueryAsync($query, $parameters, $config)->wait();
+    }
+
+    /**
+     * 
+     * @param string $query
+     * @param array<mixed> $parameters
+     * @param SearchConfig $config
+     * @return GraphPromise
+     */
+    public function getGraphBySqlQueryAsync(string $query, array $parameters,
+                                            SearchConfig $config): GraphPromise {
+        $headers = [
+            'Accept'       => 'application/n-triples',
+            'Content-Type' => 'application/x-www-form-urlencoded',
+        ];
+        $headers = array_merge($headers, $config->getHeaders($this));
+        $body    = array_merge(
+            ['sql' => $query, 'sqlParam' => $parameters],
+            $config->toArray()
+        );
+        $body    = http_build_query($body);
+        $req     = new Request('post', $this->baseUrl . 'search', $headers, $body);
+        $promise = $this->sendRequestAsync($req)->then(function (ResponseInterface $resp) use ($config): Graph {
+            return $this->parseSearchResponse($resp, $config);
+        });
+        return new GraphPromise($promise);
+    }
+
+    /**
+     * 
+     * @param array<SearchTerm> $searchTerms
+     * @param SearchConfig $config
+     * @return Graph
+     */
+    public function getGraphBySearchTerms(array $searchTerms,
+                                          SearchConfig $config): Graph {
+        return $this->getGraphBySearchTermsAsync($searchTerms, $config)->wait();
+    }
+
+    /**
+     * 
+     * @param array<SearchTerm> $searchTerms
+     * @param SearchConfig $config
+     * @return GraphPromise
+     */
+    public function getGraphBySearchTermsAsync(array $searchTerms,
+                                               SearchConfig $config): GraphPromise {
         $headers = [
             'Accept'       => 'application/n-triples',
             'Content-Type' => 'application/x-www-form-urlencoded',
@@ -491,10 +544,10 @@ class Repo implements RepoInterface {
         $body .= (!empty($body) ? '&' : '') . $config->toQuery();
         $req  = new Request('post', $this->baseUrl . 'search', $headers, $body);
 
-        $promise = $this->sendRequestAsync($req)->then(function (ResponseInterface $resp) use ($config): Generator {
-            yield from $this->parseSearchResponse($resp, $config);
+        $promise = $this->sendRequestAsync($req)->then(function (ResponseInterface $resp) use ($config): Graph {
+            return $this->parseSearchResponse($resp, $config);
         });
-        return new GeneratorPromise($promise);
+        return new GraphPromise($promise);
     }
 
     /**
@@ -579,31 +632,44 @@ class Repo implements RepoInterface {
     }
 
     /**
-     * Parses search request response into an array of `RepoResource` objects.
+     * Parses search request response into the EasyRdf Graph.
      * 
      * @param ResponseInterface $resp PSR-7 search request response
      * @param SearchConfig $config search configuration object
-     * @return Generator<RepoResource>
+     * @return Graph
      */
     private function parseSearchResponse(ResponseInterface $resp,
-                                         SearchConfig $config): Generator {
-        $class = $config->class ?? self::$resourceClass;
-
+                                         SearchConfig $config): Graph {
         $graph = new Graph();
-        $body  = $resp->getBody();
+        $body  = (string) $resp->getBody();
         if (!empty($body)) {
             $format = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
             $graph->parse($body, $format);
 
             $config->count = (int) ((string) $graph->resource($this->getBaseUrl())->getLiteral($this->getSchema()->searchCount));
+        } else {
+            $config->count = 0;
+        }
+        return $graph;
+    }
 
-            $resources = $graph->resourcesMatching($this->schema->searchMatch);
-            foreach ($resources as $i) {
-                $i->delete($this->schema->searchMatch);
-                $obj = new $class($i->getUri(), $this);
-                $obj->setGraph($i);
-                yield $obj;
-            }
+    /**
+     * Extracts collection of RepoResource objects from the EasyRdf graph being
+     * parsed from a search response.
+     * 
+     * @param Graph $graph graph returned by the parseSearchResponse() method
+     * @param SearchConfig $config search configuration object
+     * @return Generator<RepoResource>
+     */
+    private function extractResourcesFromGraph(Graph $graph,
+                                               SearchConfig $config): Generator {
+        $class     = $config->class ?? self::$resourceClass;
+        $resources = $graph->resourcesMatching($this->schema->searchMatch);
+        foreach ($resources as $i) {
+            $i->delete($this->schema->searchMatch);
+            $obj = new $class($i->getUri(), $this);
+            $obj->setGraph($i);
+            yield $obj;
         }
     }
 }

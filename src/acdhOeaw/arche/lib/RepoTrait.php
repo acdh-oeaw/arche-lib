@@ -90,7 +90,7 @@ trait RepoTrait {
      *   (to be used by extension libraries)
      * @return RepoResourceInterface
      */
-    public function getResourceById(string $id, string $class = null) {
+    public function getResourceById(string $id, string $class = null): RepoResourceInterface {
         return $this->getResourceByIds([$id], $class);
     }
 
