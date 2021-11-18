@@ -220,7 +220,7 @@ class RepoResource implements RepoResourceInterface {
                     }
                 }
                 $param = ['concurrency' => 1];
-                return new \GuzzleHttp\Promise\EachPromise($respPromises, $param);
+                return (new \GuzzleHttp\Promise\EachPromise($respPromises, $param))->promise();
             });
         }
         return $promise;
