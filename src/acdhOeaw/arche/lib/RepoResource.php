@@ -219,7 +219,12 @@ class RepoResource implements RepoResourceInterface {
                         $respPromises[] = $this->repo->sendRequestAsync($req);
                     }
                 }
-                $param = ['concurrency' => 1];
+                $param = [
+                    'concurrency' => 1,
+                    'rejected' => function ($x, $i) {
+                        throw $x instanceof \Exception ? $x : new \RuntimeException($x);
+                    }
+                ];
                 return (new \GuzzleHttp\Promise\EachPromise($respPromises, $param))->promise();
             });
         }
