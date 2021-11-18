@@ -329,10 +329,8 @@ class Repo implements RepoInterface {
                 yield $f($j, $this);
             }
         };
-        $results   = [];
-        $queue     = new \GuzzleHttp\Promise\EachPromise(
-            $promiseIterator($iter, $func),
-                             [
+        $results = [];
+        $param     = [
             'concurrency' => $concurrency,
             'fulfilled'   => function ($x, $i) use (&$results) {
                 $results[$i] = $x;
@@ -350,8 +348,8 @@ class Repo implements RepoInterface {
                         throw new \RuntimeException("Unknown rejectAction");
                 }
             },
-            ]
-        );
+        ];
+        $queue   = new \GuzzleHttp\Promise\EachPromise($promiseIterator($iter, $func), $param);
         $queue->promise()->wait();
         return $results;
     }
