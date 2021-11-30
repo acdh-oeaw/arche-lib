@@ -62,7 +62,7 @@ class RepoResourceResolver {
      *   requires no configutation at all.
      *   This mode is always available as a fallback resolution method for the
      *   resolve() method and explicitely as the resolveUrl() method.
-     * - REST API mode (when `$config` is provided and contains `$config->dbConnStr`)
+     * - REST API mode (when `$config` is provided and misses `$config->dbConnStr`)
      *   This mode is faster but works only against a single repository.
      * - direct database access mode (when `$config` is provided and contains
      *    `$config->dbConnStr`). This is definitely the fastest mode but works
