@@ -82,6 +82,26 @@ class Repo implements RepoInterface {
         return new Repo($baseUrl, $schema, $headers, $options);
     }
 
+    /**
+     * Interactively creates a repository instance asking user for all required data.
+     * 
+     * @param string|null $cfgLocation optional path to a directory containing a config.yaml file.
+     *   The config.yaml file may provide a predefined list of repositories and/or ARCHE login
+     *   formatted as follows:
+     *   ```
+     *   repositories:
+     *   - urlBase: http://arche.acdh.oeaw.ac.at
+     *     pathBase: /api/
+     *   - urlBase: https://arche-curation.acdh-dev.oeaw.ac.at
+     *     pathBase: /
+     *   auth:
+     *     httpBasic:
+     *       user: myLogin
+     *   ```
+     * @param string|null $login ARCHE login. If null, user will be asked to provide it interactively.
+     * @param string|null $pswd ARCHE password. If null, user will be asked to provide it interactively.
+     * @return self
+     */
     static public function factoryInteractive(?string $cfgLocation = null,
                                               ?string $login = null,
                                               ?string $pswd = null): self {
