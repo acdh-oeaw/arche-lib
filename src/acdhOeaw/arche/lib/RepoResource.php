@@ -207,7 +207,7 @@ class RepoResource implements RepoResourceInterface {
         $this->metadata = null;
 
         if ($tombstone) {
-            $promise = $promise->then(function (ResponseInterface $resp): PromiseInterface {
+            $promise = $promise->then(function (ResponseInterface $resp): array {
                 $format = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
 
                 $graph        = new Graph();
@@ -216,16 +216,10 @@ class RepoResource implements RepoResourceInterface {
                 foreach ($graph->resources() as $i) {
                     if (count($i->propertyUris()) > 0) {
                         $req            = new Request('delete', $i->getUri() . '/tombstone');
-                        $respPromises[] = $this->repo->sendRequestAsync($req);
+                        $respPromises[] = $this->repo->sendRequest($req);
                     }
                 }
-                $param = [
-                    'concurrency' => 1,
-                    'rejected' => function ($x, $i) {
-                        throw $x instanceof \Exception ? $x : new \RuntimeException($x);
-                    }
-                ];
-                return (new \GuzzleHttp\Promise\EachPromise($respPromises, $param))->promise();
+                return $respPromises;
             });
         }
         return $promise;
