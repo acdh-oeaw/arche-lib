@@ -29,7 +29,7 @@ namespace acdhOeaw\arche\lib\exception;
 use Throwable;
 
 /**
- * Description of Deleted
+ * Exception representing the HTTP 410 Gone return code
  *
  * @author zozlak
  */

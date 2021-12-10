@@ -35,6 +35,7 @@ use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Promise\RejectedPromise;
 use Psr\Http\Message\ResponseInterface;
+use acdhOeaw\arche\lib\exception\Conflict;
 use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
 use acdhOeaw\arche\lib\exception\AmbiguousMatch;
@@ -298,6 +299,8 @@ class Repo implements RepoInterface {
                 switch ($e->getCode()) {
                     case 410:
                         return new RejectedPromise(new Deleted());
+                    case 409:
+                        return new RejectedPromise(new Conflict());
                     case 404:
                         return new RejectedPromise(new NotFound());
                     default:

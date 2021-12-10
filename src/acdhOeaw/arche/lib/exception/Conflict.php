@@ -3,7 +3,7 @@
 /*
  * The MIT License
  *
- * Copyright 2019 Austrian Centre for Digital Humanities.
+ * Copyright 2021 Austrian Centre for Digital Humanities.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +29,13 @@ namespace acdhOeaw\arche\lib\exception;
 use Throwable;
 
 /**
- * Exception representing the HTTP 404 Not Found return code
+ * Exception representing the HTTP 409 Conflict return code
  *
  * @author zozlak
  */
-class NotFound extends RepoLibException {
-    public function __construct(string $message = "", int $code = 404,
+class Conflict extends RepoLibException {
+
+    public function __construct(string $message = "", int $code = 409,
                                 Throwable $previous = NULL) {
         parent::__construct($message, $code, $previous);
     }
