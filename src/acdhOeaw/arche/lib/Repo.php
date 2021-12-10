@@ -82,61 +82,54 @@ class Repo implements RepoInterface {
         return new Repo($baseUrl, $schema, $headers, $options);
     }
 
-    static public function factoryInteractive(string $cfgPath = '.'): self {
-        if (!file_exists($cfgPath) || !is_file($cfgPath)) {
-            while (file_exists($cfgPath) && !file_exists($cfgPath . '/config.yaml')) {
-                $cfgPath .= '/..';
+    static public function factoryInteractive(?string $cfgLocation = null,
+                                              ?string $login = null,
+                                              ?string $pswd = null): self {
+        if ($cfgLocation !== null) {
+            while (file_exists($cfgPath) && !file_exists($cfgLocation . '/config.yaml')) {
+                $cfgLocation .= '/..';
             }
-            $cfgPath .= '/config.yaml';
-            if (!file_exists($cfgPath) || !is_file($cfgPath)) {
-                exit("No config.yaml found.\n");
+            $cfgLocation .= '/config.yaml';
+            if (!file_exists($cfgLocation) || !is_file($cfgLocation)) {
+                echo "No config.yaml found.\n";
+            } else {
+                echo "Configuration found at $cfgPath\n";
+                $cfg = Config::fromYaml($cfgPath);
             }
         }
-        echo "Configuration found at $cfgPath\n";
-        $cfg = Config::fromYaml($cfgPath);
 
         if (isset($cfg->repositories)) {
             echo "\nWhat's the repository you want to ingest to? (type a number)\n";
             foreach ($cfg->repositories as $k => $v) {
                 echo ($k + 1) . "\t" . $v->urlBase . $v->pathBase . "\n";
             }
-            $line     = ((int) trim((string) fgets(STDIN))) - 1;
-            $urlBase  = $cfg->repositories[$line]->urlBase ?? '';
-            $pathBase = $cfg->repositories[$line]->pathBase ?? '';
+            $line    = ((int) trim((string) fgets(\STDIN))) - 1;
+            $baseUrl = ($cfg->repositories[$line]->urlBase ?? '') . ($cfg->repositories[$line]->pathBase ?? '');
         } else {
-            $urlBase  = $cfg->rest->urlBase ?? '';
-            $pathBase = $cfg->rest->pathBase ?? '';
+            echo "\nWhat's the base URL of the repository you want to ingest to?\n";
+            $baseUrl = trim((string) fgets(\STDIN));
         }
-        if (empty($urlBase . $pathBase)) {
-            exit("Repository URL not set. Please reaview your config.yaml.\n");
-        }
-        echo "\nIs repository URL $urlBase$pathBase correct? (type 'yes' to continue)\n";
+        echo "\nIs repository URL $baseUrl correct? (type 'yes' to continue)\n";
         $line = trim((string) fgets(STDIN));
         if ($line !== 'yes') {
             exit("Wrong repository URL\n");
         }
-        $cfg->rest->urlBase  = $urlBase;
-        $cfg->rest->pathBase = $pathBase;
 
-        $user = $cfg->auth->httpBasic->user ?? '';
+        $user = $login ?? ($cfg->auth->httpBasic->user ?? '');
         if (empty($user)) {
-            echo "\nWhat's your login? (login not set in the config.yaml)\n";
-            $user = trim((string) fgets(STDIN));
+            echo "\nWhat's your login?\n";
+            $user = trim((string) fgets(\STDIN));
         }
 
-        echo "\nWhat's your password?\n";
-        system('stty -echo');
-        $pswd = trim((string) fgets(STDIN));
-        system('stty echo');
-
-        $cfg->auth = new Config((object) ['httpBasic' => ['user' => $user, 'password' => $pswd]]);
-        $tmpfile   = (string) tempnam('/tmp', '');
-        file_put_contents($tmpfile, $cfg->asYaml());
-        try {
-            $repo = Repo::factory($tmpfile);
-        } finally {
-            unlink($tmpfile);
+        if (empty($pswd)) {
+            echo "\nWhat's your password?\n";
+            system('stty -echo');
+            $pswd = trim((string) fgets(\STDIN));
+            system('stty echo');
         }
+
+        $options = ['auth' => [$user, $pswd]];
+        $repo    = self::factoryFromUrl($baseUrl, $options);
         return $repo;
     }
 
