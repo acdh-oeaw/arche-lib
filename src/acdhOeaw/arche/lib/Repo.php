@@ -224,11 +224,15 @@ class Repo implements RepoInterface {
      *   by all requests to the repository REST API (e.g. credentials)
      */
     public function __construct(string $baseUrl, array $guzzleOptions = []) {
-        $this->client  = new Client($guzzleOptions);
-        $this->baseUrl = (string) preg_replace('`/$`', '', $baseUrl);
+        $this->client = new Client($guzzleOptions);
+        
+        $this->baseUrl = $baseUrl;
+        if (substr($this->baseUrl, -1) !== '/') {
+            $this->baseUrl .= '/';
+        }
 
         $headers  = ['Accept' => 'application/json'];
-        $response = $this->client->send(new Request('get', "$this->baseUrl/describe", $headers));
+        $response = $this->client->send(new Request('get', $this->baseUrl . "describe", $headers));
         if ($response->getStatusCode() !== 200) {
             throw new NotFound("$baseUrl doesn't resolve to an ARCHE repository", 404);
         }
