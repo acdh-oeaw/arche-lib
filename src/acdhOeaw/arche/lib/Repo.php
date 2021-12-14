@@ -163,17 +163,19 @@ class Repo implements RepoInterface {
     }
 
     /**
-     * Creates a Repo instance from any URL resolving to a repository resource.
+     * Creates a Repo instance from any URL pointing (also trough redirects) 
+     * to a valid REST API endpoint.
      * 
-     * It's not very fast but requires a zero config.
+     * It can be slow (especially when redirects are involved) but requires 
+     * no config.
      * 
      * @param string $url
      * @param array<mixed> $guzzleOptions
      * @param string $realUrl if provided, the final resource URL will be stored
      *   in this variable.
      * @param string $metaReadModeHeader header used by the repository to denote
-     *   the metadata read mode. Providing this parameter will make the resolution
-     *   faster.
+     *   the metadata read mode. Providing this parameter will speed up the
+     *   initialization if the $url points to a repository resource.
      * @return self
      */
     static public function factoryFromUrl(string $url,
@@ -194,9 +196,10 @@ class Repo implements RepoInterface {
         $resp      = $client->send(new Request('HEAD', $url));
         $redirects = array_merge([$url], $resp->getHeader('X-Guzzle-Redirect-History'));
         $realUrl   = (string) array_pop($redirects);
-        $realUrl   = (string) preg_replace('`/?(|describe|user|user/[^/]+|metadata|transaction|[0-9]+|[0-9]+/metadata|[0-9]+/tombstone|merge/[0-9]+/[0-9]+|search)/?$`', '', $realUrl);
+        $realUrl   = (string) preg_replace('`/metadata/?$`', '', $realUrl);
+        $baseUrl   = (string) preg_replace('`/?(|describe|user|user/[^/]+|metadata|transaction|[0-9]+|[0-9]+/tombstone|merge/[0-9]+/[0-9]+|search)/?$`', '', $realUrl);
 
-        return new Repo($realUrl, $guzzleOptions);
+        return new Repo($baseUrl, $guzzleOptions);
     }
 
     /**
@@ -225,7 +228,7 @@ class Repo implements RepoInterface {
         $this->baseUrl = (string) preg_replace('`/$`', '', $baseUrl);
 
         $headers  = ['Accept' => 'application/json'];
-        $response = $this->client->send(new Request('get', "$baseUrl/describe", $headers));
+        $response = $this->client->send(new Request('get', "$this->baseUrl/describe", $headers));
         if ($response->getStatusCode() !== 200) {
             throw new NotFound("$baseUrl doesn't resolve to an ARCHE repository", 404);
         }
