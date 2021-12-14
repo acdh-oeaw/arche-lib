@@ -79,8 +79,6 @@ class Repo implements RepoInterface {
         $config = Config::fromYaml($configFile);
 
         $baseUrl            = $config->rest->urlBase . $config->rest->pathBase;
-        $schema             = new Schema($config->schema);
-        $headers            = new Schema($config->rest->headers);
         $options            = [];
         $options['headers'] = (array) ($config->auth->httpHeader ?? []);
         if (!empty($config->auth->httpBasic->user ?? '')) {
@@ -90,7 +88,7 @@ class Repo implements RepoInterface {
             $options['verify'] = false;
         }
 
-        return new Repo($baseUrl, $schema, $headers, $options);
+        return new Repo($baseUrl, $options);
     }
 
     /**
@@ -196,17 +194,9 @@ class Repo implements RepoInterface {
         $resp      = $client->send(new Request('HEAD', $url));
         $redirects = array_merge([$url], $resp->getHeader('X-Guzzle-Redirect-History'));
         $realUrl   = (string) array_pop($redirects);
-        $realUrl   = (string) preg_replace('|/metadata$|', '', $realUrl);
+        $realUrl   = (string) preg_replace('`/?(|describe|user|user/[^/]+|metadata|transaction|[0-9]+|[0-9]+/metadata|[0-9]+/tombstone|merge/[0-9]+/[0-9]+|search)/?$`', '', $realUrl);
 
-        $baseUrl = preg_replace('@([0-9]+|describe/?)$@', '', $realUrl) ?? '';
-        $resp    = $client->send(new Request('GET', "$baseUrl/describe", ['Accept' => 'application/json']));
-        if ($resp->getStatusCode() !== 200) {
-            throw new NotFound("Provided URL doesn't resolve to an ARCHE repository", 404);
-        }
-        $config  = new Config((object) json_decode((string) $resp->getBody()));
-        $schema  = new Schema($config->schema);
-        $headers = new Schema($config->rest->headers);
-        return new Repo($baseUrl, $schema, $headers, $guzzleOptions);
+        return new Repo($realUrl, $guzzleOptions);
     }
 
     /**
@@ -227,19 +217,21 @@ class Repo implements RepoInterface {
      * Creates an repository connection object.
      * 
      * @param string $baseUrl repository REST API base URL
-     * @param Schema $schema mappings between repository 
-     *   concepts and RDF properties used to denote them by a given repository instance
-     * @param Schema $headers mappings between repository 
-     *   REST API parameters and HTTP headers used to pass them to a given repository instance
      * @param array<mixed> $guzzleOptions Guzzle HTTP client connection options to be used 
      *   by all requests to the repository REST API (e.g. credentials)
      */
-    public function __construct(string $baseUrl, Schema $schema,
-                                Schema $headers, array $guzzleOptions = []) {
+    public function __construct(string $baseUrl, array $guzzleOptions = []) {
         $this->client  = new Client($guzzleOptions);
-        $this->baseUrl = $baseUrl;
-        $this->headers = $headers;
-        $this->schema  = $schema;
+        $this->baseUrl = (string) preg_replace('`/$`', '', $baseUrl);
+
+        $headers  = ['Accept' => 'application/json'];
+        $response = $this->client->send(new Request('get', "$baseUrl/describe", $headers));
+        if ($response->getStatusCode() !== 200) {
+            throw new NotFound("$baseUrl doesn't resolve to an ARCHE repository", 404);
+        }
+        $config        = new Config((object) json_decode((string) $response->getBody()));
+        $this->schema  = new Schema($config->schema);
+        $this->headers = new Schema($config->rest->headers);
     }
 
     /**
@@ -345,7 +337,7 @@ class Repo implements RepoInterface {
                 yield $f($j, $this);
             }
         };
-        $results = [];
+        $results   = [];
         $param     = [
             'concurrency' => $concurrency,
             'fulfilled'   => function ($x, $i) use (&$results) {
@@ -365,7 +357,7 @@ class Repo implements RepoInterface {
                 }
             },
         ];
-        $queue   = new \GuzzleHttp\Promise\EachPromise($promiseIterator($iter, $func), $param);
+        $queue = new \GuzzleHttp\Promise\EachPromise($promiseIterator($iter, $func), $param);
         $queue->promise()->wait();
         return $results;
     }

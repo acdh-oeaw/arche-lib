@@ -251,8 +251,7 @@ class RepoResourceTest extends TestBase {
         $this->noteResource($res2);
 
         $meta3 = $this->getMetadata([
-            $otherProp => $res1->getUri(),
-            $otherProp => $res2->getUri(),
+            $otherProp => [$res1->getUri(), $res2->getUri()]
         ]);
         $res3  = self::$repo->createResource($meta3);
         $this->noteResource($res3);

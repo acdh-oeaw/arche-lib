@@ -93,7 +93,7 @@ class TestBase extends \PHPUnit\Framework\TestCase {
 
     /**
      * 
-     * @param array<string, scalar|array> $properties
+     * @param array<string, mixed> $properties
      * @return Resource
      */
     protected function getMetadata(array $properties): Resource {
