@@ -114,17 +114,14 @@ class Repo implements RepoInterface {
     static public function factoryInteractive(?string $cfgLocation = null,
                                               ?string $login = null,
                                               ?string $pswd = null): self {
+        $cfg = null;
         if ($cfgLocation !== null) {
-            while (file_exists($cfgPath) && !file_exists($cfgLocation . '/config.yaml')) {
+            while (file_exists($cfgLocation) && !file_exists($cfgLocation . '/config.yaml')) {
                 $cfgLocation .= '/..';
             }
             $cfgLocation .= '/config.yaml';
-            if (!file_exists($cfgLocation) || !is_file($cfgLocation)) {
-                echo "No config.yaml found.\n";
-            } else {
-                echo "Configuration found at $cfgPath\n";
-                $cfg = Config::fromYaml($cfgPath);
-            }
+            echo "Configuration found at $cfgLocation\n";
+            $cfg         = Config::fromYaml($cfgLocation);
         }
 
         if (isset($cfg->repositories)) {
@@ -225,7 +222,7 @@ class Repo implements RepoInterface {
      */
     public function __construct(string $baseUrl, array $guzzleOptions = []) {
         $this->client = new Client($guzzleOptions);
-        
+
         $this->baseUrl = $baseUrl;
         if (substr($this->baseUrl, -1) !== '/') {
             $this->baseUrl .= '/';
@@ -275,10 +272,7 @@ class Repo implements RepoInterface {
             $res   = $class::factory($this, $resp);
 
             if ($payload !== null) {
-                $promise = $res->updateContentAsync($payload)->then(function ()use ($res): RepoResource {
-                    return $res;
-                });
-                return new RepoResourcePromise($promise);
+                $res->updateContentAsync($payload)->wait();
             }
             return $res;
         });
