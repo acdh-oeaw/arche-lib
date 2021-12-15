@@ -35,10 +35,24 @@ use GuzzleHttp\Promise\PromiseInterface;
  */
 trait PromiseTrait {
 
+    // debug stuff
+    static private int $__count = 0;
+    static public bool $debug    = false;
+    private string $caller;
+    private int $id;
+    // actually needed
     private PromiseInterface $promise;
 
     public function __construct(PromiseInterface $promise) {
         $this->promise = $promise;
+        if (self::$debug) {
+            self::$__count++;
+            $this->id     = self::$__count;
+            $caller       = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+            $this->caller = ($caller[1]['class'] ?? '') . '::' . ($caller[1]['function'] ?? '') . '():' . ($caller[0]['line'] ?? '') .
+                ',' . ($caller[2]['class'] ?? '') . '::' . ($caller[2]['function'] ?? '') . '():' . ($caller[1]['line'] ?? '');
+            echo "RepoResourceTrait [$this->id] created from " . get_class($promise) . " caller $this->caller\n";
+        }
     }
 
     public function cancel(): void {
