@@ -106,15 +106,15 @@ class Repo implements RepoInterface {
                                               ?string $login = null,
                                               ?string $pswd = null): self {
         if ($cfgLocation !== null) {
-            while (file_exists($cfgPath) && !file_exists($cfgLocation . '/config.yaml')) {
+            while (file_exists($cfgLocation) && !file_exists($cfgLocation . '/config.yaml')) {
                 $cfgLocation .= '/..';
             }
             $cfgLocation .= '/config.yaml';
             if (!file_exists($cfgLocation) || !is_file($cfgLocation)) {
                 echo "No config.yaml found.\n";
             } else {
-                echo "Configuration found at $cfgPath\n";
-                $cfg = Config::fromYaml($cfgPath);
+                echo "Configuration found at $cfgLocation\n";
+                $cfg = Config::fromYaml($cfgLocation);
             }
         }
 
