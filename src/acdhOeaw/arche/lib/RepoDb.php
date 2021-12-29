@@ -280,6 +280,7 @@ class RepoDb implements RepoInterface {
                     $config->metadataParentProperty, $max, (int) $neighbors, (int) $reverse
                 ];
                 break;
+            case RRI::META_NONE:
             case RRI::META_IDS:
                 $metaQuery = "SELECT id, property, type, lang, value FROM metadata JOIN ids USING (id) WHERE property = ?";
                 $metaParam = [$this->schema->label];
