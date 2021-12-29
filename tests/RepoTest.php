@@ -77,8 +77,8 @@ class RepoTest extends TestBase {
     public function testTransactionExpired(): void {
         self::$repo->begin();
         sleep(self::$config->transactionController->timeout + 1);
-        $this->expectException('GuzzleHttp\Exception\ClientException');
-        $this->expectExceptionMessage('resulted in a `400 Bad Request` response');
+        $this->expectException(\GuzzleHttp\Exception\ClientException::class);
+        $this->expectExceptionMessageMatches('/resulted in a `400 Bad Request` response/');
         self::$repo->commit();
     }
 

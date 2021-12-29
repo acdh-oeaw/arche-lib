@@ -567,6 +567,7 @@ class Repo implements RepoInterface {
      * @see commit()
      */
     public function begin(): void {
+        $this->txId = null;
         $req        = new Request('post', $this->baseUrl . 'transaction');
         $resp       = $this->sendRequest($req);
         $this->txId = $resp->getHeader($this->getHeaderName('transactionId'))[0];
