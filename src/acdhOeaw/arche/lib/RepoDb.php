@@ -247,7 +247,7 @@ class RepoDb implements RepoInterface {
         $ftsQP     = $this->getFtsQuery($config);
         $orderByQP = $this->getOrderByQuery($config);
 
-        $mode = strtolower($config->metadataMode ?? '');
+        $mode = $config->metadataMode ?? '';
         switch ($mode) {
             case RRI::META_RESOURCE:
                 $metaQuery = "
