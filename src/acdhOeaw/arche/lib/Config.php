@@ -141,6 +141,8 @@ use function GuzzleHttp\json_encode;
  * @property string $table
  * @property string $tikaLocation
  * @property int    $timeout
+ * @property int    $lockTimeout
+ * @property int    $statementTimeout
  * @property string $tmpDir
  * @property Config $transactionController
  * @property string $transactionId
