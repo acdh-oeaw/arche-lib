@@ -13,6 +13,7 @@ jobs:
         chmod +x config/run.d/xdebug.sh
         cp tests/config.yaml config/yaml/local.yaml
         cp .github/workflows/30-fixVocabularies.sh config/initScripts/
+        cp .github/workflows/composer.json config/composer.json
     - name: run repo docker
       run: |
         mkdir log
