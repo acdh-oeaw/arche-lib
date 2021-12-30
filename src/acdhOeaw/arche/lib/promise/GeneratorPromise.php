@@ -52,6 +52,6 @@ class GeneratorPromise implements PromiseInterface {
      * @return Generator<mixed>
      */
     public function wait($unwrap = true): Generator {
-        return $this->promise->wait($unwrap);
+        return $this->promise->wait(true);
     }
 }

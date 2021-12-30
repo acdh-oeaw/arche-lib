@@ -48,6 +48,6 @@ class ResponsePromise implements PromiseInterface {
     }
 
     public function wait($unwrap = true): ResponseInterface {
-        return $this->promise->wait($unwrap);
+        return $this->promise->wait(true);
     }
 }

@@ -38,12 +38,6 @@ class RepoResourcePromise implements PromiseInterface {
 
     use PromiseTrait;
 
-    public function __destruct() {
-        if (self::$debug) {
-            echo "RepoResourceTrait [$this->id] destructed (" . $this->promise->getState() . ") [$this->caller]\n";
-        }
-    }
-
     public function resolve($value): void {
         $this->promise->resolve($value);
     }
@@ -53,10 +47,6 @@ class RepoResourcePromise implements PromiseInterface {
     }
 
     public function wait($unwrap = true): RepoResource {
-        $ret = $this->promise->wait($unwrap);
-        if (self::$debug) {
-            echo "RepoResourceTrait [$this->id] returning " . ($ret !== null ? get_class($ret) : 'null') . " [$this->caller]\n";
-        }
-        return $ret;
+        return $this->promise->wait(true);
     }
 }

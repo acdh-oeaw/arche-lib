@@ -52,6 +52,6 @@ class GraphPromise implements PromiseInterface {
      * @return Graph
      */
     public function wait($unwrap = true): Graph {
-        return $this->promise->wait($unwrap);
+        return $this->promise->wait(true);
     }
 }
