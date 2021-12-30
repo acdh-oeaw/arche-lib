@@ -82,7 +82,7 @@ class RepoTest extends TestBase {
         self::$repo->commit();
     }
 
-    public function testCreateResource(): void {
+    public function testCreateBinaryResource(): void {
         $labelProp = self::$schema->label;
         $metadata  = $this->getMetadata([$labelProp => 'sampleTitle']);
         $binary    = new BinaryPayload(null, __FILE__);
@@ -99,6 +99,20 @@ class RepoTest extends TestBase {
         $this->assertEquals('sampleTitle', (string) $res2->getMetadata()->getLiteral($labelProp));
     }
 
+    public function testCreateResource(): void {
+        $labelProp = self::$schema->label;
+        $metadata  = $this->getMetadata([$labelProp => 'sampleTitle']);
+
+        self::$repo->begin();
+        $res1 = self::$repo->createResource($metadata);
+        $this->noteResource($res1);
+        $this->assertEquals('sampleTitle', (string) $res1->getMetadata()->getLiteral($labelProp));
+        self::$repo->commit();
+
+        $res2 = new RepoResource($res1->getUri(), self::$repo);
+        $this->assertEquals('sampleTitle', (string) $res2->getMetadata()->getLiteral($labelProp));
+    }
+    
     public function testSearchById(): void {
         $idProp = self::$schema->id;
         $id     = 'https://a.b/' . rand();
