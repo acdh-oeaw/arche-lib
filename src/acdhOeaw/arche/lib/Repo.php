@@ -39,6 +39,7 @@ use acdhOeaw\arche\lib\exception\Conflict;
 use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
 use acdhOeaw\arche\lib\exception\AmbiguousMatch;
+use acdhOeaw\arche\lib\exception\RepoLibException;
 use acdhOeaw\arche\lib\promise\GeneratorPromise;
 use acdhOeaw\arche\lib\promise\GraphPromise;
 use acdhOeaw\arche\lib\promise\ResponsePromise;

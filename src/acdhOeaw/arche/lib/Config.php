@@ -153,6 +153,7 @@ use function GuzzleHttp\json_encode;
  * @property string $userCol
  * @property string $value
  * @property bool   $verifyCert
+ * @property float  $version
  */
 class Config {
 
