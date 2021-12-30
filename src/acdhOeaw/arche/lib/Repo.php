@@ -53,9 +53,10 @@ use function GuzzleHttp\json_decode;
  */
 class Repo implements RepoInterface {
 
-    const REJECT_SKIP    = 1;
-    const REJECT_FAIL    = 2;
-    const REJECT_INCLUDE = 3;
+    const REJECT_SKIP            = 1;
+    const REJECT_FAIL            = 2;
+    const REJECT_INCLUDE         = 3;
+    const ARCHE_CORE_MIN_VERSION = 3.2;
     use RepoTrait;
 
     /**
@@ -233,7 +234,11 @@ class Repo implements RepoInterface {
         if ($response->getStatusCode() !== 200) {
             throw new NotFound("$baseUrl doesn't resolve to an ARCHE repository", 404);
         }
-        $config        = new Config((object) json_decode((string) $response->getBody()));
+        $config  = new Config((object) json_decode((string) $response->getBody()));
+        $version = (float) ($config->version ?? 0.1);
+        if ($version > 0 && $version < self::ARCHE_CORE_MIN_VERSION) {
+            throw new RepoLibException("This version of arche-lib requires ARCHE version " . self::ARCHE_CORE_MIN_VERSION . " while the repository version is $version");
+        }
         $this->schema  = new Schema($config->schema);
         $this->headers = new Schema($config->rest->headers);
     }
