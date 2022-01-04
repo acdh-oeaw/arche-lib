@@ -43,7 +43,7 @@ class BinaryPayload {
         if (!isset(self::$guzzleVersion)) {
             self::$guzzleVersion = (int) InstalledVersions::getVersion('guzzlehttp/psr7');
         }
-        return self::$guzzleVersion >= 2 ? \GuzzleHttp\Psr7\MimeType::fromFilename($fileName) : \GuzzleHttp\Psr7\mimetype_from_filename($fileName);
+        return self::$guzzleVersion <= 1 ? \GuzzleHttp\Psr7\mimetype_from_filename($fileName) : \GuzzleHttp\Psr7\MimeType::fromFilename($fileName);
     }
 
     /**
