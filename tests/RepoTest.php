@@ -26,6 +26,9 @@
 
 namespace acdhOeaw\arche\lib\tests;
 
+use EasyRdf\Literal;
+use GuzzleHttp\Exception\ClientException;
+use zozlak\RdfConstants as RDF;
 use acdhOeaw\arche\lib\BinaryPayload;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\RepoResource;
@@ -112,7 +115,7 @@ class RepoTest extends TestBase {
         $res2 = new RepoResource($res1->getUri(), self::$repo);
         $this->assertEquals('sampleTitle', (string) $res2->getMetadata()->getLiteral($labelProp));
     }
-    
+
     public function testSearchById(): void {
         $idProp = self::$schema->id;
         $id     = 'https://a.b/' . rand();
@@ -148,4 +151,45 @@ class RepoTest extends TestBase {
         self::$repo->getResourceByIds([$id1, $id2]);
     }
 
+    public function testMap(): void {
+        $prop    = 'http://foo/bar';
+        $valueOk = rand();
+        $metaOk  = $this->getMetadata([$prop => $valueOk]);
+        $metaBad = $this->getMetadata([$prop => new Literal('baz', null, RDF::XSD_DATE)]);
+        self::$repo->begin();
+
+        // REJEST_SKIP
+        $results = self::$repo->map([$metaOk, $metaBad], fn($meta) => self::$repo->createResourceAsync($meta), 1, Repo::REJECT_SKIP);
+        $this->assertCount(1, $results);
+        $this->assertInstanceOf(RepoResource::class, $results[0]);
+        $this->assertEquals($valueOk, (string) $results[0]->getGraph()->get($prop));
+
+        // REJECT_INCLUDE
+        $results   = self::$repo->map([$metaOk, $metaBad], fn($meta) => self::$repo->createResourceAsync($meta), 1, Repo::REJECT_INCLUDE);
+        $this->assertCount(2, $results);
+        $rejected  = $fulfilled = null;
+        foreach ($results as $i) {
+            if ($i instanceof RepoResource) {
+                $fulfilled = $i;
+            } elseif ($i instanceof ClientException) {
+                $rejected = $i;
+            }
+        }
+        $this->assertNotNull($rejected);
+        $this->assertNotNull($fulfilled);
+        $this->assertEquals($valueOk, (string) $fulfilled->getGraph()->get($prop));
+        $this->assertEquals(400, $rejected->getResponse()->getStatusCode());
+        $this->assertStringContainsString('Wrong property value', (string) $rejected->getResponse()->getBody());
+
+        // REJECT_FAIL
+        try {
+            $results = self::$repo->map([$metaOk, $metaBad], fn($meta) => self::$repo->createResourceAsync($meta), 1, Repo::REJECT_FAIL);
+            $this->assertTrue(false);
+        } catch (ClientException $e) {
+            $this->assertEquals(400, $e->getResponse()->getStatusCode());
+            $this->assertStringContainsString('Wrong property value', (string) $e->getResponse()->getBody());
+        }
+
+        self::$repo->rollback();
+    }
 }
