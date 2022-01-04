@@ -3,7 +3,7 @@
 /*
  * The MIT License
  *
- * Copyright 2019 Austrian Centre for Digital Humanities.
+ * Copyright 2021 Austrian Centre for Digital Humanities.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,19 +24,44 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\arche\lib\exception;
+namespace acdhOeaw\arche\lib\promise;
 
-use Throwable;
+use EasyRdf\Graph;
+use GuzzleHttp\Promise\PromiseInterface;
 
 /**
- * Exception representing the HTTP 404 Not Found return code
+ * Description of GraphPromise
  *
  * @author zozlak
  */
-class NotFound extends RepoLibException {
-    public function __construct(string $message = "", int $code = 404,
-                                Throwable $previous = NULL) {
-        parent::__construct($message, $code, $previous);
+class GraphPromise implements PromiseInterface {
+
+    use PromiseTrait;
+
+    /**
+     * 
+     * @param mixed $value
+     * @return void
+     */
+    public function resolve($value): void {
+        $this->promise->resolve($value);
     }
 
+    /**
+     * 
+     * @param mixed $reason
+     * @return void
+     */
+    public function reject($reason): void {
+        $this->promise->reject($reason);
+    }
+
+    /**
+     * 
+     * @param bool $unwrap
+     * @return Graph|null
+     */
+    public function wait($unwrap = true): ?Graph {
+        return $this->promise->wait($unwrap);
+    }
 }

@@ -12,10 +12,10 @@
         }
     ],
     "require": {
-        "php": ">=8",
+        "php": ">=8.0 <=8.1",
         "guzzlehttp/guzzle": "^7 | ^6",
-        "acdh-oeaw/easyrdf": "*",
-        "zozlak/rdf-constants": "*",
+        "acdh-oeaw/easyrdf": ">=0.13.5",
+        "zozlak/rdf-constants": "^1",
         "zozlak/query-part": "^2",
         "psr/log": "*"
     },

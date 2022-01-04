@@ -77,7 +77,7 @@ class TestBase extends \PHPUnit\Framework\TestCase {
         self::$repo->begin();
         foreach ($this->resources as $i) {
             try {
-                $i->delete(true, true, self::$schema->id);
+                $i->delete(true, true, self::$schema->parent);
             } catch (Deleted $e) {
                 
             } catch (NotFound $e) {
@@ -93,7 +93,7 @@ class TestBase extends \PHPUnit\Framework\TestCase {
 
     /**
      * 
-     * @param array<string, scalar|array> $properties
+     * @param array<string, mixed> $properties
      * @return Resource
      */
     protected function getMetadata(array $properties): Resource {

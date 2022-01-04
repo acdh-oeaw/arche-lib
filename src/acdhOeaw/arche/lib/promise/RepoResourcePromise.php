@@ -3,7 +3,7 @@
 /*
  * The MIT License
  *
- * Copyright 2019 Austrian Centre for Digital Humanities.
+ * Copyright 2021 Austrian Centre for Digital Humanities.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,19 +24,44 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\arche\lib\exception;
+namespace acdhOeaw\arche\lib\promise;
 
-use Throwable;
+use GuzzleHttp\Promise\PromiseInterface;
+use acdhOeaw\arche\lib\RepoResource;
 
 /**
- * Exception representing the HTTP 404 Not Found return code
+ * Description of Psr7ResponsePromise
  *
  * @author zozlak
  */
-class NotFound extends RepoLibException {
-    public function __construct(string $message = "", int $code = 404,
-                                Throwable $previous = NULL) {
-        parent::__construct($message, $code, $previous);
+class RepoResourcePromise implements PromiseInterface {
+
+    use PromiseTrait;
+
+    /**
+     * 
+     * @param mixed $value
+     * @return void
+     */
+    public function resolve($value): void {
+        $this->promise->resolve($value);
     }
 
+    /**
+     * 
+     * @param mixed $reason
+     * @return void
+     */
+    public function reject($reason): void {
+        $this->promise->reject($reason);
+    }
+
+    /**
+     * 
+     * @param bool $unwrap
+     * @return RepoResource|null
+     */
+    public function wait($unwrap = true): ?RepoResource {
+        return $this->promise->wait($unwrap);
+    }
 }

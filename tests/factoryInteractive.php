@@ -3,7 +3,7 @@
 /*
  * The MIT License
  *
- * Copyright 2019 Austrian Centre for Digital Humanities.
+ * Copyright 2022 Austrian Centre for Digital Humanities.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,19 +24,11 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\arche\lib\exception;
-
-use Throwable;
-
 /**
- * Exception representing the HTTP 404 Not Found return code
- *
- * @author zozlak
+ * Wrapper used to test the acdhOeaw\arche\lib\Repo::factoryInteractive()
  */
-class NotFound extends RepoLibException {
-    public function __construct(string $message = "", int $code = 404,
-                                Throwable $previous = NULL) {
-        parent::__construct($message, $code, $previous);
-    }
+use acdhOeaw\arche\lib\Repo;
 
-}
+include __DIR__ . "/../vendor/autoload.php";
+
+$repo = Repo::factoryInteractive($argv[1] ?? null, $argv[2] ?? null, $argv[3] ?? null);

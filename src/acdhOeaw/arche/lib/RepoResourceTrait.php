@@ -70,7 +70,7 @@ trait RepoResourceTrait {
         $idProp = $this->repoInt->getSchema()->id;
         $this->loadMetadata();
         $ids    = [];
-        foreach ($this->metadata?->allResources($idProp) as $i) {
+        foreach ($this->metadata?->allResources($idProp) ?? [] as $i) {
             $ids[] = (string) $i;
         }
         return $ids;
@@ -84,7 +84,7 @@ trait RepoResourceTrait {
     public function getClasses(): array {
         $this->loadMetadata();
         $ret = [];
-        foreach ($this->metadata?->allResources(RDF::RDF_TYPE) as $i) {
+        foreach ($this->metadata?->allResources(RDF::RDF_TYPE) ?? [] as $i) {
             $ret[] = $i->getUri();
         }
         return $ret;

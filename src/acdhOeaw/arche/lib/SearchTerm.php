@@ -313,6 +313,7 @@ class SearchTerm {
                 } else {
                     $func = "st_intersects(geom, $valueQuery)";
                 }
+                break;
         }
         $query = "
             SELECT DISTINCT COALESCE(m.id, ss.id) AS id

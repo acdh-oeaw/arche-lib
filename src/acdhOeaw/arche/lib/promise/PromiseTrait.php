@@ -3,7 +3,7 @@
 /*
  * The MIT License
  *
- * Copyright 2019 Austrian Centre for Digital Humanities.
+ * Copyright 2021 Austrian Centre for Digital Humanities.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,19 +24,37 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\arche\lib\exception;
+namespace acdhOeaw\arche\lib\promise;
 
-use Throwable;
+use GuzzleHttp\Promise\PromiseInterface;
 
 /**
- * Exception representing the HTTP 404 Not Found return code
+ * Description of PromiseTrait
  *
  * @author zozlak
  */
-class NotFound extends RepoLibException {
-    public function __construct(string $message = "", int $code = 404,
-                                Throwable $previous = NULL) {
-        parent::__construct($message, $code, $previous);
+trait PromiseTrait {
+
+    private PromiseInterface $promise;
+
+    public function __construct(PromiseInterface $promise) {
+        $this->promise = $promise;
     }
 
+    public function cancel(): void {
+        $this->promise->cancel();
+    }
+
+    public function getState(): string {
+        return $this->promise->getState();
+    }
+
+    public function otherwise(callable $onRejected): PromiseInterface {
+        return $this->promise->otherwise($onRejected);
+    }
+
+    public function then(callable $onFulfilled = null,
+                         callable $onRejected = null): PromiseInterface {
+        return $this->promise->then($onFulfilled, $onRejected);
+    }
 }

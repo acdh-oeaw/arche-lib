@@ -26,7 +26,9 @@
 
 namespace acdhOeaw\arche\lib;
 
+use EasyRdf\Graph;
 use Generator;
+use acdhOeaw\arche\lib\SearchTerm;
 
 /**
  *
@@ -77,7 +79,9 @@ interface RepoInterface {
     public function getResourceByIds(array $ids, string $class = null): RepoResourceInterface;
 
     /**
-     * Performs a search
+     * Returns repository resources matching a given SQL search query.
+     * The query should return the resources.id database column value of all
+     * resources matching the search. The column name "id" has to be used.
      * 
      * @param string $query
      * @param array<mixed> $parameters
@@ -96,5 +100,25 @@ interface RepoInterface {
      */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator;
-    
+
+    /**
+     * Returns RDF metadata graph of the search results.
+     * 
+     * @param string $query
+     * @param array<mixed> $parameters
+     * @param SearchConfig $config
+     * @return Graph
+     */
+    public function getGraphBySqlQuery(string $query, array $parameters,
+                                       SearchConfig $config): Graph;
+
+    /**
+     * Returns RDF metadata graph of the search results.
+     * 
+     * @param array<SearchTerm> $searchTerms
+     * @param SearchConfig $config
+     * @return Graph
+     */
+    public function getGraphBySearchTerms(array $searchTerms,
+                                          SearchConfig $config): Graph;
 }

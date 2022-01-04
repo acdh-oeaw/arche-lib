@@ -26,44 +26,47 @@
 
 namespace acdhOeaw\arche\lib;
 
+use Composer\InstalledVersions;
 use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Utils;
 use acdhOeaw\arche\lib\exception\RepoLibException;
 
 /**
- * Simple container for a request binary payload
- *
+ * Simple container for a request binary payload.
+ * 
  * @author zozlak
  */
 class BinaryPayload {
 
-    const GUZZLE_PSR7_V1_MIME_FUNC = '\GuzzleHttp\Psr7\mimetype_from_filename';
-    const GUZZLE_PSR7_V2_MIME_FUNC = '\GuzzleHttp\Psr7\MimeType::fromFilename';
+    static private int $guzzleVersion;
 
     static public function guzzleMimetype(string $fileName): ?string {
-        $f = function_exists(self::GUZZLE_PSR7_V1_MIME_FUNC) ? self::GUZZLE_PSR7_V1_MIME_FUNC : self::GUZZLE_PSR7_V2_MIME_FUNC;
-        return $f($fileName);
+        if (!isset(self::$guzzleVersion)) {
+            self::$guzzleVersion = (int) InstalledVersions::getVersion('guzzlehttp/psr7');
+        }
+        return self::$guzzleVersion >= 2 || self::$guzzleVersion === 0 ? \GuzzleHttp\Psr7\MimeType::fromFilename($fileName) : \GuzzleHttp\Psr7\mimetype_from_filename($fileName);
     }
 
     /**
-     * A stream object or the data as a string.
-     * 
-     * @var mixed
+     * Data as a string (not set if data come from a file)
      */
-    public $data;
+    private string $data;
 
     /**
-     * Name of the file data come from.
-     * 
+     * File name (real or provided by hand)
      * @var string
      */
-    public $fileName;
+    private string $filename;
+
+    /**
+     * Path to the data
+     */
+    private string $path;
 
     /**
      * Mime type of the data.
-     * 
-     * @var string
      */
-    public $mimeType;
+    private string $mimeType;
 
     /**
      * Creates a binary payload object.
@@ -78,18 +81,9 @@ class BinaryPayload {
     public function __construct(?string $data = null, ?string $filePath = null,
                                 ?string $mimeType = null) {
         if ($data !== null) {
-            $this->createFromData($data, basename((string) $filePath), $mimeType);
+            $this->createFromData($data, (string) $filePath, $mimeType);
         } elseif ($filePath !== null) {
             $this->createFromFile($filePath, $mimeType);
-        }
-    }
-
-    /**
-     * Makes sure all data streams are closed.
-     */
-    public function __destruct() {
-        if (is_resource($this->data)) {
-            fclose($this->data);
         }
     }
 
@@ -100,38 +94,41 @@ class BinaryPayload {
      * @return Request
      */
     public function attachTo(Request $request): Request {
-        $headers = $request->getHeaders();
-        if (!empty($this->fileName)) {
-            $headers['Content-Disposition'] = 'attachment; filename="' . $this->fileName . '"';
+        if (!empty($this->filename ?? '')) {
+            $request = $request->withHeader('Content-Disposition', 'attachment; filename="' . $this->filename . '"');
         }
-        if ($this->mimeType) {
-            $headers['Content-Type'] = $this->mimeType;
+        if (isset($this->mimeType)) {
+            $request = $request->withHeader('Content-Type', $this->mimeType);
         }
-        return new Request($request->getMethod(), $request->getUri(), $headers, $this->data);
+        $data = isset($this->path) ? fopen($this->path, 'rb') : $this->data;
+        return $request->withBody(Utils::streamFor($data));
     }
 
     /**
      * Initializes the object from the data in string.
      * 
      * @param string $data data
-     * @param string|null $fileName file name to be passed to the repository
+     * @param string|null $filename file name to be passed to the repository
      * @param string|null $mimeType mime type
      * @return void
      */
-    private function createFromData(string $data, ?string $fileName,
+    private function createFromData(string $data, ?string $filename,
                                     ?string $mimeType): void {
         $this->data = $data;
-        if (!empty($fileName)) {
-            $this->fileName = $fileName;
-            $this->mimeType = self::guzzleMimetype($this->fileName) ?? '';
+        if (!empty($filename)) {
+            $this->filename = basename($filename);
         }
         if (!empty($mimeType)) {
             $this->mimeType = $mimeType;
+        } elseif (isset($this->filename)) {
+            $this->mimeType = self::guzzleMimetype($this->filename) ?? '';
         }
     }
 
     /**
      * Initializes the object from a file.
+     * 
+     * Doesn't call fopen() to avoid problem with async requests.
      * 
      * @param string $path file path
      * @param string|null $mimeType mime type 
@@ -144,15 +141,15 @@ class BinaryPayload {
             throw new RepoLibException('No such file');
         }
 
-        $this->data     = fopen($path, 'rb');
-        $this->fileName = basename($path);
+        $this->path     = $path;
+        $this->filename = basename($path);
 
         if (!empty($mimeType)) {
             $this->mimeType = $mimeType;
         } else {
-            $this->mimeType = self::guzzleMimetype(basename($path)) ?? '';
-            if ($this->mimeType === null) {
-                $this->mimeType = (string) @mime_content_type($path);
+            $this->mimeType = self::guzzleMimetype($this->filename) ?? '';
+            if ($this->mimeType === '') {
+                $this->mimeType = (string) @mime_content_type($this->path);
             }
         }
     }

@@ -93,7 +93,7 @@ class RepoResourceResolver {
                 $this->repo = new RepoDb($baseUrl, $schema, $headers, $pdo);
             } else {
                 $options    = (array) ($this->config->options ?? []);
-                $this->repo = new Repo($baseUrl, $schema, $headers, $options);
+                $this->repo = new Repo($baseUrl, $options);
             }
             if ($log !== null) {
                 $this->repo->setQueryLog($log);

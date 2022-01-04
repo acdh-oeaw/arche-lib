@@ -35,6 +35,11 @@ use EasyRdf\Resource;
 interface RepoResourceInterface {
 
     /**
+     * Provides no metadata.
+     */
+    const META_NONE              = 'none';
+    
+    /**
      * Provide only given resource's metadata
      */
     const META_RESOURCE          = 'resource';

@@ -27,15 +27,25 @@
 namespace acdhOeaw\arche\lib;
 
 use Generator;
+use RuntimeException;
 use EasyRdf\Graph;
 use EasyRdf\Resource;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Promise\RejectedPromise;
 use Psr\Http\Message\ResponseInterface;
+use acdhOeaw\arche\lib\exception\Conflict;
 use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
 use acdhOeaw\arche\lib\exception\AmbiguousMatch;
+use acdhOeaw\arche\lib\exception\RepoLibException;
+use acdhOeaw\arche\lib\promise\GeneratorPromise;
+use acdhOeaw\arche\lib\promise\GraphPromise;
+use acdhOeaw\arche\lib\promise\ResponsePromise;
+use acdhOeaw\arche\lib\promise\RepoResourcePromise;
+use acdhOeaw\arche\lib\SearchTerm;
 use function GuzzleHttp\json_decode;
 
 /**
@@ -45,6 +55,10 @@ use function GuzzleHttp\json_decode;
  */
 class Repo implements RepoInterface {
 
+    const REJECT_SKIP            = 1;
+    const REJECT_FAIL            = 2;
+    const REJECT_INCLUDE         = 3;
+    const ARCHE_CORE_MIN_VERSION = 3.2;
     use RepoTrait;
 
     /**
@@ -68,8 +82,6 @@ class Repo implements RepoInterface {
         $config = Config::fromYaml($configFile);
 
         $baseUrl            = $config->rest->urlBase . $config->rest->pathBase;
-        $schema             = new Schema($config->schema);
-        $headers            = new Schema($config->rest->headers);
         $options            = [];
         $options['headers'] = (array) ($config->auth->httpHeader ?? []);
         if (!empty($config->auth->httpBasic->user ?? '')) {
@@ -79,7 +91,7 @@ class Repo implements RepoInterface {
             $options['verify'] = false;
         }
 
-        return new Repo($baseUrl, $schema, $headers, $options);
+        return new Repo($baseUrl, $options);
     }
 
     /**
@@ -105,6 +117,7 @@ class Repo implements RepoInterface {
     static public function factoryInteractive(?string $cfgLocation = null,
                                               ?string $login = null,
                                               ?string $pswd = null): self {
+        $cfg = null;
         if ($cfgLocation !== null) {
             if (!file_exists($cfgLocation) || !is_file($cfgLocation)) {
                 echo "No config.yaml found.\n";
@@ -126,9 +139,10 @@ class Repo implements RepoInterface {
             $baseUrl = trim((string) fgets(\STDIN));
         }
         echo "\nIs repository URL $baseUrl correct? (type 'yes' to continue)\n";
-        $line = trim((string) fgets(STDIN));
+        $line = trim((string) fgets(\STDIN));
         if ($line !== 'yes') {
-            exit("Wrong repository URL\n");
+            echo "Wrong repository URL\n";
+            exit(1);
         }
 
         $user = $login ?? ($cfg->auth->httpBasic->user ?? '');
@@ -150,17 +164,19 @@ class Repo implements RepoInterface {
     }
 
     /**
-     * Creates a Repo instance from any URL resolving to a repository resource.
+     * Creates a Repo instance from any URL pointing (also trough redirects) 
+     * to a valid REST API endpoint.
      * 
-     * It's not very fast but requires a zero config.
+     * It can be slow (especially when redirects are involved) but requires 
+     * no config.
      * 
      * @param string $url
      * @param array<mixed> $guzzleOptions
      * @param string $realUrl if provided, the final resource URL will be stored
      *   in this variable.
      * @param string $metaReadModeHeader header used by the repository to denote
-     *   the metadata read mode. Providing this parameter will make the resolution
-     *   faster.
+     *   the metadata read mode. Providing this parameter will speed up the
+     *   initialization if the $url points to a repository resource.
      * @return self
      */
     static public function factoryFromUrl(string $url,
@@ -181,17 +197,10 @@ class Repo implements RepoInterface {
         $resp      = $client->send(new Request('HEAD', $url));
         $redirects = array_merge([$url], $resp->getHeader('X-Guzzle-Redirect-History'));
         $realUrl   = (string) array_pop($redirects);
-        $realUrl   = (string) preg_replace('|/metadata$|', '', $realUrl);
+        $realUrl   = (string) preg_replace('`/metadata/?$`', '', $realUrl);
+        $baseUrl   = (string) preg_replace('`/?(|describe|user|user/[^/]+|metadata|transaction|[0-9]+|[0-9]+/tombstone|merge/[0-9]+/[0-9]+|search)/?$`', '', $realUrl);
 
-        $baseUrl = preg_replace('@([0-9]+|describe/?)$@', '', $realUrl) ?? '';
-        $resp    = $client->send(new Request('GET', "$baseUrl/describe", ['Accept' => 'application/json']));
-        if ($resp->getStatusCode() !== 200) {
-            throw new NotFound("Provided URL doesn't resolve to an ARCHE repository", 404);
-        }
-        $config  = new Config((object) json_decode((string) $resp->getBody()));
-        $schema  = new Schema($config->schema);
-        $headers = new Schema($config->rest->headers);
-        return new Repo($baseUrl, $schema, $headers, $guzzleOptions);
+        return new Repo($baseUrl, $guzzleOptions);
     }
 
     /**
@@ -212,19 +221,29 @@ class Repo implements RepoInterface {
      * Creates an repository connection object.
      * 
      * @param string $baseUrl repository REST API base URL
-     * @param Schema $schema mappings between repository 
-     *   concepts and RDF properties used to denote them by a given repository instance
-     * @param Schema $headers mappings between repository 
-     *   REST API parameters and HTTP headers used to pass them to a given repository instance
      * @param array<mixed> $guzzleOptions Guzzle HTTP client connection options to be used 
      *   by all requests to the repository REST API (e.g. credentials)
      */
-    public function __construct(string $baseUrl, Schema $schema,
-                                Schema $headers, array $guzzleOptions = []) {
-        $this->client  = new Client($guzzleOptions);
+    public function __construct(string $baseUrl, array $guzzleOptions = []) {
+        $this->client = new Client($guzzleOptions);
+
         $this->baseUrl = $baseUrl;
-        $this->headers = $headers;
-        $this->schema  = $schema;
+        if (substr($this->baseUrl, -1) !== '/') {
+            $this->baseUrl .= '/';
+        }
+
+        $headers  = ['Accept' => 'application/json'];
+        $response = $this->client->send(new Request('get', $this->baseUrl . "describe", $headers));
+        if ($response->getStatusCode() !== 200) {
+            throw new NotFound("$baseUrl doesn't resolve to an ARCHE repository", 404);
+        }
+        $config  = new Config((object) json_decode((string) $response->getBody()));
+        $version = (float) ($config->version ?? 0.1);
+        if ($version > 0 && $version < self::ARCHE_CORE_MIN_VERSION) {
+            throw new RepoLibException("This version of arche-lib requires ARCHE version " . self::ARCHE_CORE_MIN_VERSION . " while the repository version is $version");
+        }
+        $this->schema  = new Schema($config->schema);
+        $this->headers = new Schema($config->rest->headers);
     }
 
     /**
@@ -234,31 +253,59 @@ class Repo implements RepoInterface {
      * @param BinaryPayload $payload resource binary payload (can be null)
      * @param string $class an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
+     * @param string $readMode scope of the metadata returned by the repository
+     *   - see the META_* constants defined by the RepoResourceInterface 
+     * @param string $parentProperty RDF property to be used by the metadata
+     *   read mode denoted by the $readMode parameter
      * @return RepoResource
      */
     public function createResource(Resource $metadata,
                                    BinaryPayload $payload = null,
-                                   string $class = null): RepoResource {
-        $readModeHeader = $this->getHeaderName('metadataReadMode');
-        $headers        = [
-            'Content-Type'  => 'application/n-triples',
-            'Accept'        => 'application/n-triples',
-            $readModeHeader => RepoResource::META_RESOURCE,
-        ];
-        $graph          = new Graph();
-        $metadata       = $body           = $metadata->copy([], '/^$/', $this->baseUrl, $graph);
-        $body           = $graph->serialise('application/n-triples');
-        $req            = new Request('post', $this->baseUrl . 'metadata', $headers, $body);
-        $resp           = $this->sendRequest($req);
+                                   string $class = null,
+                                   string $readMode = RepoResourceInterface::META_RESOURCE,
+                                   ?string $parentProperty = null): RepoResource {
+        return $this->createResourceAsync($metadata, $payload, $class, $readMode, $parentProperty)->wait(true) ?? throw new RuntimeException('Promise returned null');
+    }
 
-        $class = $class ?? self::$resourceClass;
-        $res   = $class::factory($this, $resp);
+    /**
+     * Asynchronous version of createResource()
+     * 
+     * @param Resource $metadata
+     * @param BinaryPayload $payload
+     * @param string $class
+     * @param string $readMode
+     * @param string|null $parentProperty
+     * @return RepoResourcePromise
+     * @see createResource()
+     */
+    public function createResourceAsync(Resource $metadata,
+                                        BinaryPayload $payload = null,
+                                        string $class = null,
+                                        string $readMode = RepoResourceInterface::META_RESOURCE,
+                                        ?string $parentProperty = null): RepoResourcePromise {
+        $graph       = new Graph();
+        $metadata    = $body        = $metadata->copy([], '/^$/', $this->baseUrl, $graph);
+        $body        = $graph->serialise('application/n-triples');
+        $headers     = ['Content-Type' => 'application/n-triples'];
+        $req         = new Request('post', $this->baseUrl . 'metadata', $headers, $body);
+        $readModeTmp = $payload === null ? $readMode : RepoResourceInterface::META_NONE;
+        $req         = $this->withReadHeaders($req, $readModeTmp, $parentProperty);
+        $promise     = $this->sendRequestAsync($req);
+        $promise     = $promise->then(function (ResponseInterface $resp) use ($payload,
+                                                                              $class,
+                                                                              $readMode,
+                                                                              $parentProperty): RepoResource | RepoResourcePromise {
+            $class = $class ?? self::$resourceClass;
+            $res   = $class::factory($this, $resp);
 
-        if ($payload !== null) {
-            $res->updateContent($payload);
-        }
-
-        return $res;
+            if ($payload === null) {
+                return $res;
+            }
+            $promise = $res->updateContentAsync($payload, $readMode, $parentProperty);
+            $promise = $promise->then(fn() => $res);
+            return new RepoResourcePromise($promise);
+        });
+        return new RepoResourcePromise($promise);
     }
 
     /**
@@ -275,22 +322,82 @@ class Repo implements RepoInterface {
      * @throws RequestException
      */
     public function sendRequest(Request $request): ResponseInterface {
+        return $this->sendRequestAsync($request)->wait(true) ?? throw new RuntimeException('Promise returned null');
+        ;
+    }
+
+    /**
+     * Asynchronous version of sendRequest()
+     * 
+     * @param Request $request
+     * @return ResponsePromise
+     * @see sendRequest()
+     */
+    public function sendRequestAsync(Request $request): ResponsePromise {
         if (!empty($this->txId)) {
             $request = $request->withHeader($this->getHeaderName('transactionId'), $this->txId);
         }
-        try {
-            $response = $this->client->send($request);
-        } catch (RequestException $e) {
-            switch ($e->getCode()) {
-                case 410:
-                    throw new Deleted();
-                case 404:
-                    throw new NotFound();
-                default:
-                    throw $e;
+        $promise = $this->client->sendAsync($request)->otherwise(
+            function (RequestException $e) {
+                switch ($e->getCode()) {
+                    case 410:
+                        return new RejectedPromise(new Deleted());
+                    case 409:
+                        return new RejectedPromise(new Conflict());
+                    case 404:
+                        return new RejectedPromise(new NotFound());
+                    default:
+                        return new RejectedPromise($e);
+                }
+            });
+        return new ResponsePromise($promise);
+    }
+
+    /**
+     * A wrapper function for parallel repository requests execution.
+     * 
+     * It calls $func for every element of $iter to generate a set of promises,
+     * executes all of them and returns their results.
+     * 
+     * @param iterable<mixed> $iter collection of values to iterate over.
+     * @param callable $func function to apply to each $iter element with
+     *   signature `f(mixed $iterElement, Repo $thisRepoObject): GuzzleHttp\Promise\PromiseInterface`.
+     * @param int $concurrency number of promises executed in parallel
+     * @param int $rejectAction what to do with rejected promises - one of 
+     *   Repo::REJECT_SKIP (skip the silently), Repo::REJECT_FAIL (throw an error)
+     *   and Repo::REJECT_INCLUDE (include the rejection value in the results).
+     * @return array<mixed>
+     */
+    public function map(iterable $iter, callable $func, int $concurrency = 1,
+                        int $rejectAction = self::REJECT_SKIP): array {
+        $promiseIterator = function ($i, $f) {
+            foreach ($i as $j) {
+                yield $f($j, $this);
             }
-        }
-        return $response;
+        };
+        $results   = [];
+        $param     = [
+            'concurrency' => $concurrency,
+            'fulfilled'   => function ($x, $i) use (&$results) {
+                $results[$i] = $x;
+            },
+            'rejected' => function ($x, $i) use (&$results, $rejectAction) {
+                switch ($rejectAction) {
+                    case self::REJECT_FAIL:
+                        throw $x instanceof \Exception ? $x : new \RuntimeException($x);
+                    case self::REJECT_INCLUDE:
+                        $results[$i] = $x;
+                        break;
+                    case self::REJECT_SKIP:
+                        break;
+                    default:
+                        throw new \RuntimeException("Unknown rejectAction");
+                }
+            },
+        ];
+        $queue = new \GuzzleHttp\Promise\EachPromise($promiseIterator($iter, $func), $param);
+        $queue->promise()->wait();
+        return $results;
     }
 
     /**
@@ -310,6 +417,30 @@ class Repo implements RepoInterface {
      * @throws AmbiguousMatch
      */
     public function getResourceByIds(array $ids, string $class = null): RepoResource {
+        return $this->getResourceByIdsAsync($ids, $class)->wait(true) ?? throw new RuntimeException('Promise returned null');
+    }
+
+    /**
+     * Asynchronous version of getResourceByIds()
+     * 
+     * @param string $id
+     * @param string $class
+     * @return RepoResourcePromise
+     * @see getResourceByIds()
+     */
+    public function getResourceByIdAsync(string $id, string $class = null): RepoResourcePromise {
+        return $this->getResourceByIdsAsync([$id], $class);
+    }
+
+    /**
+     * Asynchronous version of getResourceByIds()
+     * 
+     * @param array<string> $ids
+     * @param string $class
+     * @return RepoResourcePromise
+     * @see getResourceByIds()
+     */
+    public function getResourceByIdsAsync(array $ids, string $class = null): RepoResourcePromise {
         $url          = $this->baseUrl . 'search';
         $headers      = [
             'Content-Type' => 'application/x-www-form-urlencoded',
@@ -321,23 +452,26 @@ class Repo implements RepoInterface {
             'sqlParam' => $ids,
         ]);
         $req          = new Request('post', $url, $headers, $body);
-        $resp         = $this->sendRequest($req);
-        $format       = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
-        $graph        = new Graph();
-        $graph->parse($resp->getBody(), $format);
-        $matches      = $graph->resourcesMatching($this->schema->searchMatch);
-        switch (count($matches)) {
-            case 0:
-                throw new NotFound();
-            case 1;
-                $class = $class ?? self::$resourceClass;
-                return new $class($matches[0]->getUri(), $this);
-            default:
-                $uris  = implode(', ', array_map(function ($x) {
-                        return $x->getUri();
-                    }, $matches));
-                throw new AmbiguousMatch("Many resources match the search: $uris");
-        }
+        $promise      = $this->sendRequestAsync($req);
+        $promise      = $promise->then(function (ResponseInterface $resp) use ($class) {
+            $format  = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
+            $graph   = new Graph();
+            $graph->parse($resp->getBody(), $format);
+            $matches = $graph->resourcesMatching($this->schema->searchMatch);
+            switch (count($matches)) {
+                case 0:
+                    return new RejectedPromise(new NotFound());
+                case 1;
+                    $class = $class ?? self::$resourceClass;
+                    return new $class($matches[0]->getUri(), $this);
+                default:
+                    $uris  = implode(', ', array_map(function ($x) {
+                            return $x->getUri();
+                        }, $matches));
+                    return new RejectedPromise(new AmbiguousMatch("Many resources match the search: $uris"));
+            }
+        });
+        return new RepoResourcePromise($promise);
     }
 
     /**
@@ -350,19 +484,26 @@ class Repo implements RepoInterface {
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): Generator {
-        $headers = [
-            'Accept'       => 'application/n-triples',
-            'Content-Type' => 'application/x-www-form-urlencoded',
-        ];
-        $headers = array_merge($headers, $config->getHeaders($this));
-        $body    = array_merge(
-            ['sql' => $query, 'sqlParam' => $parameters],
-            $config->toArray()
-        );
-        $body    = http_build_query($body);
-        $req     = new Request('post', $this->baseUrl . 'search', $headers, $body);
-        $resp    = $this->sendRequest($req);
-        yield from $this->parseSearchResponse($resp, $config);
+        return $this->getResourcesBySqlQueryAsync($query, $parameters, $config)->wait(true) ?? throw new RuntimeException('Promise returned null');
+    }
+
+    /**
+     * Asynchronous version of getResourcesBySqlQuery()
+     * 
+     * @param string $query
+     * @param array<mixed> $parameters
+     * @param SearchConfig $config
+     * @return GeneratorPromise
+     * @see getResourcesBySqlQuery()
+     */
+    public function getResourcesBySqlQueryAsync(string $query,
+                                                array $parameters,
+                                                SearchConfig $config): GeneratorPromise {
+        $promise = $this->getGraphBySqlQueryAsync($query, $parameters, $config);
+        $promise = $promise->then(function (Graph $graph) use ($config): Generator {
+            yield from $this->extractResourcesFromGraph($graph, $config);
+        });
+        return new GeneratorPromise($promise);
     }
 
     /**
@@ -374,6 +515,89 @@ class Repo implements RepoInterface {
      */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator {
+        return $this->getResourcesBySearchTermsAsync($searchTerms, $config)->wait(true) ?? throw new RuntimeException('Promise returned null');
+    }
+
+    /**
+     * Asynchronous version of getResourcesBySearchTerms()
+     * 
+     * @param array<SearchTerm> $searchTerms
+     * @param SearchConfig $config
+     * @return GeneratorPromise
+     * @see getResourcesBySearchTerms()
+     */
+    public function getResourcesBySearchTermsAsync(array $searchTerms,
+                                                   SearchConfig $config): GeneratorPromise {
+        $promise = $this->getGraphBySearchTermsAsync($searchTerms, $config);
+        $promise = $promise->then(function (Graph $graph) use ($config): Generator {
+            yield from $this->extractResourcesFromGraph($graph, $config);
+        });
+        return new GeneratorPromise($promise);
+    }
+
+    /**
+     * Asynchronous version of 
+     * 
+     * @param string $query
+     * @param array<mixed> $parameters
+     * @param SearchConfig $config
+     * @return Graph
+     */
+    public function getGraphBySqlQuery(string $query, array $parameters,
+                                       SearchConfig $config): Graph {
+        return $this->getGraphBySqlQueryAsync($query, $parameters, $config)->wait(true) ?? throw new RuntimeException('Promise returned null');
+    }
+
+    /**
+     * Asynchronous version of getGraphBySqlQuery()
+     * 
+     * @param string $query
+     * @param array<mixed> $parameters
+     * @param SearchConfig $config
+     * @return GraphPromise
+     * @see getGraphBySqlQuery()
+     */
+    public function getGraphBySqlQueryAsync(string $query, array $parameters,
+                                            SearchConfig $config): GraphPromise {
+        $headers = [
+            'Accept'       => 'application/n-triples',
+            'Content-Type' => 'application/x-www-form-urlencoded',
+        ];
+        $headers = array_merge($headers, $config->getHeaders($this));
+        $body    = array_merge(
+            ['sql' => $query, 'sqlParam' => $parameters],
+            $config->toArray()
+        );
+        $body    = http_build_query($body);
+        $req     = new Request('post', $this->baseUrl . 'search', $headers, $body);
+        $promise = $this->sendRequestAsync($req);
+        $promise = $promise->then(function (ResponseInterface $resp) use ($config): Graph {
+            return $this->parseSearchResponse($resp, $config);
+        });
+        return new GraphPromise($promise);
+    }
+
+    /**
+     * 
+     * @param array<SearchTerm> $searchTerms
+     * @param SearchConfig $config
+     * @return Graph
+     */
+    public function getGraphBySearchTerms(array $searchTerms,
+                                          SearchConfig $config): Graph {
+        return $this->getGraphBySearchTermsAsync($searchTerms, $config)->wait(true) ?? throw new RuntimeException('Promise returned null');
+    }
+
+    /**
+     * Asynchronous version of getGraphBySearchTerms()
+     * 
+     * @param array<SearchTerm> $searchTerms
+     * @param SearchConfig $config
+     * @return GraphPromise
+     * @see getGraphBySearchTerms()
+     */
+    public function getGraphBySearchTermsAsync(array $searchTerms,
+                                               SearchConfig $config): GraphPromise {
         $headers = [
             'Accept'       => 'application/n-triples',
             'Content-Type' => 'application/x-www-form-urlencoded',
@@ -387,8 +611,11 @@ class Repo implements RepoInterface {
         $body .= (!empty($body) ? '&' : '') . $config->toQuery();
         $req  = new Request('post', $this->baseUrl . 'search', $headers, $body);
 
-        $resp = $this->sendRequest($req);
-        yield from $this->parseSearchResponse($resp, $config);
+        $promise = $this->sendRequestAsync($req);
+        $promise = $promise->then(function (ResponseInterface $resp) use ($config): Graph {
+            return $this->parseSearchResponse($resp, $config);
+        });
+        return new GraphPromise($promise);
     }
 
     /**
@@ -401,6 +628,7 @@ class Repo implements RepoInterface {
      * @see commit()
      */
     public function begin(): void {
+        $this->txId = null;
         $req        = new Request('post', $this->baseUrl . 'transaction');
         $resp       = $this->sendRequest($req);
         $this->txId = $resp->getHeader($this->getHeaderName('transactionId'))[0];
@@ -473,31 +701,52 @@ class Repo implements RepoInterface {
     }
 
     /**
-     * Parses search request response into an array of `RepoResource` objects.
+     * Parses search request response into the EasyRdf Graph.
      * 
      * @param ResponseInterface $resp PSR-7 search request response
      * @param SearchConfig $config search configuration object
-     * @return Generator<RepoResource>
+     * @return Graph
      */
     private function parseSearchResponse(ResponseInterface $resp,
-                                         SearchConfig $config): Generator {
-        $class = $config->class ?? self::$resourceClass;
-
+                                         SearchConfig $config): Graph {
         $graph = new Graph();
-        $body  = $resp->getBody();
+        $body  = (string) $resp->getBody();
         if (!empty($body)) {
             $format = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
             $graph->parse($body, $format);
 
             $config->count = (int) ((string) $graph->resource($this->getBaseUrl())->getLiteral($this->getSchema()->searchCount));
-
-            $resources = $graph->resourcesMatching($this->schema->searchMatch);
-            foreach ($resources as $i) {
-                $i->delete($this->schema->searchMatch);
-                $obj = new $class($i->getUri(), $this);
-                $obj->setGraph($i);
-                yield $obj;
-            }
+        } else {
+            $config->count = 0;
         }
+        return $graph;
+    }
+
+    /**
+     * Extracts collection of RepoResource objects from the EasyRdf graph being
+     * parsed from a search response.
+     * 
+     * @param Graph $graph graph returned by the parseSearchResponse() method
+     * @param SearchConfig $config search configuration object
+     * @return Generator<RepoResource>
+     */
+    private function extractResourcesFromGraph(Graph $graph,
+                                               SearchConfig $config): Generator {
+        $class     = $config->class ?? self::$resourceClass;
+        $resources = $graph->resourcesMatching($this->schema->searchMatch);
+        foreach ($resources as $i) {
+            $i->delete($this->schema->searchMatch);
+            $obj = new $class($i->getUri(), $this);
+            $obj->setGraph($i);
+            yield $obj;
+        }
+    }
+
+    private function withReadHeaders(Request $request, string $mode,
+                                     ?string $parentProperty): Request {
+        return $request->
+                withHeader('Accept', 'application/n-triples')->
+                withHeader($this->getHeaderName('metadataReadMode'), $mode)->
+                withHeader($this->getHeaderName('metadataParentProperty'), $parentProperty ?? $this->schema->parent);
     }
 }

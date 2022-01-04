@@ -103,6 +103,8 @@ class RepoResourceDb implements RepoResourceInterface {
     public function getMetadataQuery(string $mode = self::META_RESOURCE,
                                      ?string $parentProperty = null): QueryPart {
         switch ($mode) {
+            case self::META_NONE:
+                return new QueryPart("SELECT * FROM metadata_view WHERE false");
             case self::META_RESOURCE:
                 $query = "SELECT * FROM (SELECT * FROM metadata_view WHERE id = ?) mt";
                 $param = [$this->id];
