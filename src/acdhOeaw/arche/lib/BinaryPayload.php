@@ -69,12 +69,6 @@ class BinaryPayload {
     private string $mimeType;
 
     /**
-     * A handle for the opened file.
-     * @var resource
-     */
-    private $fileHandle = null;
-
-    /**
      * Creates a binary payload object.
      * 
      * @param string|null $data data as a string (pass null for creating a payload 
@@ -94,15 +88,6 @@ class BinaryPayload {
     }
 
     /**
-     * Makes sure all data streams are closed.
-     */
-    public function __destruct() {
-        if (is_resource($this->fileHandle)) {
-            fclose($this->fileHandle);
-        }
-    }
-
-    /**
      * Attaches the data to a given HTTP request.
      * 
      * @param Request $request PSR-7 request
@@ -115,16 +100,8 @@ class BinaryPayload {
         if (isset($this->mimeType)) {
             $request = $request->withHeader('Content-Type', $this->mimeType);
         }
-        if (is_resource($this->fileHandle)) {
-            fclose($this->fileHandle);
-        }
-        if (isset($this->path)) {
-            $this->fileHandle = fopen($this->path, 'rb') ?: throw new RepoLibException("Can't open file $this->path for reading");
-            $data             = Utils::streamFor($this->fileHandle);
-        } else {
-            $data = Utils::streamFor($this->data);
-        }
-        return $request->withBody($data);
+        $data = isset($this->path) ? fopen($this->path, 'rb') : $this->data;
+        return $request->withBody(Utils::streamFor($data));
     }
 
     /**
