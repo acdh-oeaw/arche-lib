@@ -40,7 +40,6 @@ use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
 use acdhOeaw\arche\lib\exception\AmbiguousMatch;
 use acdhOeaw\arche\lib\exception\RepoLibException;
-use acdhOeaw\arche\lib\exception\RepoMapException;
 use acdhOeaw\arche\lib\promise\GeneratorPromise;
 use acdhOeaw\arche\lib\promise\GraphPromise;
 use acdhOeaw\arche\lib\promise\ResponsePromise;
@@ -382,7 +381,7 @@ class Repo implements RepoInterface {
             'rejected' => function ($x, $i) use (&$results, $rejectAction) {
                 switch ($rejectAction) {
                     case self::REJECT_FAIL:
-                        throw new RepoMapException("", 0, $x instanceof \Exception ? $x : new \RuntimeException($x));
+                        throw $x instanceof \Exception ? $x : new \RuntimeException($x);
                     case self::REJECT_INCLUDE:
                         $results[$i] = $x;
                         break;
@@ -394,13 +393,7 @@ class Repo implements RepoInterface {
             },
         ];
         $queue = new \GuzzleHttp\Promise\EachPromise($promiseIterator($iter, $func), $param);
-        try {
-            $queue->promise()->wait();
-        } catch (RepoMapException $e) {
-            throw $e->getPrevious();
-        } catch (\Throwable) {
-            
-        }
+        $queue->promise()->wait();
         return $results;
     }
 
