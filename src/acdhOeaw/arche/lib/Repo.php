@@ -138,9 +138,10 @@ class Repo implements RepoInterface {
             $baseUrl = trim((string) fgets(\STDIN));
         }
         echo "\nIs repository URL $baseUrl correct? (type 'yes' to continue)\n";
-        $line = trim((string) fgets(STDIN));
+        $line = trim((string) fgets(\STDIN));
         if ($line !== 'yes') {
-            exit("Wrong repository URL\n");
+            echo "Wrong repository URL\n";
+            exit(1);
         }
 
         $user = $login ?? ($cfg->auth->httpBasic->user ?? '');

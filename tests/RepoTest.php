@@ -192,4 +192,64 @@ class RepoTest extends TestBase {
 
         self::$repo->rollback();
     }
+
+    public function testFactoryFromUrl(): void {
+        self::$repo->begin();
+        $resUrl  = self::$repo->createResource($this->getMetadata([]))->getUri();
+        self::$repo->rollback();
+        $baseUrl = self::$repo->getBaseUrl();
+
+        $repos = [
+            Repo::factoryFromUrl($baseUrl),
+            Repo::factoryFromUrl($baseUrl . "describe"),
+            Repo::factoryFromUrl("$baseUrl/transaction"),
+            Repo::factoryFromUrl($resUrl),
+            Repo::factoryFromUrl("$resUrl/metadata"),
+        ];
+        foreach ($repos as $i) {
+            $this->assertInstanceOf(Repo::class, $i);
+        }
+    }
+
+    public function testFactoryInteractive(): void {
+        $baseUrl = self::$repo->getBaseUrl();
+        $output  = $result  = null;
+        $baseCmd = "php -f " . escapeshellarg(__DIR__ . "/factoryInteractive.php");
+
+        // OK
+        $stdIn = [
+            "$baseUrl\\nyes\\nuser\\npassword\\n",
+            "$baseUrl\\nyes\\n",
+            "1\\nyes\\nuser\\npassword\\n",
+            "1\\nyes\\nuser\\n",
+            "1\\nyes\\n",
+        ];
+        $param = [
+            "",
+            "",
+            __DIR__ . "/config.yaml",
+            __DIR__ . "/config.yaml user",
+            __DIR__ . "/config.yaml user password",
+        ];
+        for ($i = 0; $i < count($stdIn); $i++) {
+            exec("echo " . escapeshellarg($stdIn[$i]) . " | $baseCmd $param[$i] 2>&1", $output, $result);
+            $this->assertEquals(0, $result, "Repo initialization test $i failed");
+        }
+
+        // FAIL
+        $stdIn = [
+            "$baseUrl/foo\\nyes\\n",
+            "2\\nyes\\n",
+            "1\\nfoo\\n",
+        ];
+        $param = [
+            "",
+            __DIR__ . "/config.yaml",
+            __DIR__ . "/config.yaml",
+        ];
+        for ($i = 0; $i < count($stdIn); $i++) {
+            exec("echo -e " . escapeshellarg($stdIn[$i]) . " | $baseCmd $param[$i] 2>&1", $output, $result);
+            $this->assertGreaterThan(0, $result, "Repo initialization fail test $i succeeded");
+        }
+    }
 }

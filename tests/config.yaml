@@ -36,3 +36,6 @@ auth:
 transactionController:
     # transaction timeout in s
     timeout: 15
+repositories:
+- urlBase: http://127.0.0.1
+  pathBase: /api/
