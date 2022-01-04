@@ -97,9 +97,9 @@ class Repo implements RepoInterface {
     /**
      * Interactively creates a repository instance asking user for all required data.
      * 
-     * @param string|null $cfgLocation optional path to a directory containing a config.yaml file.
-     *   The config.yaml file may provide a predefined list of repositories and/or ARCHE login
-     *   formatted as follows:
+     * @param string|null $cfgLocation optional path to a config file.
+     *   The config file may provide a predefined list of repositories and/or 
+     * ARCHE login formatted as follows:
      *   ```
      *   repositories:
      *   - urlBase: http://arche.acdh.oeaw.ac.at
@@ -119,12 +119,12 @@ class Repo implements RepoInterface {
                                               ?string $pswd = null): self {
         $cfg = null;
         if ($cfgLocation !== null) {
-            while (file_exists($cfgLocation) && !file_exists($cfgLocation . '/config.yaml')) {
-                $cfgLocation .= '/..';
+            if (file_exists($cfgLocation) && !is_file($cfgLocation)) {
+                echo "No config.yaml found.\n";
+            } else {
+                echo "Configuration found at $cfgLocation\n";
+                $cfg = Config::fromYaml($cfgLocation);
             }
-            $cfgLocation .= '/config.yaml';
-            echo "Configuration found at $cfgLocation\n";
-            $cfg         = Config::fromYaml($cfgLocation);
         }
 
         if (isset($cfg->repositories)) {
