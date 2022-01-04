@@ -26,6 +26,7 @@
 
 namespace acdhOeaw\arche\lib;
 
+use RuntimeException;
 use EasyRdf\Graph;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
@@ -97,7 +98,7 @@ class RepoResource implements RepoResourceInterface {
      * @return ResponseInterface PSR-7 response containing resource's binary content
      */
     public function getContent(): ResponseInterface {
-        return $this->getContentAsync()->wait();
+        return $this->getContentAsync()->wait(true) ?? throw new RuntimeException('Promise returned null');
     }
 
     /**

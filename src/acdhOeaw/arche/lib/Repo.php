@@ -27,6 +27,7 @@
 namespace acdhOeaw\arche\lib;
 
 use Generator;
+use RuntimeException;
 use EasyRdf\Graph;
 use EasyRdf\Resource;
 use GuzzleHttp\Client;
@@ -263,7 +264,7 @@ class Repo implements RepoInterface {
                                    string $class = null,
                                    string $readMode = RepoResourceInterface::META_RESOURCE,
                                    ?string $parentProperty = null): RepoResource {
-        return $this->createResourceAsync($metadata, $payload, $class, $readMode, $parentProperty)->wait();
+        return $this->createResourceAsync($metadata, $payload, $class, $readMode, $parentProperty)->wait(true) ?? throw new RuntimeException('Promise returned null');
     }
 
     /**
@@ -321,7 +322,8 @@ class Repo implements RepoInterface {
      * @throws RequestException
      */
     public function sendRequest(Request $request): ResponseInterface {
-        return $this->sendRequestAsync($request)->wait();
+        return $this->sendRequestAsync($request)->wait(true) ?? throw new RuntimeException('Promise returned null');
+        ;
     }
 
     /**
@@ -415,7 +417,7 @@ class Repo implements RepoInterface {
      * @throws AmbiguousMatch
      */
     public function getResourceByIds(array $ids, string $class = null): RepoResource {
-        return $this->getResourceByIdsAsync($ids, $class)->wait();
+        return $this->getResourceByIdsAsync($ids, $class)->wait(true) ?? throw new RuntimeException('Promise returned null');
     }
 
     /**
@@ -482,7 +484,7 @@ class Repo implements RepoInterface {
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): Generator {
-        return $this->getResourcesBySqlQueryAsync($query, $parameters, $config)->wait();
+        return $this->getResourcesBySqlQueryAsync($query, $parameters, $config)->wait(true) ?? throw new RuntimeException('Promise returned null');
     }
 
     /**
@@ -513,7 +515,7 @@ class Repo implements RepoInterface {
      */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator {
-        return $this->getResourcesBySearchTermsAsync($searchTerms, $config)->wait();
+        return $this->getResourcesBySearchTermsAsync($searchTerms, $config)->wait(true) ?? throw new RuntimeException('Promise returned null');
     }
 
     /**
@@ -543,7 +545,7 @@ class Repo implements RepoInterface {
      */
     public function getGraphBySqlQuery(string $query, array $parameters,
                                        SearchConfig $config): Graph {
-        return $this->getGraphBySqlQueryAsync($query, $parameters, $config)->wait();
+        return $this->getGraphBySqlQueryAsync($query, $parameters, $config)->wait(true) ?? throw new RuntimeException('Promise returned null');
     }
 
     /**
@@ -583,7 +585,7 @@ class Repo implements RepoInterface {
      */
     public function getGraphBySearchTerms(array $searchTerms,
                                           SearchConfig $config): Graph {
-        return $this->getGraphBySearchTermsAsync($searchTerms, $config)->wait();
+        return $this->getGraphBySearchTermsAsync($searchTerms, $config)->wait(true) ?? throw new RuntimeException('Promise returned null');
     }
 
     /**

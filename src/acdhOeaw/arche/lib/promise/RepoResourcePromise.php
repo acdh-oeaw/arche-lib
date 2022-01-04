@@ -38,15 +38,30 @@ class RepoResourcePromise implements PromiseInterface {
 
     use PromiseTrait;
 
+    /**
+     * 
+     * @param mixed $value
+     * @return void
+     */
     public function resolve($value): void {
         $this->promise->resolve($value);
     }
 
+    /**
+     * 
+     * @param mixed $reason
+     * @return void
+     */
     public function reject($reason): void {
         $this->promise->reject($reason);
     }
 
-    public function wait($unwrap = true): RepoResource {
-        return $this->promise->wait(true);
+    /**
+     * 
+     * @param bool $unwrap
+     * @return RepoResource|null
+     */
+    public function wait($unwrap = true): ?RepoResource {
+        return $this->promise->wait($unwrap);
     }
 }

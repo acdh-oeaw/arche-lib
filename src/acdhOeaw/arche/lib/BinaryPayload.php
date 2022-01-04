@@ -26,6 +26,7 @@
 
 namespace acdhOeaw\arche\lib;
 
+use Composer\InstalledVersions;
 use GuzzleHttp\Psr7\Request;
 use acdhOeaw\arche\lib\exception\RepoLibException;
 
@@ -36,12 +37,13 @@ use acdhOeaw\arche\lib\exception\RepoLibException;
  */
 class BinaryPayload {
 
-    const GUZZLE_PSR7_V1_MIME_FUNC = '\GuzzleHttp\Psr7\mimetype_from_filename';
-    const GUZZLE_PSR7_V2_MIME_FUNC = '\GuzzleHttp\Psr7\MimeType::fromFilename';
+    static private int $guzzleVersion;
 
     static public function guzzleMimetype(string $fileName): ?string {
-        $f = function_exists(self::GUZZLE_PSR7_V1_MIME_FUNC) ? self::GUZZLE_PSR7_V1_MIME_FUNC : self::GUZZLE_PSR7_V2_MIME_FUNC;
-        return $f($fileName);
+        if (!isset(self::$guzzleVersion)) {
+            self::$guzzleVersion = (int) InstalledVersions::getVersion('guzzlehttp/psr7');
+        }
+        return self::$guzzleVersion >= 2 ? \GuzzleHttp\Psr7\MimeType::fromFilename($fileName) : \GuzzleHttp\Psr7\mimetype_from_filename($fileName);
     }
 
     /**

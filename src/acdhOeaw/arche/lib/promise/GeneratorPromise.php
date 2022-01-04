@@ -38,10 +38,20 @@ class GeneratorPromise implements PromiseInterface {
 
     use PromiseTrait;
 
+    /**
+     * 
+     * @param mixed $value
+     * @return void
+     */
     public function resolve($value): void {
         $this->promise->resolve($value);
     }
 
+    /**
+     * 
+     * @param mixed $reason
+     * @return void
+     */
     public function reject($reason): void {
         $this->promise->reject($reason);
     }
@@ -49,9 +59,9 @@ class GeneratorPromise implements PromiseInterface {
     /**
      * 
      * @param bool $unwrap
-     * @return Generator<mixed>
+     * @return Generator<mixed>|null
      */
-    public function wait($unwrap = true): Generator {
+    public function wait($unwrap = true): ?Generator {
         return $this->promise->wait(true);
     }
 }
