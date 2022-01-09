@@ -323,7 +323,6 @@ class Repo implements RepoInterface {
      */
     public function sendRequest(Request $request): ResponseInterface {
         return $this->sendRequestAsync($request)->wait(true) ?? throw new RuntimeException('Promise returned null');
-        ;
     }
 
     /**
@@ -343,7 +342,7 @@ class Repo implements RepoInterface {
                     case 410:
                         return new RejectedPromise(new Deleted());
                     case 409:
-                        return new RejectedPromise(new Conflict());
+                        return new RejectedPromise(new Conflict((string) $e->getResponse()->getBody()));
                     case 404:
                         return new RejectedPromise(new NotFound());
                     default:
