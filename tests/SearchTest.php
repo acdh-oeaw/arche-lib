@@ -25,10 +25,10 @@
  */
 
 namespace acdhOeaw\arche\lib\tests;
+
 use acdhOeaw\arche\lib\RepoResource;
 use acdhOeaw\arche\lib\SearchConfig;
 use acdhOeaw\arche\lib\SearchTerm;
-
 use zozlak\RdfConstants as C;
 
 /**
@@ -150,9 +150,9 @@ class SearchTest extends TestBase {
         $config->metadataMode           = RepoResource::META_RELATIVES;
         $config->metadataParentProperty = self::$repo->getSchema()->parent;
 
-        $result = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, $config));
+        $result     = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, $config));
         $this->assertEquals(1, count($result));
-        $meta   = $result[0]->getGraph();
+        $meta       = $result[0]->getGraph();
         $this->assertEquals('2019-02-01', (string) $meta->getLiteral('https://date.prop'));
         $parentProp = self::$repo->getSchema()->parent;
         $this->assertEquals('2019-01-01', (string) $meta->getResource($parentProp)?->getLiteral('https://date.prop'));
@@ -172,11 +172,14 @@ class SearchTest extends TestBase {
         $this->assertEquals(1, count($result));
         $meta           = $result[0]->getGraph();
         $this->assertEquals('2019-01-01', (string) $meta->getLiteral('https://date.prop'));
+        $this->assertEquals(2, $config->count);
 
         $config->offset = 1;
+        $config->count  = null;
         $result         = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, $config));
         $this->assertEquals(1, count($result));
         $meta           = $result[0]->getGraph();
         $this->assertEquals('2019-02-01', (string) $meta->getLiteral('https://date.prop'));
+        $this->assertEquals(2, $config->count);
     }
 }
