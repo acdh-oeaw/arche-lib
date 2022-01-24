@@ -163,7 +163,7 @@ class RepoDb implements RepoInterface {
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator {
         $graph = $this->getGraphBySearchTerms($searchTerms, $config);
-        yield from $this->parseSearchGraph($graph, $config->class ?? RepoResourceDb::class);
+        yield from $this->parseSearchGraph($graph, $config);
     }
 
     /**
@@ -177,7 +177,7 @@ class RepoDb implements RepoInterface {
     public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): Generator {
         $graph = $this->getGraphBySqlQuery($query, $parameters, $config);
-        yield from $this->parseSearchGraph($graph, $config->class ?? RepoResourceDb::class);
+        yield from $this->parseSearchGraph($graph, $config);
     }
 
     /**
@@ -472,11 +472,16 @@ class RepoDb implements RepoInterface {
     /**
      * 
      * @param Graph $graph
-     * @param string $class
+     * @param SearchConfig $config
      * @return Generator<RepoResourceDb>
      */
-    private function parseSearchGraph(Graph $graph, string $class): Generator {
+    private function parseSearchGraph(Graph $graph, SearchConfig $config): Generator {
+        $class = $config->class ?? RepoResourceDb::class;
+
         $resources = $graph->resourcesMatching($this->schema->searchMatch);
+        if (count($config->orderBy) > 0) {
+            $this->sortMatchingResources($resources, $config);
+        }
         foreach ($resources as $i) {
             $i->delete($this->schema->searchMatch);
             $obj = new $class($i->getUri(), $this);

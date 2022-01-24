@@ -27,6 +27,7 @@
 namespace acdhOeaw\arche\lib;
 
 use Psr\Log\AbstractLogger;
+use EasyRdf\Resource;
 use acdhOeaw\arche\lib\exception\RepoLibException;
 
 /**
@@ -102,5 +103,31 @@ trait RepoTrait {
      */
     public function setQueryLog(AbstractLogger $log): void {
         $this->queryLog = $log;
+    }
+
+    /**
+     * 
+     * @param array<Resource> $resources
+     * @param SearchConfig $config
+     * @return void
+     */
+    private function sortMatchingResources(array &$resources,
+                                           SearchConfig $config): void {
+        usort($resources, function ($a, $b) use ($config) {
+            foreach ($config->orderBy as $sortProp) {
+                $order = true;
+                if (str_starts_with($sortProp, '^')) {
+                    $sortProp = substr($sortProp, 1);
+                    $order    = false;
+                }
+                $a = (string) $a->getLiteral($sortProp, $config->orderByLang);
+                $b = (string) $b->getLiteral($sortProp, $config->orderByLang);
+                $r = $a <=> $b;
+                if ($r !== 0) {
+                    return $order ? $r : -$r;
+                }
+            }
+            return 0;
+        });
     }
 }

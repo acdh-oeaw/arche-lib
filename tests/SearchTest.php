@@ -182,4 +182,26 @@ class SearchTest extends TestBase {
         $this->assertEquals('2019-02-01', (string) $meta->getLiteral('https://date.prop'));
         $this->assertEquals(2, $config->count);
     }
+
+    /**
+     * @group search
+     */
+    public function testSearchOrder(): void {
+        $dateProp = 'https://date.prop';
+        $query    = "SELECT id FROM metadata WHERE property = ? ORDER BY id";
+        $param    = [$dateProp];
+        $config   = new SearchConfig();
+
+        $config->orderBy = [$dateProp];
+        $results         = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, $config));
+        $first           = (string) $results[0]->getGraph()->get($dateProp);
+        $second          = (string) $results[1]->getGraph()->get($dateProp);
+        $this->assertGreaterThan($first, $second);
+
+        $config->orderBy = ["^$dateProp"];
+        $results         = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, $config));
+        $first           = (string) $results[0]->getGraph()->get($dateProp);
+        $second          = (string) $results[1]->getGraph()->get($dateProp);
+        $this->assertLessThan($first, $second);
+    }
 }

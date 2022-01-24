@@ -733,6 +733,11 @@ class Repo implements RepoInterface {
                                                SearchConfig $config): Generator {
         $class     = $config->class ?? self::$resourceClass;
         $resources = $graph->resourcesMatching($this->schema->searchMatch);
+
+        if (count($config->orderBy) > 0) {
+            $this->sortMatchingResources($resources, $config);
+        }
+
         foreach ($resources as $i) {
             $i->delete($this->schema->searchMatch);
             $obj = new $class($i->getUri(), $this);
