@@ -66,7 +66,7 @@ class SearchConfig {
      * RDF predicate used by some of metadataModes.
      */
     public ?string $metadataParentProperty = null;
-
+    
     /**
      * Maximum number of returned resources (only resources matched by the search
      * are counted - see `$metadataMode`).

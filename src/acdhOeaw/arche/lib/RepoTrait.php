@@ -120,8 +120,8 @@ trait RepoTrait {
                     $sortProp = substr($sortProp, 1);
                     $order    = false;
                 }
-                $a = (string) $a->getLiteral($sortProp, $config->orderByLang);
-                $b = (string) $b->getLiteral($sortProp, $config->orderByLang);
+                $a = (string) $a->getLiteral($sortProp, $config->orderByLang) ?? $a->getLiteral($sortProp);
+                $b = (string) $b->getLiteral($sortProp, $config->orderByLang) ?? $b->getLiteral($sortProp);
                 $r = $a <=> $b;
                 if ($r !== 0) {
                     return $order ? $r : -$r;
