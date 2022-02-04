@@ -265,7 +265,7 @@ class SearchTerm {
             }
         }
         $query = "
-            SELECT DISTINCT COALESCE(m.id, fts.id) AS id
+            SELECT DISTINCT COALESCE(m.id, fts.iid, fts.id) AS id
             FROM full_text_search fts LEFT JOIN metadata m USING (mid)
             WHERE websearch_to_tsquery('simple', ?) @@ segments $where
         ";
