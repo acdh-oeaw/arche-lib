@@ -242,10 +242,10 @@ class RepoDb implements RepoInterface {
      */
     public function getPdoStatementBySqlQuery(string $query, array $parameters,
                                               SearchConfig $config): PDOStatement {
-        $authQP    = $this->getMetadataAuthQuery();
-        $pagingQP  = $this->getPagingQuery($config);
-        $ftsQP     = $this->getFtsQuery($config);
-        $orderByQP = $this->getOrderByQuery($config);
+        $authQP   = $this->getMetadataAuthQuery();
+        $pagingQP = $this->getPagingQuery($config);
+        $ftsQP    = $this->getFtsQuery($config);
+        list($orderByQP1, $orderByQP2) = $this->getOrderByQuery($config);
 
         $mode = $config->metadataMode ?? '';
         switch ($mode) {
@@ -296,7 +296,7 @@ class RepoDb implements RepoInterface {
                 ),
                 ids AS (
                     SELECT id FROM allids
-                        $orderByQP->query
+                    $orderByQP1->query
                     $pagingQP->query
                 )
             $metaQuery
@@ -305,12 +305,13 @@ class RepoDb implements RepoInterface {
             UNION
             SELECT null::bigint, ?::text AS property, ?::text AS type, ''::text AS lang, count(*)::text AS value FROM allids
             $ftsQP->query
+            $orderByQP2->query
         ";
         $schemaParam = [
             $this->getSchema()->searchMatch, RDF::XSD_BOOLEAN, 'true',
             $this->getSchema()->searchCount, RDF::XSD_INTEGER,
         ];
-        $param       = array_merge($parameters, $authQP->param, $orderByQP->param, $pagingQP->param, $metaParam, $schemaParam, $ftsQP->param);
+        $param       = array_merge($parameters, $authQP->param, $orderByQP1->param, $pagingQP->param, $metaParam, $schemaParam, $ftsQP->param, $orderByQP2->param);
         $this->logQuery($query, $param);
 
         $query = $this->pdo->prepare($query);
@@ -391,10 +392,15 @@ class RepoDb implements RepoInterface {
         return new QueryPart($query, $param);
     }
 
-    private function getOrderByQuery(SearchConfig $config): QueryPart {
+    /**
+     * 
+     * @param SearchConfig $config
+     * @return array<QueryPart>
+     */
+    private function getOrderByQuery(SearchConfig $config): array {
         $qp = new QueryPart();
         if (!is_array($config->orderBy) || count($config->orderBy) === 0) {
-            return $qp;
+            return [$qp, $qp];
         }
         $lang    = !empty($config->orderByLang) ? "AND (type <> ? OR lang = ?)" : '';
         $orderBy = '';
@@ -413,7 +419,15 @@ class RepoDb implements RepoInterface {
             $orderBy .= ($n > 0 ? ', ' : '') . "_ob$n $desc NULLS LAST";
         }
         $qp->query .= "ORDER BY $orderBy\n";
-        return $qp;
+
+        $qp2        = new QueryPart();
+        $qp2->query = "
+            UNION
+            SELECT ids.id, ? AS property, ? AS type, '' AS lang, (row_number() OVER ())::text AS value 
+            FROM ids
+        ";
+        $qp2->param = [$this->schema->searchOrder, RDF::XSD_POSITIVE_INTEGER];
+        return [$qp, $qp2];
     }
 
     /**
@@ -479,9 +493,7 @@ class RepoDb implements RepoInterface {
         $class = $config->class ?? RepoResourceDb::class;
 
         $resources = $graph->resourcesMatching($this->schema->searchMatch);
-        if (count($config->orderBy) > 0) {
-            $this->sortMatchingResources($resources, $config);
-        }
+        $this->sortMatchingResources($resources, $config);
         foreach ($resources as $i) {
             $i->delete($this->schema->searchMatch);
             $obj = new $class($i->getUri(), $this);

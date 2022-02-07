@@ -129,6 +129,7 @@ use function GuzzleHttp\json_encode;
  * @property Config $rest
  * @property Config $schema
  * @property string $searchCount
+ * @property string $searchOrder
  * @property string $searchFts
  * @property string $searchMatch
  * @property bool   $simplifyMetaHistory

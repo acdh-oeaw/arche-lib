@@ -734,9 +734,7 @@ class Repo implements RepoInterface {
         $class     = $config->class ?? self::$resourceClass;
         $resources = $graph->resourcesMatching($this->schema->searchMatch);
 
-        if (count($config->orderBy) > 0) {
-            $this->sortMatchingResources($resources, $config);
-        }
+        $this->sortMatchingResources($resources, $config);
 
         foreach ($resources as $i) {
             $i->delete($this->schema->searchMatch);
