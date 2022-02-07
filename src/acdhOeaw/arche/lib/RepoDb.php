@@ -496,6 +496,7 @@ class RepoDb implements RepoInterface {
         $this->sortMatchingResources($resources, $config);
         foreach ($resources as $i) {
             $i->delete($this->schema->searchMatch);
+            $i->delete($this->schema->searchOrder);
             $obj = new $class($i->getUri(), $this);
             $obj->setGraph($i);
             yield $obj;
