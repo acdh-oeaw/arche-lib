@@ -363,8 +363,15 @@ class RepoResource implements RepoResourceInterface {
     private function parseMetadata(ResponseInterface $resp): void {
         $format = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
         $graph  = new Graph();
-        if ($resp->getStatusCode() !== 204) {
-            $graph->parse($resp->getBody(), $format);
+        switch ($resp->getStatusCode()) {
+            case 200:
+            case 201:
+                $graph->parse($resp->getBody(), $format);
+                break;
+            case 204:
+                break;
+            default:
+                throw new RepoLibException("Invalid response status code: " . $resp->getStatusCode() . " with body: " . $resp->getBody());
         }
         $this->metadata   = $graph->resource($this->url);
         $this->metaSynced = true;
