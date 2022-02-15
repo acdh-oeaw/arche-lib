@@ -342,7 +342,7 @@ class Repo implements RepoInterface {
                     case 410:
                         return new RejectedPromise(new Deleted());
                     case 409:
-                        return new RejectedPromise(new Conflict((string) $e->getResponse()->getBody()));
+                        return new RejectedPromise(new Conflict((string) $e->getResponse()?->getBody()));
                     case 404:
                         return new RejectedPromise(new NotFound());
                     default:
@@ -734,7 +734,7 @@ class Repo implements RepoInterface {
         $class     = $config->class ?? self::$resourceClass;
         $resources = $graph->resourcesMatching($this->schema->searchMatch);
 
-        $this->sortMatchingResources($resources, $config);
+        $this->sortMatchingResources($resources, $this->schema->searchOrder);
 
         foreach ($resources as $i) {
             $i->delete($this->schema->searchMatch);

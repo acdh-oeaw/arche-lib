@@ -493,7 +493,7 @@ class RepoDb implements RepoInterface {
         $class = $config->class ?? RepoResourceDb::class;
 
         $resources = $graph->resourcesMatching($this->schema->searchMatch);
-        $this->sortMatchingResources($resources, $config);
+        $this->sortMatchingResources($resources, $this->schema->searchOrder);
         foreach ($resources as $i) {
             $i->delete($this->schema->searchMatch);
             $i->delete($this->schema->searchOrder);

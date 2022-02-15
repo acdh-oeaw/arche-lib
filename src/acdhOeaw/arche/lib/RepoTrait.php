@@ -108,26 +108,13 @@ trait RepoTrait {
     /**
      * 
      * @param array<Resource> $resources
-     * @param SearchConfig $config
+     * @param string $searchOrderProp
      * @return void
      */
     private function sortMatchingResources(array &$resources,
-                                           SearchConfig $config): void {
-        usort($resources, function ($a, $b) use ($config) {
-            foreach ($config->orderBy as $sortProp) {
-                $order = true;
-                if (str_starts_with($sortProp, '^')) {
-                    $sortProp = substr($sortProp, 1);
-                    $order    = false;
-                }
-                $a = (string) ($a->getLiteral($sortProp, $config->orderByLang) ?? $a->getLiteral($sortProp));
-                $b = (string) ($b->getLiteral($sortProp, $config->orderByLang) ?? $b->getLiteral($sortProp));
-                $r = $a <=> $b;
-                if ($r !== 0) {
-                    return $order ? $r : -$r;
-                }
-            }
-            return 0;
+                                           string $searchOrderProp): void {
+        usort($resources, function (Resource $a, Resource $b) use ($searchOrderProp) {
+            return $a->getLiteral($searchOrderProp) <=> $b->getLiteral($searchOrderProp);
         });
     }
 }

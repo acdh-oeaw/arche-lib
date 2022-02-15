@@ -44,6 +44,7 @@ use function GuzzleHttp\json_encode;
  * @property string $searchCount
  * @property string $searchFts
  * @property string $searchMatch
+ * @property string $searchOrder
  * @property object $test
  */
 class Schema {
