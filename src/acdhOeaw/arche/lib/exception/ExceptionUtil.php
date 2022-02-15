@@ -48,7 +48,7 @@ class ExceptionUtil {
         }
         if ($includeBacktrace) {
             $msg .= "--------------------\n--- Exception backtrace:\n";
-            $msg .= print_r($e);
+            $msg .= print_r($e, true);
         }
         return $msg;
     }
