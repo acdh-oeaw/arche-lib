@@ -35,6 +35,7 @@ use acdhOeaw\arche\lib\RepoResource;
 use acdhOeaw\arche\lib\exception\AmbiguousMatch;
 use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
+use acdhOeaw\arche\lib\exception\ExceptionUtil;
 
 /**
  * Description of RepoTest
@@ -188,6 +189,9 @@ class RepoTest extends TestBase {
         } catch (ClientException $e) {
             $this->assertEquals(400, $e->getResponse()->getStatusCode());
             $this->assertStringContainsString('Wrong property value', (string) $e->getResponse()->getBody());
+            $unwrapped = ExceptionUtil::unwrap($e, false);
+            $this->assertStringContainsString('HTTP 400 with message:', $unwrapped);
+            $this->assertStringContainsString('Wrong property value', $unwrapped);
         }
 
         self::$repo->rollback();
