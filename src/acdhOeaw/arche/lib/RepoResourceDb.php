@@ -102,6 +102,7 @@ class RepoResourceDb implements RepoResourceInterface {
      */
     public function getMetadataQuery(string $mode = self::META_RESOURCE,
                                      ?string $parentProperty = null): QueryPart {
+        $param = [$this->id, $parentProperty];
         switch ($mode) {
             case self::META_NONE:
                 return new QueryPart("SELECT * FROM metadata_view WHERE false");
@@ -111,15 +112,24 @@ class RepoResourceDb implements RepoResourceInterface {
                 break;
             case self::META_NEIGHBORS:
                 $query = "SELECT * FROM get_neighbors_metadata(?, ?)";
-                $param = [$this->id, $parentProperty];
                 break;
             case self::META_RELATIVES:
-                $query = "SELECT * FROM get_relatives_metadata(?, ?)";
-                $param = [$this->id, $parentProperty];
+                $query = "SELECT * FROM get_relatives_metadata(?, ?, 999999, -999999, true, false)";
+                break;
+            case self::META_RELATIVES_ONLY:
+                $query = "SELECT * FROM get_relatives_metadata(?, ?, 999999, -999999, false, false)";
+                break;
+            case self::META_RELATIVES_REVERSE:
+                $query = "SELECT * FROM get_relatives_metadata(?, ?, 999999, -999999, true, true)";
                 break;
             case self::META_PARENTS:
-                $query = "SELECT * FROM get_relatives_metadata(?, ?, 0)";
-                $param = [$this->id, $parentProperty];
+                $query = "SELECT * FROM get_relatives_metadata(?, ?, 0, -999999, true, false)";
+                break;
+            case self::META_PARENTS_ONLY:
+                $query = "SELECT * FROM get_relatives_metadata(?, ?, 0, -999999, false, false)";
+                break;
+            case self::META_PARENTS_REVERSE:
+                $query = "SELECT * FROM get_relatives_metadata(?, ?, 0, -999999, true, true)";
                 break;
             case self::META_IDS:
                 $query = "SELECT id, property, type, lang, value FROM metadata WHERE id = ? AND property = ?";
