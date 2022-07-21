@@ -102,43 +102,34 @@ class RepoResourceDb implements RepoResourceInterface {
      */
     public function getMetadataQuery(string $mode = self::META_RESOURCE,
                                      ?string $parentProperty = null): QueryPart {
-        $param = [$this->id, $parentProperty];
-        switch ($mode) {
-            case self::META_NONE:
-                return new QueryPart("SELECT * FROM metadata_view WHERE false");
-            case self::META_RESOURCE:
-                $query = "SELECT * FROM (SELECT * FROM metadata_view WHERE id = ?) mt";
-                $param = [$this->id];
-                break;
-            case self::META_NEIGHBORS:
-                $query = "SELECT * FROM get_neighbors_metadata(?, ?)";
-                break;
-            case self::META_RELATIVES:
-                $query = "SELECT * FROM get_relatives_metadata(?, ?, 999999, -999999, true, false)";
-                break;
-            case self::META_RELATIVES_ONLY:
-                $query = "SELECT * FROM get_relatives_metadata(?, ?, 999999, -999999, false, false)";
-                break;
-            case self::META_RELATIVES_REVERSE:
-                $query = "SELECT * FROM get_relatives_metadata(?, ?, 999999, -999999, true, true)";
-                break;
-            case self::META_PARENTS:
-                $query = "SELECT * FROM get_relatives_metadata(?, ?, 0, -999999, true, false)";
-                break;
-            case self::META_PARENTS_ONLY:
-                $query = "SELECT * FROM get_relatives_metadata(?, ?, 0, -999999, false, false)";
-                break;
-            case self::META_PARENTS_REVERSE:
-                $query = "SELECT * FROM get_relatives_metadata(?, ?, 0, -999999, true, true)";
-                break;
-            case self::META_IDS:
-                $query = "SELECT id, property, type, lang, value FROM metadata WHERE id = ? AND property = ?";
-                $param = [$this->id, $this->repo->getSchema()->label];
-                break;
-            default:
-                throw new RepoLibException('Bad metadata mode ' . $mode, 400);
-        }
+        // simple cases
         $authQP = $this->repo->getMetadataAuthQuery();
-        return new QueryPart($query . $authQP->query, array_merge($param, $authQP->param));
+        if ($mode === self::META_NONE) {
+            return new QueryPart("SELECT * FROM metadata_view WHERE false");
+        } elseif ($mode === self::META_RESOURCE) {
+            return new QueryPart(
+                "SELECT * FROM (SELECT * FROM metadata_view WHERE id = ?) mt",
+                [$this->id]
+            );
+        } elseif ($mode === self::META_IDS) {
+            $query = "SELECT id, property, type, lang, value FROM metadata WHERE id = ? AND property = ?";
+            $param = [$this->id, $this->repo->getSchema()->label];
+            return new QueryPart($query . $authQP->query, array_merge($param, $authQP->param));
+        }
+        // get_relatives_metadata() cases
+        $getRelParam = match ($mode) {
+            self::META_NEIGHBORS => [0, 0, 1, 1],
+            self::META_RELATIVES => [999999, -999999, 1, 0],
+            self::META_RELATIVES_ONLY => [999999, -999999, 0, 0],
+            self::META_RELATIVES_REVERSE => [999999, -999999, 1, 1],
+            self::META_PARENTS => [0, -999999, 1, 0],
+            self::META_PARENTS_ONLY => [0, -999999, 0, 0],
+            self::META_PARENTS_REVERSE => [0, -999999, 1, 1],
+            default => RepoDb::parseMetadataReadMode($mode),
+        };
+
+        $param = array_merge([$this->id, $parentProperty], $getRelParam, $authQP->param);
+        $query = "SELECT * FROM get_relatives_metadata(?::bigint, ?::text, ?::int, -?::int, ?::bool, ?::bool)";
+        return new QueryPart($query . $authQP->query, $param);
     }
 }

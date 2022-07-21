@@ -90,6 +90,22 @@ class RepoDb implements RepoInterface {
         return new RepoDb($baseUrl, $schema, $headers, $pdo, (array) $nonRelProp);
     }
 
+    /**
+     * Helper for parsing the metadata read mode generic syntax.
+     * 
+     * @param string $mode
+     * @return array<int>
+     */
+    static public function parseMetadataReadMode(string $mode): array {
+        $checkFn = fn($x) => is_numeric($x) ? (int) $x : throw new RepoLibException('Bad metadata mode ' . $mode, 400);
+        $param   = array_map($checkFn, explode('_', $mode));
+        $param   = array_merge($param, array_fill(0, 4 - count($param), 0));
+        if ($param[2] < 0 || $param[2] > 1 || $param[3] < 0 || $param[3] > 1 || count($param) !== 4) {
+            throw new RepoLibException('Bad metadata mode ' . $mode, 400);
+        }
+        return $param;
+    }
+
     private PDO $pdo;
     private ?AuthInterface $auth;
 
@@ -250,7 +266,7 @@ class RepoDb implements RepoInterface {
         $mode = $config->metadataMode ?? '';
         switch ($mode) {
             case RRI::META_RESOURCE:
-                $metaQuery = "
+                $metaQuery   = "
                     SELECT id, property, type, lang, value
                     FROM metadata JOIN ids USING (id)
                   UNION
@@ -260,11 +276,11 @@ class RepoDb implements RepoInterface {
                     SELECT id, property, 'REL' AS type, null, target_id::text AS value
                     FROM relations JOIN ids USING (id)
                 ";
-                $metaParam = [];
+                $metaParam   = [];
                 break;
             case RRI::META_NEIGHBORS:
-                $metaQuery = "SELECT (get_neighbors_metadata(id, ?)).* FROM ids";
-                $metaParam = [$config->metadataParentProperty];
+                $metaQuery   = "SELECT (get_neighbors_metadata(id, ?)).* FROM ids";
+                $metaParam   = [$config->metadataParentProperty];
                 break;
             case RRI::META_RELATIVES:
             case RRI::META_RELATIVES_ONLY:
@@ -272,21 +288,23 @@ class RepoDb implements RepoInterface {
             case RRI::META_PARENTS:
             case RRI::META_PARENTS_ONLY:
             case RRI::META_PARENTS_REVERSE:
-                $max       = $mode === RRI::META_PARENTS || $mode === RRI::META_PARENTS_ONLY || $mode === RRI::META_PARENTS_REVERSE ? 0 : 999999;
-                $neighbors = $mode === RRI::META_PARENTS_ONLY || $mode === RRI::META_RELATIVES_ONLY ? false : true;
-                $reverse   = $mode === RRI::META_PARENTS_REVERSE || $mode === RRI::META_RELATIVES_REVERSE ? true : false;
-                $metaQuery = "SELECT (get_relatives_metadata(id, ?, ?, -999999, ?, ?)).* FROM ids";
-                $metaParam = [
+                $max         = $mode === RRI::META_PARENTS || $mode === RRI::META_PARENTS_ONLY || $mode === RRI::META_PARENTS_REVERSE ? 0 : 999999;
+                $neighbors   = $mode === RRI::META_PARENTS_ONLY || $mode === RRI::META_RELATIVES_ONLY ? false : true;
+                $reverse     = $mode === RRI::META_PARENTS_REVERSE || $mode === RRI::META_RELATIVES_REVERSE ? true : false;
+                $metaQuery   = "SELECT (get_relatives_metadata(id, ?, ?, -999999, ?, ?)).* FROM ids";
+                $metaParam   = [
                     $config->metadataParentProperty, $max, (int) $neighbors, (int) $reverse
                 ];
                 break;
             case RRI::META_NONE:
             case RRI::META_IDS:
-                $metaQuery = "SELECT id, property, type, lang, value FROM metadata JOIN ids USING (id) WHERE property = ?";
-                $metaParam = [$this->schema->label];
+                $metaQuery   = "SELECT id, property, type, lang, value FROM metadata JOIN ids USING (id) WHERE property = ?";
+                $metaParam   = [$this->schema->label];
                 break;
             default:
-                throw new RepoLibException('Wrong metadata read mode value ' . $config->metadataMode, 400);
+                $getRelParam = self::parseMetadataReadMode($mode);
+                $metaQuery   = "SELECT (get_relatives_metadata(id, ?, ?, ?, ?, ?)).* FROM ids";
+                $metaParam   = array_merge([$config->metadataParentProperty], $getRelParam);
         }
 
         $query       = "
