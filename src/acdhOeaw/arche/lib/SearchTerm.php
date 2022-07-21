@@ -41,6 +41,7 @@ class SearchTerm {
 
     const PROPERTY_BINARY   = 'BINARY';
     const DATETIME_REGEX    = '/^-?[0-9]{4,}-[0-9][0-9]-[0-9][0-9](T[0-9][0-9](:[0-9][0-9])?(:[0-9][0-9])?([.][0-9]+)?Z?)?$/';
+    const URI_REGEX         = '\w+:(\/?\/?)[^\s]+';
     const TYPE_NUMBER       = 'number';
     const TYPE_DATE         = 'date';
     const TYPE_DATETIME     = 'datetime';
@@ -250,7 +251,10 @@ class SearchTerm {
     }
 
     private function getSqlQueryFts(): QueryPart {
-        $param = [$this->value];
+        // escape URIs/URLs so that websearch_to_tsquery() parses them properly
+        $value = preg_replace("`" . self::URI_REGEX . "`", '"\0"', $this->value);
+        $value = str_replace('""', '"', $value);
+        $param = [$value];
         $where = '';
         if (!empty($this->language)) {
             $where   .= " AND (lang = ? OR lang IS NULL)";
