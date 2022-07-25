@@ -196,9 +196,11 @@ class SearchTerm {
         }
         // if type not enforced by the operator and not provided, guess it
         if ($type === null) {
-            if (is_numeric($this->value)) {
+            // if many values, guess the type based on the first one
+            $value = $this->value[0] ?? $this->value;
+            if (is_numeric($value)) {
                 $type = self::TYPE_NUMBER;
-            } elseif (preg_match(self::DATETIME_REGEX, (string) $this->value)) {
+            } elseif (preg_match(self::DATETIME_REGEX, (string) $value)) {
                 $type = self::TYPE_DATETIME;
             } else {
                 $type = self::TYPE_STRING;
