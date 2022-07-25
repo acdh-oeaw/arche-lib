@@ -362,7 +362,9 @@ class RepoResource implements RepoResourceInterface {
      */
     public function merge(string $targetResId,
                           string $readMode = self::META_RESOURCE,
-                          ?string $parentProperty = null): void {
+                          ?string $parentProperty = null,
+                          array $resourceProperties = [],
+                          array $relativesProperties = []): void {
         $this->mergeAsync($targetResId, $readMode, $parentProperty)->wait();
     }
 
@@ -419,6 +421,15 @@ class RepoResource implements RepoResourceInterface {
         $this->metaSynced = true;
     }
 
+    /**
+     * 
+     * @param Request $request
+     * @param string $mode
+     * @param string|null $parentProperty
+     * @param array<string> $resourceProperties
+     * @param array<string> $relativesProperties
+     * @return Request
+     */
     private function withReadHeaders(Request $request, string $mode,
                                      ?string $parentProperty,
                                      array $resourceProperties,

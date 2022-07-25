@@ -26,6 +26,7 @@
 
 namespace acdhOeaw\arche\lib;
 
+use PDOStatement;
 use zozlak\queryPart\QueryPart;
 use acdhOeaw\arche\lib\exception\RepoLibException;
 
@@ -66,21 +67,29 @@ class RepoResourceDb implements RepoResourceInterface {
      * @param bool $force enforce fetch from the repository 
      *   (when you want to make sure metadata are in line with ones in the repository 
      *   or e.g. reset them back to their current state in the repository)
-     * @param string $mode scope of the metadata returned by the repository - see the getMetadataQuery() method
-     * @param string $parentProperty RDF property name used to find related resources - see the getMetadataQuery() method
+     * @param string $mode scope of the metadata returned by the repository - see the 
+     *   `RepoDb()::getPdoStatementBySqlQuery()` method
+     * @param string $parentProperty RDF property name used to find related resources 
+     *   - see the getMetadataQuery() method
+     * @param array<string> $resourceProperties list of RDF properties to be includes
+     *   for a resource (if the list is empty, all exsiting RDF properties are included)
+     * @param array<string> $relativesProperties list of RDF properties to be includes
+     *   for resources being relatives (if the list is empty, all exsiting RDF 
+     *   properties are included)
      * @return void
      * @throws RepoLibException
      * @see getMetadataQuery
      */
     public function loadMetadata(bool $force = false,
                                  string $mode = self::META_RESOURCE,
-                                 ?string $parentProperty = null): void {
+                                 string $parentProperty = null,
+                                 array $resourceProperties = [],
+                                 array $relativesProperties = []): void {
         if (!$force && $this->metadata !== null) {
             return;
         }
-        $queryQP        = $this->getMetadataQuery($mode, $parentProperty);
-        $query          = $this->repo->runQuery($queryQP->query, $queryQP->param);
-        $graph          = $this->repo->parsePdoStatement($query);
+        $stmt           = $this->getMetadataStatement($mode, $parentProperty, $resourceProperties, $relativesProperties);
+        $graph          = $this->repo->parsePdoStatement($stmt);
         $this->metadata = $graph->resource($this->getUri());
     }
 
@@ -88,48 +97,25 @@ class RepoResourceDb implements RepoResourceInterface {
      * Returns a QueryPart object with an SQL query loading resource's metadata
      * in a given mode.
      * 
-     * @param string $mode scope of the metadata returned by the repository: 
-     *   `RepoResourceInterface::META_RESOURCE` - only given resource metadata,
-     *   `RepoResourceInterface::META_NEIGHBORS` - metadata of a given resource, all the resources pointed by its metadata and all its children
-     *      (resource pointing to a given resource with the `$parentProperty` property),
-     *   `RepoResourceInterface::META_RELATIVES` - metadata of a given resource and all resources recursively pointing to a given metadata property
-     *      (see the `$parentProperty` parameter) in both directions (both "parents" and "children")
-     *   `RepoResourceInterface::META_PARENTS` - like META_RELATIVES but only parents are returned
-     * @param string|null $parentProperty RDF property name used to find related resources in the 
-     *   `RepoResourceInterface::META_RELATIVES` and `RepoResourceInterface::META_PARENTS` modes
-     * @return QueryPart
-     * @throws RepoLibException
+     * @param string $mode scope of the metadata returned by the repository - see the 
+     *   `RepoDb()::getPdoStatementBySqlQuery()` method
+     * @param string $parentProperty RDF property name used to find related resources
+     * @param array<string> $resourceProperties list of RDF properties to be includes
+     *   for a resource (if the list is empty, all exsiting RDF properties are included)
+     * @param array<string> $relativesProperties list of RDF properties to be includes
+     *   for resources being relatives (if the list is empty, all exsiting RDF 
+     *   properties are included)
+     * @return PDOStatement
      */
-    public function getMetadataQuery(string $mode = self::META_RESOURCE,
-                                     ?string $parentProperty = null): QueryPart {
-        // simple cases
-        $authQP = $this->repo->getMetadataAuthQuery();
-        if ($mode === self::META_NONE) {
-            return new QueryPart("SELECT * FROM metadata_view WHERE false");
-        } elseif ($mode === self::META_RESOURCE) {
-            return new QueryPart(
-                "SELECT * FROM (SELECT * FROM metadata_view WHERE id = ?) mt",
-                [$this->id]
-            );
-        } elseif ($mode === self::META_IDS) {
-            $query = "SELECT id, property, type, lang, value FROM metadata WHERE id = ? AND property = ?";
-            $param = [$this->id, $this->repo->getSchema()->label];
-            return new QueryPart($query . $authQP->query, array_merge($param, $authQP->param));
-        }
-        // get_relatives_metadata() cases
-        $getRelParam = match ($mode) {
-            self::META_NEIGHBORS => [0, 0, 1, 1],
-            self::META_RELATIVES => [999999, -999999, 1, 0],
-            self::META_RELATIVES_ONLY => [999999, -999999, 0, 0],
-            self::META_RELATIVES_REVERSE => [999999, -999999, 1, 1],
-            self::META_PARENTS => [0, -999999, 1, 0],
-            self::META_PARENTS_ONLY => [0, -999999, 0, 0],
-            self::META_PARENTS_REVERSE => [0, -999999, 1, 1],
-            default => RepoDb::parseMetadataReadMode($mode),
-        };
+    public function getMetadataStatement(string $mode = self::META_RESOURCE,
+                                         string $parentProperty = null,
+                                         array $resourceProperties = [],
+                                         array $relativesProperties = []): PDOStatement {
+        $config                         = new SearchConfig();
+        $config->metadataMode           = $mode;
+        $config->metadataParentProperty = $parentProperty;
 
-        $param = array_merge([$this->id, $parentProperty], $getRelParam, $authQP->param);
-        $query = "SELECT * FROM get_relatives_metadata(?::bigint, ?::text, ?::int, -?::int, ?::bool, ?::bool)";
-        return new QueryPart($query . $authQP->query, $param);
+        $term = new SearchTerm(null, $this->id, '=', SearchTerm::TYPE_ID);
+        return $this->repo->getPdoStatementBySearchTerms([$term], $config);
     }
 }
