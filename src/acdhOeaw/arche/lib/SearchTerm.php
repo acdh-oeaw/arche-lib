@@ -256,9 +256,10 @@ class SearchTerm {
     }
 
     private function getSqlQueryFts(): QueryPart {
+        $value = is_array($this->value) ? reset($this->value) : $this->value;
         // escape URIs/URLs so that websearch_to_tsquery() parses them properly
-        $value = preg_replace("`" . self::URI_REGEX . "`", '"\0"', $this->value);
-        $value = str_replace('""', '"', $value);
+        $value = preg_replace("`" . self::URI_REGEX . "`", '"\0"', (string) $value);
+        $value = str_replace('""', '"', (string) $value);
         $param = [$value];
         $where = '';
         if (!empty($this->language)) {
