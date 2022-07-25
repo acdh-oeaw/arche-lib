@@ -111,9 +111,10 @@ class RepoResourceDb implements RepoResourceInterface {
                                          string $parentProperty = null,
                                          array $resourceProperties = [],
                                          array $relativesProperties = []): PDOStatement {
-        $config                         = new SearchConfig();
-        $config->metadataMode           = $mode;
-        $config->metadataParentProperty = $parentProperty;
+        $config                           = new SearchConfig();
+        $config->metadataMode             = $mode;
+        $config->metadataParentProperty   = $parentProperty;
+        $config->skipArtificialProperties = true;
 
         $term = new SearchTerm(null, $this->id, '=', SearchTerm::TYPE_ID);
         return $this->repo->getPdoStatementBySearchTerms([$term], $config);

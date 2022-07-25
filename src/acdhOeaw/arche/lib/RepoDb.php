@@ -244,8 +244,28 @@ class RepoDb implements RepoInterface {
                                               SearchConfig $config): PDOStatement {
         $authQP   = $this->getMetadataAuthQuery();
         $pagingQP = $this->getPagingQuery($config);
-        $ftsQP    = $this->getFtsQuery($config);
         list($orderByQP1, $orderByQP2) = $this->getOrderByQuery($config);
+
+        $searchMetaQuery = '';
+        $searchMetaParam = [];
+        if ($config->skipArtificialProperties === false) {
+            $ftsQP           = $this->getFtsQuery($config);
+            $searchMetaQuery = "
+              UNION
+                SELECT id, ?::text AS property, ?::text AS type, ''::text AS lang, ?::text AS value FROM ids
+              UNION
+                SELECT null::bigint, ?::text AS property, ?::text AS type, ''::text AS lang, count(*)::text AS value FROM allids
+                $ftsQP->query
+                $orderByQP2->query
+            ";
+            $searchMetaParam = array_merge(
+                [
+                    $this->getSchema()->searchMatch, RDF::XSD_BOOLEAN, 'true',
+                    $this->getSchema()->searchCount, RDF::XSD_INTEGER,
+                ],
+                $ftsQP->param, $orderByQP2->param,
+            );
+        }
 
         $mode = $config->metadataMode ?? '';
         switch ($mode) {
@@ -281,7 +301,7 @@ class RepoDb implements RepoInterface {
                 $metaParam = array_merge([$config->metadataParentProperty], $getRelParam);
         }
 
-        $query       = "
+        $query = "
             WITH
                 allids AS (
                     SELECT id FROM ($query) t $authQP->query
@@ -292,18 +312,9 @@ class RepoDb implements RepoInterface {
                     $pagingQP->query
                 )
             $metaQuery
-          UNION
-            SELECT id, ?::text AS property, ?::text AS type, ''::text AS lang, ?::text AS value FROM ids
-          UNION
-            SELECT null::bigint, ?::text AS property, ?::text AS type, ''::text AS lang, count(*)::text AS value FROM allids
-            $ftsQP->query
-            $orderByQP2->query
+            $searchMetaQuery
         ";
-        $schemaParam = [
-            $this->getSchema()->searchMatch, RDF::XSD_BOOLEAN, 'true',
-            $this->getSchema()->searchCount, RDF::XSD_INTEGER,
-        ];
-        $param       = array_merge($parameters, $authQP->param, $orderByQP1->param, $pagingQP->param, $metaParam, $schemaParam, $ftsQP->param, $orderByQP2->param);
+        $param = array_merge($parameters, $authQP->param, $orderByQP1->param, $pagingQP->param, $metaParam, $searchMetaParam);
         $this->logQuery($query, $param);
 
         $query = $this->pdo->prepare($query);

@@ -198,6 +198,12 @@ class SearchConfig {
     public ?string $class = null;
 
     /**
+     * Should artificially generated search properties denoting search match,
+     * ordering, FTS highlighting, etc. be skipped or included.
+     */
+    public bool $skipArtificialProperties = false;
+    
+    /**
      * 
      * @return array<mixed>
      */
