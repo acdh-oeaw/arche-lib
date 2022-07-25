@@ -94,6 +94,7 @@ class SearchTerm {
         self::TYPE_NUMBER      => 'value_n',
         self::TYPE_STRING      => 'value',
         self::TYPE_RELATION    => 'ids',
+        self::TYPE_ID          => 'id',
     ];
 
     /**
@@ -401,10 +402,10 @@ class SearchTerm {
 
     private function getSqlQueryId(): QueryPart {
         if (is_array($this->value)) {
-            $query = 'SELECT id FROM (VALUES ' . substr(str_repeat(', (?)', count($this->value)), 2) . ') AS t (id)';
+            $query = 'SELECT id FROM (VALUES ' . substr(str_repeat(', (?::bigint)', count($this->value)), 2) . ') AS t (id)';
             return new QueryPart($query, $this->value);
         } else {
-            return new QueryPart('SELECT ? AS id', [$this->value]);
+            return new QueryPart('SELECT ?::bigint AS id', [$this->value]);
         }
     }
 
