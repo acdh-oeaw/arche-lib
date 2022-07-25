@@ -126,6 +126,8 @@ use function GuzzleHttp\json_encode;
  * @property string $queue
  * @property Config | null $rabbitMq
  * @property string $read
+ * @property array<sting> $relativesProperties
+ * @property array<sting> $resourceProperties
  * @property Config $rest
  * @property Config $schema
  * @property string $searchCount
