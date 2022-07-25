@@ -120,12 +120,19 @@ class RepoResource implements RepoResourceInterface {
      *   - see the META_* constants defined by the RepoResourceInterface 
      * @param string $parentProperty RDF property to be used by the metadata
      *   read mode denoted by the $readMode parameter
+     * @param array<string> $resourceProperties list of RDF properties to be includes
+     *   for a resource (if the list is empty, all exsiting RDF properties are included)
+     * @param array<string> $relativesProperties list of RDF properties to be includes
+     *   for resources being relatives (if the list is empty, all exsiting RDF 
+     *   properties are included)
      * @return void
      */
     public function updateContent(BinaryPayload $content,
                                   string $readMode = self::META_RESOURCE,
-                                  ?string $parentProperty = null): void {
-        $this->updateContentAsync($content, $readMode, $parentProperty)->wait();
+                                  ?string $parentProperty = null,
+                                  array $resourceProperties = [],
+                                  array $relativesProperties = []): void {
+        $this->updateContentAsync($content, $readMode, $parentProperty, $resourceProperties, $relativesProperties)->wait();
     }
 
     /**
@@ -135,14 +142,18 @@ class RepoResource implements RepoResourceInterface {
      * @param string $readMode
      * @param string|null $parentProperty
      * @return PromiseInterface
+     * @param array<string> $resourceProperties
+     * @param array<string> $relativesProperties
      * @see updateContent()
      */
     public function updateContentAsync(BinaryPayload $content,
                                        string $readMode = self::META_RESOURCE,
-                                       ?string $parentProperty = null): PromiseInterface {
+                                       ?string $parentProperty = null,
+                                       array $resourceProperties = [],
+                                       array $relativesProperties = []): PromiseInterface {
         $request = new Request('put', $this->url);
         $request = $content->attachTo($request);
-        $request = $this->withReadHeaders($request, $readMode, $parentProperty);
+        $request = $this->withReadHeaders($request, $readMode, $parentProperty, $resourceProperties, $relativesProperties);
         $promise = $this->repo->sendRequestAsync($request);
         $promise = $promise->then(function (Response $resp): void {
             $this->parseMetadata($resp);
@@ -171,12 +182,19 @@ class RepoResource implements RepoResourceInterface {
      *   - see the META_* constants defined by the RepoResourceInterface 
      * @param string $parentProperty RDF property to be used by the metadata
      *   read mode denoted by the $readMode parameter
+     * @param array<string> $resourceProperties list of RDF properties to be includes
+     *   for a resource (if the list is empty, all exsiting RDF properties are included)
+     * @param array<string> $relativesProperties list of RDF properties to be includes
+     *   for resources being relatives (if the list is empty, all exsiting RDF 
+     *   properties are included)
      * @return void
      */
     public function updateMetadata(string $updateMode = self::UPDATE_MERGE,
                                    string $readMode = self::META_RESOURCE,
-                                   ?string $parentProperty = null): void {
-        $this->updateMetadataAsync($updateMode, $readMode, $parentProperty)?->wait();
+                                   ?string $parentProperty = null,
+                                   array $resourceProperties = [],
+                                   array $relativesProperties = []): void {
+        $this->updateMetadataAsync($updateMode, $readMode, $parentProperty, $resourceProperties, $relativesProperties)?->wait();
     }
 
     /**
@@ -185,12 +203,16 @@ class RepoResource implements RepoResourceInterface {
      * @param string $updateMode
      * @param string $readMode
      * @param string|null $parentProperty
+     * @param array<string> $resourceProperties
+     * @param array<string> $relativesProperties
      * @return PromiseInterface|null
      * @see updateMetadata()
      */
     public function updateMetadataAsync(string $updateMode = self::UPDATE_MERGE,
                                         string $readMode = self::META_RESOURCE,
-                                        ?string $parentProperty = null): ?PromiseInterface {
+                                        ?string $parentProperty = null,
+                                        array $resourceProperties = [],
+                                        array $relativesProperties = []): ?PromiseInterface {
         if (!$this->metaSynced) {
             $headers = [
                 'Content-Type'                                  => 'application/n-triples',
@@ -198,7 +220,7 @@ class RepoResource implements RepoResourceInterface {
             ];
             $body    = $this->metadata?->getGraph()->serialise('application/n-triples');
             $req     = new Request('patch', $this->url . '/metadata', $headers, $body);
-            $req     = $this->withReadHeaders($req, $readMode, $parentProperty);
+            $req     = $this->withReadHeaders($req, $readMode, $parentProperty, $resourceProperties, $relativesProperties);
             $promise = $this->repo->sendRequestAsync($req);
             $promise = $promise->then(function (ResponseInterface $resp): void {
                 $this->parseMetadata($resp);
@@ -278,11 +300,18 @@ class RepoResource implements RepoResourceInterface {
      *   - see the META_* constants defined by the RepoResourceInterface 
      * @param string $parentProperty RDF property to be used by the metadata
      *   read mode denoted by the $mode parameter
+     * @param array<string> $resourceProperties list of RDF properties to be includes
+     *   for a resource (if the list is empty, all exsiting RDF properties are included)
+     * @param array<string> $relativesProperties list of RDF properties to be includes
+     *   for resources being relatives (if the list is empty, all exsiting RDF 
+     *   properties are included)
      */
     public function loadMetadata(bool $force = false,
                                  string $mode = self::META_RESOURCE,
-                                 ?string $parentProperty = null): void {
-        $this->loadMetadataAsync($force, $mode, $parentProperty)?->wait();
+                                 ?string $parentProperty = null,
+                                 array $resourceProperties = [],
+                                 array $relativesProperties = []): void {
+        $this->loadMetadataAsync($force, $mode, $parentProperty, $resourceProperties, $relativesProperties)?->wait();
     }
 
     /**
@@ -291,15 +320,19 @@ class RepoResource implements RepoResourceInterface {
      * @param bool $force
      * @param string $mode
      * @param string|null $parentProperty
+     * @param array<string> $resourceProperties
+     * @param array<string> $relativesProperties
      * @return PromiseInterface|null
      * @see loadMetadata()
      */
     public function loadMetadataAsync(bool $force = false,
                                       string $mode = self::META_RESOURCE,
-                                      ?string $parentProperty = null): ?PromiseInterface {
+                                      ?string $parentProperty = null,
+                                      array $resourceProperties = [],
+                                      array $relativesProperties = []): ?PromiseInterface {
         if ($this->metadata === null || $force) {
             $req     = new Request('get', $this->url . '/metadata');
-            $req     = $this->withReadHeaders($req, $mode, $parentProperty);
+            $req     = $this->withReadHeaders($req, $mode, $parentProperty, $resourceProperties, $relativesProperties);
             $promise = $this->repo->sendRequestAsync($req);
             $promise = $promise->then(function (ResponseInterface $resp): void {
                 $this->parseMetadata($resp);
@@ -320,6 +353,11 @@ class RepoResource implements RepoResourceInterface {
      *   - see the META_* constants defined by the RepoResourceInterface 
      * @param string $parentProperty RDF property to be used by the metadata
      *   read mode denoted by the $readMode parameter
+     * @param array<string> $resourceProperties list of RDF properties to be includes
+     *   for a resource (if the list is empty, all exsiting RDF properties are included)
+     * @param array<string> $relativesProperties list of RDF properties to be includes
+     *   for resources being relatives (if the list is empty, all exsiting RDF 
+     *   properties are included)
      * @return void
      */
     public function merge(string $targetResId,
@@ -334,18 +372,22 @@ class RepoResource implements RepoResourceInterface {
      * @param string $targetResId
      * @param string $readMode
      * @param string|null $parentProperty
+     * @param array<string> $resourceProperties
+     * @param array<string> $relativesProperties
      * @return PromiseInterface
      * @see merge()
      */
     public function mergeAsync(string $targetResId,
                                string $readMode = self::META_RESOURCE,
-                               ?string $parentProperty = null): PromiseInterface {
+                               ?string $parentProperty = null,
+                               array $resourceProperties = [],
+                               array $relativesProperties = []): PromiseInterface {
         $baseUrl   = $this->repo->getBaseUrl();
         $srcId     = $this->getId();
         $targetRes = $this->repo->getResourceById($targetResId);
         $targetId  = substr($targetRes->getUri(), strlen($baseUrl));
         $request   = new Request('PUT', $baseUrl . "merge/$srcId/$targetId");
-        $request   = $this->withReadHeaders($request, $readMode, $parentProperty);
+        $request   = $this->withReadHeaders($request, $readMode, $parentProperty, $resourceProperties, $relativesProperties);
         $promise   = $this->repo->sendRequestAsync($request);
         $promise   = $promise->then(function (ResponseInterface $resp) use ($targetRes): void {
             $this->url = $targetRes->getUri();
@@ -378,11 +420,20 @@ class RepoResource implements RepoResourceInterface {
     }
 
     private function withReadHeaders(Request $request, string $mode,
-                                     ?string $parentProperty): Request {
-        return $request->
-                withHeader('Accept', 'application/n-triples')->
-                withHeader($this->repo->getHeaderName('metadataReadMode'), $mode)->
-                withHeader($this->repo->getHeaderName('metadataParentProperty'), $parentProperty ?? $this->repo->getSchema()->parent);
+                                     ?string $parentProperty,
+                                     array $resourceProperties,
+                                     array $relativesProperties): Request {
+        $request = $request->
+            withHeader('Accept', 'application/n-triples')->
+            withHeader($this->repo->getHeaderName('metadataReadMode'), $mode)->
+            withHeader($this->repo->getHeaderName('metadataParentProperty'), $parentProperty ?? $this->repo->getSchema()->parent);
+        if (count($resourceProperties) > 0) {
+            $request = $request->withHeader($this->repo->getHeaderName('resourceProperties'), implode(',', $resourceProperties));
+        }
+        if (count($relativesProperties) > 0) {
+            $request = $request->withHeader($this->repo->getHeaderName('relativesProperties'), implode(',', $relativesProperties));
+        }
+        return $request;
     }
 
     /**

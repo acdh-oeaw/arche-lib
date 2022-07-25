@@ -42,7 +42,7 @@ class ExceptionUtil {
         }
         if ($e instanceof RequestException && $e->hasResponse()) {
             $resp = $e->getResponse();
-            $msg  = "HTTP " . $resp->getStatusCode() . " with message: " . $resp->getBody() . "\n";
+            $msg  = "HTTP " . $resp?->getStatusCode() . " with message: " . $resp?->getBody() . "\n";
         } else {
             $msg = $e->getMessage();
         }

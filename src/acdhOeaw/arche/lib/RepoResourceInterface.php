@@ -37,32 +37,32 @@ interface RepoResourceInterface {
     /**
      * Provides no metadata.
      */
-    const META_NONE              = 'none';
-    
+    const META_NONE = 'none';
+
     /**
      * Provide only given resource's metadata
      */
-    const META_RESOURCE          = 'resource';
+    const META_RESOURCE = 'resource';
 
     /**
      * Include metadata of all resources a given one points to and all resources
      * which point to it. If parentProperty is specified, only resources
      * pointing to a given one with a specified RDF predicate are included.
      */
-    const META_NEIGHBORS         = 'neighbors';
+    const META_NEIGHBORS = 'neighbors';
 
     /**
      * Include metadata of all resources which can be reached from a given one
      * by following (in both directions) an RDF predicate specified by the parentProperty
      * as well as all metadata of all resources a given resource points to.
      */
-    const META_RELATIVES         = 'relatives';
+    const META_RELATIVES = 'relatives';
 
     /**
      * Include metadata of all resources which can be reached from a given one
      * by following (in both directions) an RDF predicate specified by the parentProperty
      */
-    const META_RELATIVES_ONLY    = 'relativesOnly';
+    const META_RELATIVES_ONLY = 'relativesOnly';
 
     /**
      * Include metadata of all resources which can be reached from a given one
@@ -76,25 +76,25 @@ interface RepoResourceInterface {
      * Like `relatives` but follows the parentProperty predicate only from subject
      * to object.
      */
-    const META_PARENTS           = 'parents';
+    const META_PARENTS = 'parents';
 
     /**
      * Like `relativesOnly` but follows the parentProperty predicate only from 
      * subject to object.
      */
-    const META_PARENTS_ONLY      = 'parentsOnly';
+    const META_PARENTS_ONLY = 'parentsOnly';
 
     /**
      * Like `relativesReverse` but follows the parentProperty predicate only 
      * from subject to object.
      */
-    const META_PARENTS_REVERSE   = 'parentsReverse';
+    const META_PARENTS_REVERSE = 'parentsReverse';
 
     /**
      * Provide only a `resourceUrl titleProperty title` triple for a requested
      * resource/resources matching the search.
      */
-    const META_IDS               = 'ids';
+    const META_IDS = 'ids';
 
     /**
      * Creates an object representing a repository resource.
@@ -135,11 +135,18 @@ interface RepoResourceInterface {
      *   one of `RepoResourceInterface::META_*` constants.
      * @param string $parentProperty RDF property name used to find related 
      *   resources in some modes
+     * @param array<string> $resourceProperties list of RDF properties to be includes
+     *   for a resource (if the list is empty, all exsiting RDF properties are included)
+     * @param array<string> $relativesProperties list of RDF properties to be includes
+     *   for resources being relatives (if the list is empty, all exsiting RDF 
+     *   properties are included)
      * @see RepoResourceInterface::META_RESOURCE
      */
     public function loadMetadata(bool $force = false,
                                  string $mode = self::META_RESOURCE,
-                                 ?string $parentProperty = null): void;
+                                 ?string $parentProperty = null,
+                                 array $resourceProperties = [],
+                                 array $relativesProperties = []): void;
 
     /**
      * Returns resource metadata.
