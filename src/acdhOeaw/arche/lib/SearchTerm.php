@@ -49,6 +49,7 @@ class SearchTerm {
     const TYPE_RELATION     = 'relation';
     const TYPE_FTS          = 'fts';
     const TYPE_SPATIAL      = 'spatial';
+    const TYPE_ID           = 'id';
     const OPERATOR_IN       = 'in';
     const COLUMN_STRING     = 'value';
     const STRING_MAX_LENGTH = 1000;
@@ -212,6 +213,8 @@ class SearchTerm {
         }
 
         switch ($type) {
+            case self::TYPE_ID:
+                return $this->getSqlQueryId();
             case self::TYPE_FTS:
                 return $this->getSqlQueryFts();
             case self::TYPE_SPATIAL:
@@ -393,6 +396,15 @@ class SearchTerm {
             $param = array_merge($param, [$idProp], $param, [$baseUrl], $param);
         }
         return new QueryPart($query, $param);
+    }
+
+    private function getSqlQueryId(): QueryPart {
+        if (is_array($this->value)) {
+            $query = 'SELECT id FROM (VALUES ' . substr(str_repeat(', (?)', count($this->value)), 2) . ') AS t (id)';
+            return new QueryPart($query, $this->value);
+        } else {
+            return new QueryPart('SELECT ? AS id', [$this->value]);
+        }
     }
 
     /**
