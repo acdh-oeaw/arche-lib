@@ -190,7 +190,7 @@ class RepoDb implements RepoInterface {
                                           SearchConfig $config): Graph {
         $query         = $this->getPdoStatementBySearchTerms($searchTerms, $config);
         $graph         = $this->parsePdoStatement($query);
-        $config->count = (int) ((string) $graph->resource($this->getBaseUrl())->getLiteral($this->getSchema()->searchCount));
+        $config->count = (int) ((string) $graph->resource($this->getBaseUrl())->getLiteral($this->schema->searchCount));
         return $graph;
     }
 
@@ -205,7 +205,7 @@ class RepoDb implements RepoInterface {
                                        SearchConfig $config): Graph {
         $query         = $this->getPdoStatementBySqlQuery($query, $parameters, $config);
         $graph         = $this->parsePdoStatement($query);
-        $config->count = (int) ((string) $graph->resource($this->getBaseUrl())->getLiteral($this->getSchema()->searchCount));
+        $config->count = (int) ((string) $graph->resource($this->getBaseUrl())->getLiteral($this->schema->searchCount));
         return $graph;
     }
 
@@ -260,11 +260,18 @@ class RepoDb implements RepoInterface {
             ";
             $searchMetaParam = array_merge(
                 [
-                    $this->getSchema()->searchMatch, RDF::XSD_BOOLEAN, 'true',
-                    $this->getSchema()->searchCount, RDF::XSD_INTEGER,
+                    $this->schema->searchMatch, RDF::XSD_BOOLEAN, 'true',
+                    $this->schema->searchCount, RDF::XSD_INTEGER,
                 ],
                 $ftsQP->param, $orderByQP2->param,
             );
+            foreach ($orderByQP1->columns as $n => $i) {
+                $searchMetaQuery   .= "UNION
+                    SELECT id, ?::text AS property, ?::text AS type, ''::text AS lang, $i AS value FROM ids
+                ";
+                $searchMetaParam[] = $this->schema->searchOrderValue . ($n + 1);
+                $searchMetaParam[] = RDF::XSD_STRING;
+            }
         }
 
         $mode = $config->metadataMode ?? '';
@@ -300,13 +307,17 @@ class RepoDb implements RepoInterface {
                 }
         }
 
+        $orderByCols = '';
+        if (count($orderByQP1->columns) > 0) {
+            $orderByCols = ', ' . implode(', ', $orderByQP1->columns);
+        }
         $query = "
             WITH
                 allids AS (
                     SELECT id FROM ($query) t $authQP->query
                 ),
                 ids AS (
-                    SELECT id FROM allids
+                    SELECT id $orderByCols FROM allids
                     $orderByQP1->query
                     $pagingQP->query
                 )
@@ -387,7 +398,7 @@ class RepoDb implements RepoInterface {
                 FROM full_text_search fts $join
                 $where
             ";
-            $prop  = $this->getSchema()->searchFts;
+            $prop  = $this->schema->searchFts;
             $type  = RDF::XSD_STRING;
             $param = array_merge([$prop, $type, $cfg->ftsQuery, $options], $whereParam);
         }
@@ -412,13 +423,19 @@ class RepoDb implements RepoInterface {
                 $desc     = 'DESC';
                 $property = substr($property, 1);
             }
-            $qp->query   .= "LEFT JOIN (SELECT id, min(value) AS _ob$n FROM metadata WHERE property = ? $lang GROUP BY 1) t$n USING (id)\n";
-            $qp->param[] = $property;
+            $qp->query     .= "
+                LEFT JOIN (
+                    SELECT id, min(value) AS _ob$n, min(value_t) AS _obt$n, min(value_n) AS _obn$n
+                    FROM metadata WHERE property = ? $lang GROUP BY 1
+                ) t$n USING (id)
+            ";
+            $qp->param[]   = $property;
+            $qp->columns[] = "_ob$n";
             if (!empty($config->orderByLang)) {
                 $qp->param[] = RDF::XSD_STRING;
                 $qp->param[] = $config->orderByLang;
             }
-            $orderBy .= ($n > 0 ? ', ' : '') . "_ob$n $desc NULLS LAST";
+            $orderBy .= ($n > 0 ? ', ' : '') . "_obt$n $desc NULLS LAST, _obn$n $desc NULLS LAST, _ob$n $desc NULLS LAST";
         }
         $qp->query .= "ORDER BY $orderBy\n";
 
@@ -458,7 +475,7 @@ class RepoDb implements RepoInterface {
      * @return Graph
      */
     public function parsePdoStatement(PDOStatement $query): Graph {
-        $idProp  = $this->getSchema()->id;
+        $idProp  = $this->schema->id;
         $baseUrl = $this->getBaseUrl();
         $graph   = new Graph();
         while ($triple  = $query->fetchObject()) {
