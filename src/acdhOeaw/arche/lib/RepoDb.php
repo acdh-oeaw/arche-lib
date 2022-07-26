@@ -279,8 +279,8 @@ class RepoDb implements RepoInterface {
             default:
                 $getRelParam = $this->parseMetadataReadMode($mode);
                 $metaQuery   = "SELECT (get_relatives_metadata(id::bigint, ?::text, ?::int, ?::int, ?::bool, ?::bool)).* FROM ids";
+                $metaParam   = array_merge([$config->metadataParentProperty], $getRelParam);
                 $metaWhere   = '';
-                $metaParam   = [];
                 // filter output properties
                 if (count($config->resourceProperties) > 0) {
                     $metaWhere .= " OR ids.id IS NOT NULL AND property IN (" . substr(str_repeat(', ?', count($config->resourceProperties)), 2) . ")";
@@ -298,7 +298,6 @@ class RepoDb implements RepoInterface {
                             LEFT JOIN ids USING (id)
                         WHERE " . substr($metaWhere, 4);
                 }
-                $metaParam = array_merge([$config->metadataParentProperty], $getRelParam);
         }
 
         $query = "
@@ -529,6 +528,7 @@ class RepoDb implements RepoInterface {
             if ($param[2] < 0 || $param[2] > 1 || $param[3] < 0 || $param[3] > 1 || count($param) !== 4) {
                 throw new RepoLibException('Bad metadata mode ' . $mode, 400);
             }
+            $param[1] = -$param[1];
         }
         return $param;
     }
@@ -541,13 +541,9 @@ class RepoDb implements RepoInterface {
      */
     private function logQuery(string $query, array $param): void {
         if (isset($this->queryLog)) {
-            $msg = "\tSearch query:\n";
-            while (($pos = strpos($query, '?')) !== false) {
-                $msg   .= substr($query, 0, $pos) . $this->pdo->quote(array_shift($param));
-                $query = substr($query, $pos + 1);
-            }
-            $msg .= $query;
-            $this->queryLog->debug("\tSearch query:\n" . $msg);
+            $this->queryLog->debug($query);
+            $this->queryLog->debug(yaml_emit($param));
+            $this->queryLog->debug("\tSearch query:\n" . (new QueryPart($query, $param)));
         }
     }
 }
