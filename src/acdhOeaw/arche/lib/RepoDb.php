@@ -541,8 +541,6 @@ class RepoDb implements RepoInterface {
      */
     private function logQuery(string $query, array $param): void {
         if (isset($this->queryLog)) {
-            $this->queryLog->debug($query);
-            $this->queryLog->debug(yaml_emit($param));
             $this->queryLog->debug("\tSearch query:\n" . (new QueryPart($query, $param)));
         }
     }
