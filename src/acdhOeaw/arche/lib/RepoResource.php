@@ -28,6 +28,7 @@ namespace acdhOeaw\arche\lib;
 
 use RuntimeException;
 use EasyRdf\Graph;
+use EasyRdf\Serialiser\Ntriples;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Promise\PromiseInterface;
@@ -48,7 +49,6 @@ class RepoResource implements RepoResourceInterface {
     const UPDATE_ADD       = 'add';
     const UPDATE_OVERWRITE = 'overwrite';
     const UPDATE_MERGE     = 'merge';
-    const DELETE_STEP      = 1000;
 
     /**
      * Creates a repository resource object from the PSR-7 response object
@@ -234,16 +234,31 @@ class RepoResource implements RepoResourceInterface {
     /**
      * Deletes the repository resource.
      * 
+     * Returns an array of deleted resources' URIs.
      * @param bool $tombstone should tombstones be removed for deleted resources?
      * @param bool $references should references to deleted resources be removed
      *   from other resources?
      * @param string $recursiveProperty is present, deletion continues recursively
      *   to all resources pointing to the deleted one with this RDF property
-     * @return void
+     * @return array<string>
      */
     public function delete(bool $tombstone = false, bool $references = false,
-                           string $recursiveProperty = ''): void {
-        $this->deleteAsync($tombstone, $references, $recursiveProperty)->wait();
+                           string $recursiveProperty = ''): array {
+        $result = $this->deleteAsync($tombstone, $references, $recursiveProperty)->wait();
+        $g      = new Graph();
+        if (!is_array($result)) {
+            $result = [$result];
+        }
+        foreach ($result as $i) {
+            $g->parse((string) $i->getBody());
+        }
+        $deleted = [];
+        foreach ($g->resources() as $i) {
+            if (count($i->propertyUris()) > 0) {
+                $deleted[] = $i->getUri();
+            }
+        }
+        return $deleted;
     }
 
     /**
@@ -273,15 +288,24 @@ class RepoResource implements RepoResourceInterface {
 
         if ($tombstone) {
             $promise = $promise->then(function (ResponseInterface $resp): array {
-                $format = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
+                $format  = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
+                $idProp  = Ntriples::escapeIri($this->repo->getSchema()->id);
 
                 $graph        = new Graph();
                 $graph->parse((string) $resp->getBody(), $format);
                 $respPromises = [];
                 foreach ($graph->resources() as $i) {
                     if (count($i->propertyUris()) > 0) {
-                        $req            = new Request('delete', $i->getUri() . '/tombstone');
-                        $respPromises[] = $this->repo->sendRequest($req);
+                        $req  = new Request('delete', $i->getUri() . '/tombstone');
+                        $resp = $this->repo->sendRequest($req);
+                        if ($resp->getStatusCode() === 204) {
+                            // fake response of a delete without tombstone removal
+                            $uri  = Ntriples::escapeIri($i->getUri());
+                            $resp = $resp->
+                                withBody(\GuzzleHttp\Psr7\Utils::streamFor("<$uri> <$idProp> <$uri> ."))->
+                                withHeader('Content-Type', 'application/n-triples');
+                        }
+                        $respPromises[] = $resp;
                     }
                 }
                 return $respPromises;
