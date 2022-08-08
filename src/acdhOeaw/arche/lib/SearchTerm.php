@@ -396,13 +396,15 @@ class SearchTerm {
     /**
      * Returns the search term formatted as an HTTP query string.
      * 
+     * @param int $n term number. It's required for propert serialization of
+     *   multi-property and multi-values search terms.
      * @return string
      */
-    public function getFormData(): string {
+    public function getFormData(int $n = 0): string {
         $terms = [];
         foreach ((array) $this as $k => $v) {
             if ($v !== null) {
-                $terms[$k . '[]'] = is_array($v) ? $v : (string) $v;
+                $terms[$k . "[$n]"] = is_array($v) ? $v : (string) $v;
             }
         }
         return http_build_query($terms);
