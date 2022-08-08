@@ -603,8 +603,9 @@ class Repo implements RepoInterface {
         ];
         $headers = array_merge($headers, $config->getHeaders($this));
         $body    = [];
+        $n       = 0;
         foreach ($searchTerms as $i) {
-            $body[] = $i->getFormData();
+            $body[] = $i->getFormData($n++);
         }
         $body = implode('&', $body);
         $body .= (!empty($body) ? '&' : '') . $config->toQuery();
