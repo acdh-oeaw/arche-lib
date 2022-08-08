@@ -214,4 +214,16 @@ class SearchTest extends TestBase {
         $this->assertEquals(1, count($result));
         $this->assertEquals('a more original title for a resource', (string) $result[0]->getMetadata()->getLiteral(self::$schema->label));
     }
+
+    /**
+     * Tests if a value can be any identifier of the target resource
+     * 
+     * @group search
+     */
+    public function testSearchRelation(): void {
+        $terms  = [new SearchTerm(self::$repo->getSchema()->parent, 'https://an.unique.id')];
+        $result = iterator_to_array(self::$repo->getResourcesBySearchTerms($terms, new SearchConfig()));
+        $this->assertEquals(1, count($result));
+        $this->assertEquals('a more original title for a resource', (string) $result[0]->getMetadata()->getLiteral(self::$schema->label));
+    }
 }

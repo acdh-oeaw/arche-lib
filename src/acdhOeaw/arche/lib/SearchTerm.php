@@ -348,6 +348,7 @@ class SearchTerm {
         $otherTables = false;
         if (!empty($this->value) && is_scalar($this->value)) {
             $column      = self::$typesToColumns[$type];
+            $columnRaw   = $column;
             $otherTables = $column === self::COLUMN_STRING;
             // string values stored in the database can be too long to be indexed, 
             // therefore the index is set only on `substring(value, 1, self::STRING_MAX_LENGTH)`
@@ -385,6 +386,7 @@ class SearchTerm {
             WHERE $where
         ";
         if ($otherTables) {
+            $where = str_replace($column, $columnRaw, $where);
             $query .= "
               UNION
                 SELECT DISTINCT id
@@ -392,10 +394,10 @@ class SearchTerm {
                 WHERE $where
               UNION
                 SELECT DISTINCT id
-                FROM (SELECT id, property, '' AS lang, ? || target_id AS value FROM relations) t
+                FROM (SELECT r.id, property, '' AS lang, ids AS value FROM relations r JOIN identifiers i ON r.target_id = i.id) t
                 WHERE $where
             ";
-            $param = array_merge($param, [$idProp], $param, [$baseUrl], $param);
+            $param = array_merge($param, [$idProp], $param, $param);
         }
         return new QueryPart($query, $param);
     }
