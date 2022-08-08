@@ -412,6 +412,8 @@ class SearchTerm {
     /**
      * Returns the search term formatted as an HTTP query string.
      * 
+     * @param int $n term number. It's required for propert serialization of
+     *   multi-property and multi-values search terms.
      * @return string
      */
     public function getFormData(int $n = 0): string {

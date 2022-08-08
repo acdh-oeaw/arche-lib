@@ -150,7 +150,9 @@ class RepoDb implements RepoInterface {
         }
         $url   = $this->getBaseUrl() . $id;
         $class = $class ?? self::$resourceClass;
-        return new $class($url, $this);
+        $obj   = new $class($url, $this);
+        /** @var RepoResourceDb $obj */
+        return $obj;
     }
 
     /**
@@ -517,6 +519,7 @@ class RepoDb implements RepoInterface {
             $i->delete($this->schema->searchMatch);
             $i->delete($this->schema->searchOrder);
             $obj = new $class($i->getUri(), $this);
+            /** @var RepoResourceDb $obj */
             $obj->setGraph($i);
             yield $obj;
         }

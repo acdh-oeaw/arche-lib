@@ -741,6 +741,7 @@ class Repo implements RepoInterface {
             $i->delete($this->schema->searchMatch);
             $i->delete($this->schema->searchOrder);
             $obj = new $class($i->getUri(), $this);
+            /** @var RepoResource $obj */
             $obj->setGraph($i);
             yield $obj;
         }
