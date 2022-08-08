@@ -209,7 +209,7 @@ class SearchTest extends TestBase {
      * @group search
      */
     public function testSearchOr(): void {
-        $terms  = [new SearchTerm(['https://date.prop', 'https://number.prop'], 30)];
+        $terms  = [new SearchTerm(['https://date.prop', 'https://number.prop'], 20)];
         $result = iterator_to_array(self::$repo->getResourcesBySearchTerms($terms, new SearchConfig()));
         $this->assertEquals(1, count($result));
         $this->assertEquals('a more original title for a resource', (string) $result[0]->getMetadata()->getLiteral(self::$schema->label));
