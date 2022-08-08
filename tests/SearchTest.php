@@ -204,4 +204,14 @@ class SearchTest extends TestBase {
         $second          = (string) $results[1]->getGraph()->get($dateProp);
         $this->assertLessThan($first, $second);
     }
+
+    /**
+     * @group search
+     */
+    public function testSearchOr(): void {
+        $terms  = [new SearchTerm(['https://date.prop', 'https://number.prop'], 30)];
+        $result = iterator_to_array(self::$repo->getResourcesBySearchTerms($terms, new SearchConfig()));
+        $this->assertEquals(1, count($result));
+        $this->assertEquals('a more original title for a resource', (string) $result[0]->getMetadata()->getLiteral(self::$schema->label));
+    }
 }
