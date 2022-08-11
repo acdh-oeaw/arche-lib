@@ -114,6 +114,8 @@ class RepoResourceDb implements RepoResourceInterface {
         $config                           = new SearchConfig();
         $config->metadataMode             = $mode;
         $config->metadataParentProperty   = $parentProperty;
+        $config->resourceProperties       = $resourceProperties;
+        $config->relativesProperties      = $relativesProperties;
         $config->skipArtificialProperties = true;
 
         $term = new SearchTerm(null, $this->id, '=', SearchTerm::TYPE_ID);
