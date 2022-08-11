@@ -287,8 +287,24 @@ class RepoDb implements RepoInterface {
                 break;
             default:
                 $getRelParam = $this->parseMetadataReadMode($mode);
-                $metaQuery   = "SELECT (get_relatives_metadata(id::bigint, ?::text, ?::int, ?::int, ?::bool, ?::bool)).* FROM ids";
-                $metaParam   = array_merge([$config->metadataParentProperty], $getRelParam);
+                $metaQuery   = "
+                    , relatives AS (SELECT DISTINCT (get_relatives(id::bigint, ?::text, ?::int, ?::int, ?::bool, ?::bool)).id FROM ids),
+                    meta AS (
+                        SELECT id, ?::text AS property, 'ID'::text AS type, null::text AS lang, ids AS value
+                        FROM relatives JOIN identifiers USING (id)
+                        UNION
+                        SELECT id, property, 'REL'::text AS type, null::text AS lang, target_id::text AS value
+                        FROM relatives JOIN relations USING (id)
+                        UNION
+                        SELECT id, property, type, lang, value
+                        FROM relatives JOIN metadata USING (id)
+                    )
+                ";
+                $metaParam   = array_merge(
+                    [$config->metadataParentProperty],
+                    $getRelParam,
+                    [$this->schema->id]
+                );
                 $metaWhere   = '';
                 // filter output properties
                 if (count($config->resourceProperties) > 0) {
@@ -299,13 +315,10 @@ class RepoDb implements RepoInterface {
                     $metaWhere .= " OR ids.id IS NULL AND property IN (" . substr(str_repeat(', ?', count($config->relativesProperties)), 2) . ")";
                     $metaParam = array_merge($metaParam, $config->relativesProperties);
                 }
-                if (!empty($metaWhere)) {
-                    $metaQuery = "
-                        SELECT *
-                        FROM
-                            ($metaQuery) mq
-                            LEFT JOIN ids USING (id)
-                        WHERE " . substr($metaWhere, 4);
+                if (empty($metaWhere)) {
+                    $metaQuery .= "SELECT * FROM meta";
+                } else {
+                    $metaQuery .= "SELECT meta.* FROM meta LEFT JOIN ids USING (id) WHERE " . substr($metaWhere, 4);
                 }
         }
 
