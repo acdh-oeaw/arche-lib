@@ -646,8 +646,8 @@ class Repo implements RepoInterface {
      */
     public function rollback(): void {
         if (!empty($this->txId)) {
-            $this->txId = null;
             $headers    = [$this->getHeaderName('transactionId') => $this->txId];
+            $this->txId = null;
             $req        = new Request('delete', $this->baseUrl . 'transaction', $headers);
             $this->sendRequest($req);
         }
@@ -664,8 +664,8 @@ class Repo implements RepoInterface {
      */
     public function commit(): void {
         if (!empty($this->txId)) {
-            $this->txId = null;
             $headers    = [$this->getHeaderName('transactionId') => $this->txId];
+            $this->txId = null;
             $req        = new Request('put', $this->baseUrl . 'transaction', $headers);
             $this->sendRequest($req);
         }
