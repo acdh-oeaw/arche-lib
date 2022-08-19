@@ -244,6 +244,7 @@ class Repo implements RepoInterface {
         }
         $this->schema  = new Schema($config->schema);
         $this->headers = new Schema($config->rest->headers);
+        $this->baseUrl = $config->rest->urlBase . $config->rest->pathBase;
     }
 
     /**
