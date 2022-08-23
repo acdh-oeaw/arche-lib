@@ -310,10 +310,14 @@ class RepoDb implements RepoInterface {
                 if (count($config->resourceProperties) > 0) {
                     $metaWhere .= " OR ids.id IS NOT NULL AND property IN (" . substr(str_repeat(', ?', count($config->resourceProperties)), 2) . ")";
                     $metaParam = array_merge($metaParam, $config->resourceProperties);
+                } elseif (count($config->relativesProperties) > 0) {
+                    $metaWhere .= " OR ids.id IS NOT NULL";
                 }
                 if (count($config->relativesProperties) > 0) {
                     $metaWhere .= " OR ids.id IS NULL AND property IN (" . substr(str_repeat(', ?', count($config->relativesProperties)), 2) . ")";
                     $metaParam = array_merge($metaParam, $config->relativesProperties);
+                } elseif (count($config->resourceProperties) > 0) {
+                    $metaWhere .= " OR ids.id IS NULL";
                 }
                 if (empty($metaWhere)) {
                     $metaQuery .= "SELECT * FROM meta";
