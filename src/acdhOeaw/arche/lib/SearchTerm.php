@@ -40,6 +40,7 @@ use acdhOeaw\arche\lib\exception\RepoLibException;
 class SearchTerm {
 
     const PROPERTY_BINARY   = 'BINARY';
+    const PROPERTY_NEGATE   = '^';
     const DATETIME_REGEX    = '/^-?[0-9]{4,}-[0-9][0-9]-[0-9][0-9](T[0-9][0-9](:[0-9][0-9])?(:[0-9][0-9])?([.][0-9]+)?Z?)?$/';
     const URI_REGEX         = '\w+:(\/?\/?)[^\s]+';
     const TYPE_NUMBER       = 'number';
@@ -153,6 +154,8 @@ class SearchTerm {
      * Creates a search term object.
      * 
      * @param array<string>|string|null $property property to be matched by the RDF triple
+     *   if prefixed with a `self::PROPERTY_NEGATE`, the rdfs:resource $type is enforced 
+     *   and the $value is evaluated against the triple subject (instead of object)
      * @param array<scalar>|scalar|null $value value to be matched by the RDF triple (with a given operator)
      * @param string $operator operator used to compare the RDF triple value
      * @param string|null $type value to be matched by the RDF triple 
@@ -191,18 +194,18 @@ class SearchTerm {
             return $this->getSqlQueryOr($baseUrl, $idProp, $nonRelationProperties);
         }
 
-        $type = self::$operators[substr($this->operator ?? '', 0, 2)]; // substr for spatial operators with distance
-        // if type not enforced by the operator, try the provided one
-        if ($type === null) {
-            $type = $this->type;
+        if (str_starts_with($this->property ?? '', self::PROPERTY_NEGATE)) {
+            $type = self::TYPE_RELATION;
+        } else {
+            $type = self::$operators[substr($this->operator ?? '', 0, 2)]; // substr for spatial operators with distance
         }
-        // if type not enforced by the operator and not provided, guess it
+        // if type not enforced by the property direction nor operator, try the provided one
+        $type = $type ?? $this->type;
+        // if type still unknown guess it from the value
         if ($type === null) {
-            // if many values, guess the type based on the first one
-            $value = is_array($this->value) ? reset($this->value) : $this->value;
-            if (is_numeric($value)) {
+            if (is_numeric($this->value)) {
                 $type = self::TYPE_NUMBER;
-            } elseif (preg_match(self::DATETIME_REGEX, (string) $value)) {
+            } elseif (preg_match(self::DATETIME_REGEX, (string) $this->value)) {
                 $type = self::TYPE_DATETIME;
             } else {
                 $type = self::TYPE_STRING;
@@ -222,7 +225,7 @@ class SearchTerm {
                 return $this->getSqlQuerySpatial();
             case self::TYPE_RELATION:
             case RDF::RDFS_RESOURCE:
-                return $this->getSqlQueryUri();
+                return $this->getSqlQueryUri($this->property ?? '');
             default:
                 return $this->getSqlQueryMeta($type, $baseUrl, $idProp);
         }
@@ -283,23 +286,33 @@ class SearchTerm {
         return new QueryPart($query, $param);
     }
 
-    private function getSqlQueryUri(): QueryPart {
-        $where = $param = [];
-        if (!empty($this->property)) {
-            $where[] = "property = ?";
-            $param[] = $this->property;
+    private function getSqlQueryUri(string $property): QueryPart {
+        $value    = $this->value;
+        $select   = "r.id";
+        $on       = "r.target_id = i.id";
+        if (str_starts_with($property, self::PROPERTY_NEGATE)) {
+            $property = substr($property, strlen(self::PROPERTY_NEGATE));
+            $id       = $this->value;
+            $select   = "r.target_id AS id";
+            $on       = "r.id = i.id";
         }
-        if (!empty($this->value)) {
+        
+        $where = $param = [];
+        if (!empty($property)) {
+            $where[] = "property = ?";
+            $param[] = $property;
+        }
+        if (!empty($value)) {
             $where[] = "ids = ?";
-            $param[] = $this->value;
+            $param[] = $value;
         }
         if (count($where) === 0) {
             throw new RepoLibException('Empty search term', 400);
         }
         $where = implode(' AND ', $where);
         $query = "
-            SELECT DISTINCT r.id
-            FROM relations r JOIN identifiers i ON r.target_id = i.id
+            SELECT DISTINCT $select
+            FROM relations r JOIN identifiers i ON $on
             WHERE $where
         ";
         return new QueryPart($query, $param);

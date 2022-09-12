@@ -55,6 +55,7 @@ class SearchTest extends TestBase {
         $this->noteResource($res1);
 
         $meta2 = $this->getMetadata([
+            self::$schema->id     => 'https://res2.id',
             $relProp              => $res1->getUri(),
             self::$schema->label  => 'a more original title for a resource',
             'https://number.prop' => 20,
@@ -225,5 +226,19 @@ class SearchTest extends TestBase {
         $result = iterator_to_array(self::$repo->getResourcesBySearchTerms($terms, new SearchConfig()));
         $this->assertEquals(1, count($result));
         $this->assertEquals('a more original title for a resource', (string) $result[0]->getMetadata()->getLiteral(self::$schema->label));
+    }
+
+    /**
+     * 
+     * @group search
+     */
+    public function testSearchInverseRelation(): void {
+        $terms  = [new SearchTerm(
+                SearchTerm::PROPERTY_NEGATE . self::$repo->getSchema()->parent,
+                'https://res2.id'
+        )];
+        $result = iterator_to_array(self::$repo->getResourcesBySearchTerms($terms, new SearchConfig()));
+        $this->assertEquals(1, count($result));
+        $this->assertEquals('sample label for the first resource', (string) $result[0]->getMetadata()->getLiteral(self::$schema->label));
     }
 }
