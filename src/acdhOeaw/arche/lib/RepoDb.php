@@ -271,7 +271,7 @@ class RepoDb implements RepoInterface {
                 $searchMetaQuery   .= "UNION
                     SELECT id, ?::text AS property, ?::text AS type, ''::text AS lang, $i AS value FROM ids
                 ";
-                $searchMetaParam[] = $this->schema->searchOrderValue . ($n + 1);
+                $searchMetaParam[] = $this->schema->searchOrderValue . $n;
                 $searchMetaParam[] = RDF::XSD_STRING;
             }
         }
