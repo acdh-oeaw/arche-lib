@@ -110,6 +110,12 @@ class SearchConfig {
     public ?string $orderByLang = null;
 
     /**
+     * If specified, determines the collation used for ordering the search results.
+     * The collation must be available for the underlying database. 
+     */
+    public ?string $orderByCollation = null;
+
+    /**
      * List of metadata properties to fetch for the resource.
      * 
      * If empty, all properties are fetched.
@@ -202,7 +208,7 @@ class SearchConfig {
      * ordering, FTS highlighting, etc. be skipped or included.
      */
     public bool $skipArtificialProperties = false;
-    
+
     /**
      * 
      * @return array<mixed>

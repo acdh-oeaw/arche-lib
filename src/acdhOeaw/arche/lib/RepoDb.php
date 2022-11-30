@@ -434,7 +434,16 @@ class RepoDb implements RepoInterface {
         if (!is_array($config->orderBy) || count($config->orderBy) === 0) {
             return [$qp, $qp];
         }
-        $lang    = !empty($config->orderByLang) ? "AND (type <> ? OR lang = ?)" : '';
+        $lang      = !empty($config->orderByLang) ? "AND (type <> ? OR lang = ?)" : '';
+        $collation = '';
+        if (!empty($config->orderByCollation)) {
+            $query = $this->pdo->prepare("SELECT count(*) FROM pg_collation WHERE collname = ?");
+            $query->execute([$config->orderByCollation]);
+            if ($query->fetchColumn() !== 1) {
+                throw new RepoLibException("Unsupported collation '$config->orderByCollation'", 400);
+            }
+            $collation = 'COLLATE "' . $config->orderByCollation . '"';
+        }
         $orderBy = '';
         foreach ($config->orderBy as $n => $property) {
             $desc = '';
@@ -454,7 +463,7 @@ class RepoDb implements RepoInterface {
                 $qp->param[] = RDF::XSD_STRING;
                 $qp->param[] = $config->orderByLang;
             }
-            $orderBy .= ($n > 0 ? ', ' : '') . "_obt$n $desc NULLS LAST, _obn$n $desc NULLS LAST, _ob$n $desc NULLS LAST";
+            $orderBy .= ($n > 0 ? ', ' : '') . "_obt$n $desc NULLS LAST, _obn$n $desc NULLS LAST, _ob$n $collation $desc NULLS LAST";
         }
         $qp->query .= "ORDER BY $orderBy\n";
 
