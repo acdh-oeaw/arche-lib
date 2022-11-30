@@ -437,7 +437,7 @@ class RepoDb implements RepoInterface {
         $lang      = !empty($config->orderByLang) ? "AND (type <> ? OR lang = ?)" : '';
         $collation = '';
         if (!empty($config->orderByCollation)) {
-            $query = $this->pdo->prepare("SELECT count(*) FROM pg_collation WHERE collcollate = ?");
+            $query = $this->pdo->prepare("SELECT count(*) FROM pg_collation WHERE collname = ?");
             $query->execute([$config->orderByCollation]);
             if ($query->fetchColumn() !== 1) {
                 throw new RepoLibException("Unsupported collation '$config->orderByCollation'", 400);
