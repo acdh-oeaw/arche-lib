@@ -445,8 +445,8 @@ class RepoDb implements RepoInterface {
             $collation = 'COLLATE "' . $config->orderByCollation . '"';
         }
         $orderBy = '';
-        $n = 0;
-        foreach ($config->orderBy as $property) {
+        ksort($config->orderBy);
+        foreach (array_values($config->orderBy) as $n => $property) {
             $desc = '';
             if (substr($property, 0, 1) === '^') {
                 $desc     = 'DESC';
@@ -465,7 +465,6 @@ class RepoDb implements RepoInterface {
                 $qp->param[] = $config->orderByLang;
             }
             $orderBy .= ($n > 0 ? ', ' : '') . "_obt$n $desc NULLS LAST, _obn$n $desc NULLS LAST, _ob$n $collation $desc NULLS LAST";
-            $n++;
         }
         $qp->query .= "ORDER BY $orderBy\n";
 
