@@ -309,7 +309,7 @@ class RepoResourceTest extends TestBase {
         }, $meta->all($idProp));
         $this->assertContains($id1, $ids);
         $this->assertContains($id2, $ids);
-        $this->assertCount(4, $ids);
+        $this->assertCount(3, $ids);
 
         self::$repo->commit();
         $this->expectExceptionCode(404);
