@@ -33,6 +33,7 @@ use EasyRdf\Resource;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Promise\RejectedPromise;
 use Psr\Http\Message\ResponseInterface;
@@ -338,7 +339,7 @@ class Repo implements RepoInterface {
             $request = $request->withHeader($this->getHeaderName('transactionId'), $this->txId);
         }
         $promise = $this->client->sendAsync($request)->otherwise(
-            function (RequestException $e) {
+            function (TransferException $e) {
                 switch ($e->getCode()) {
                     case 410:
                         return new RejectedPromise(new Deleted());
@@ -364,7 +365,7 @@ class Repo implements RepoInterface {
      *   signature `f(mixed $iterElement, Repo $thisRepoObject): GuzzleHttp\Promise\PromiseInterface`.
      * @param int $concurrency number of promises executed in parallel
      * @param int $rejectAction what to do with rejected promises - one of 
-     *   Repo::REJECT_SKIP (skip the silently), Repo::REJECT_FAIL (throw an error)
+     *   Repo::REJECT_SKIP (skip them silently), Repo::REJECT_FAIL (throw an error)
      *   and Repo::REJECT_INCLUDE (include the rejection value in the results).
      * @return array<mixed>
      */
