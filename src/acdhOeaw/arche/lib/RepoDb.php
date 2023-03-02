@@ -320,9 +320,9 @@ class RepoDb implements RepoInterface {
                     $metaWhere .= " OR ids.id IS NULL";
                 }
                 if (empty($metaWhere)) {
-                    $metaQuery .= "SELECT * FROM meta";
+                    $metaQuery .= "SELECT id, property, type, lang, value FROM meta";
                 } else {
-                    $metaQuery .= "SELECT meta.* FROM meta LEFT JOIN ids USING (id) WHERE " . substr($metaWhere, 4);
+                    $metaQuery .= "SELECT meta.id, meta.property, meta.type, meta.lang, meta.value FROM meta LEFT JOIN ids USING (id) WHERE " . substr($metaWhere, 4);
                 }
         }
 
