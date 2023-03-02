@@ -290,13 +290,13 @@ class RepoDb implements RepoInterface {
                 $metaQuery   = "
                     , relatives AS (SELECT DISTINCT (get_relatives(id::bigint, ?::text, ?::int, ?::int, ?::bool, ?::bool)).id FROM ids),
                     meta AS (
-                        SELECT id, ?::text AS property, 'ID'::text AS type, null::text AS lang, ids AS value
+                        SELECT id, ?::text AS property, 'ID'::text AS type, null::text AS lang, ids AS value, false AS revrel
                         FROM relatives JOIN identifiers USING (id)
                         UNION
-                        SELECT id, property, 'REL'::text AS type, null::text AS lang, target_id::text AS value
-                        FROM relatives JOIN relations USING (id)
+                        SELECT r.id, property, 'REL'::text AS type, null::text AS lang, target_id::text AS value, i.id IS NOT NULL as revrel
+                        FROM relatives JOIN relations r USING (id) LEFT JOIN ids i ON r.target_id = i.id 
                         UNION
-                        SELECT id, property, type, lang, value
+                        SELECT id, property, type, lang, value, false AS revrel
                         FROM relatives JOIN metadata USING (id)
                     )
                 ";
@@ -314,7 +314,7 @@ class RepoDb implements RepoInterface {
                     $metaWhere .= " OR ids.id IS NOT NULL";
                 }
                 if (count($config->relativesProperties) > 0) {
-                    $metaWhere .= " OR ids.id IS NULL AND property IN (" . substr(str_repeat(', ?', count($config->relativesProperties)), 2) . ")";
+                    $metaWhere .= " OR ids.id IS NULL AND (property IN (" . substr(str_repeat(', ?', count($config->relativesProperties)), 2) . ") OR revrel)";
                     $metaParam = array_merge($metaParam, $config->relativesProperties);
                 } elseif (count($config->resourceProperties) > 0) {
                     $metaWhere .= " OR ids.id IS NULL";
