@@ -178,7 +178,6 @@ class SmartSearch {
                     full_text_search f
                     LEFT JOIN metadata sm using (mid)
                     $searchFrom
-                    $nnFrom                    
                 WHERE
                     websearch_to_tsquery('simple', ?) @@ segments
                     $inBinary
@@ -272,7 +271,7 @@ class SmartSearch {
         $query     = "
           WITH page AS (SELECT * FROM " . self::TEMPTABNAME . " OFFSET ? LIMIT ?)
             SELECT null::bigint AS id, ? AS property, ? AS type, '' AS lang, count(*)::text AS value
-            FROM page
+            FROM " . self::TEMPTABNAME . "
           UNION
             SELECT id, ? AS property, ? AS type, '' AS lang, (row_number() OVER ())::text AS value
             FROM page
