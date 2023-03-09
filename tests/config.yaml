@@ -16,6 +16,8 @@ schema:
     searchMatch: search://match
     searchFts: search://fts
     searchCount: search://count
+    searchWeight: search://weight
+    searchOrder: search://order
     binarySize: https://vocabs.acdh.oeaw.ac.at/schema#hasBinarySize
     fileName: http://www.ebu.ch/metadata/ontologies/ebucore/ebucore#filename
     mime: https://vocabs.acdh.oeaw.ac.at/schema#hasFormat

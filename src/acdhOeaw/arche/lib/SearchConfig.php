@@ -33,7 +33,16 @@ namespace acdhOeaw\arche\lib;
  */
 class SearchConfig {
 
-    const FTS_BINARY = 'BINARY';
+    const FTS_BINARY                     = 'BINARY';
+
+    /**
+     * 
+     * @var array<string>
+     */
+    static private array $highlightParam = [
+        'StartSel', 'StopSel', 'MaxWords', 'MinWords',
+        'ShortWord', 'HighlightAll', 'MaxFragments', 'FragmentDelimiter'
+    ];
 
     /**
      * Creates an instance of the SearchConfig class from the POST data or 
@@ -253,5 +262,16 @@ class SearchConfig {
 
     public function toQuery(): string {
         return http_build_query($this->toArray());
+    }
+
+    public function getTsHeadlineOptions(): string {
+        $options = '';
+        foreach (self::$highlightParam as $i) {
+            $ii = 'fts' . $i;
+            if (isset($this->$ii) && $this->ii !== null) {
+                $options .= " ,$i=" . $this->$ii;
+            }
+        }
+        return substr($options, 2);
     }
 }

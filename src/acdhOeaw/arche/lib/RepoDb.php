@@ -58,15 +58,6 @@ class RepoDb implements RepoInterface {
     static public $resourceClass = '\acdhOeaw\arche\lib\RepoResourceDb';
 
     /**
-     * 
-     * @var array<string>
-     */
-    static private array $highlightParam = [
-        'StartSel', 'StopSel', 'MaxWords', 'MinWords',
-        'ShortWord', 'HighlightAll', 'MaxFragments', 'FragmentDelimiter'
-    ];
-
-    /**
      * Creates a repository object instance from a given configuration file.
      * 
      * Automatically parses required config properties and passes them to the RepoDb object constructor.
@@ -391,15 +382,6 @@ class RepoDb implements RepoInterface {
         $query = '';
         $param = [];
         if (!empty($cfg->ftsQuery)) {
-            $options = '';
-            foreach (self::$highlightParam as $i) {
-                $ii = 'fts' . $i;
-                if ($cfg->$ii !== null) {
-                    $options .= " ,$i=" . $cfg->$ii;
-                }
-            }
-            $options = substr($options, 2);
-
             $join       = 'JOIN ids USING (id)';
             $idSrc      = 'fts';
             $where      = '';
@@ -419,7 +401,7 @@ class RepoDb implements RepoInterface {
             ";
             $prop  = $this->schema->searchFts;
             $type  = RDF::XSD_STRING;
-            $param = array_merge([$prop, $type, $cfg->ftsQuery, $options], $whereParam);
+            $param = array_merge([$prop, $type, $cfg->ftsQuery, $cfg->getTsHeadlineOptions()], $whereParam);
         }
         return new QueryPart($query, $param);
     }

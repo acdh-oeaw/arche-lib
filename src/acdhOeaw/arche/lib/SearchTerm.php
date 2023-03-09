@@ -98,6 +98,12 @@ class SearchTerm {
         self::TYPE_ID          => 'id',
     ];
 
+    static public function escapeFts(string $value): string {
+        // escape URIs/URLs so that websearch_to_tsquery() parses them properly
+        $value = (string) preg_replace("`" . self::URI_REGEX . "`", '"\0"', $value);
+        return str_replace('""', '"', $value);
+    }
+
     /**
      * Creates an instance of the SearchTerm class from a given $_POST vars set
      * 
@@ -261,9 +267,7 @@ class SearchTerm {
 
     private function getSqlQueryFts(): QueryPart {
         $value = is_array($this->value) ? reset($this->value) : $this->value;
-        // escape URIs/URLs so that websearch_to_tsquery() parses them properly
-        $value = preg_replace("`" . self::URI_REGEX . "`", '"\0"', (string) $value);
-        $value = str_replace('""', '"', (string) $value);
+        $value = self::escapeFts((string) $value);
         $param = [$value];
         $where = '';
         if (!empty($this->language)) {
@@ -287,16 +291,16 @@ class SearchTerm {
     }
 
     private function getSqlQueryUri(string $property): QueryPart {
-        $value    = $this->value;
-        $select   = "r.id";
-        $on       = "r.target_id = i.id";
+        $value  = $this->value;
+        $select = "r.id";
+        $on     = "r.target_id = i.id";
         if (str_starts_with($property, self::PROPERTY_NEGATE)) {
             $property = substr($property, strlen(self::PROPERTY_NEGATE));
             $id       = $this->value;
             $select   = "r.target_id AS id";
             $on       = "r.id = i.id";
         }
-        
+
         $where = $param = [];
         if (!empty($property)) {
             $where[] = "property = ?";
