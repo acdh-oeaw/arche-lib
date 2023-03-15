@@ -26,8 +26,6 @@
 
 namespace acdhOeaw\arche\lib;
 
-use zozlak\RdfConstants as RDF;
-
 /**
  * Simole container for an RDF triple value read from a database
  *
@@ -36,7 +34,7 @@ use zozlak\RdfConstants as RDF;
 class TripleValue {
 
     static public function fromDbRow(object $row) {
-        $triple        = new Triple();
+        $triple        = new TripleValue();
         $triple->type  = $row->type;
         $triple->lang  = (string) $row->lang;
         $triple->value = $row->value_t ?? $row->value_n ?? $row->value;
