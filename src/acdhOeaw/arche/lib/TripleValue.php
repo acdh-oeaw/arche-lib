@@ -43,7 +43,7 @@ class TripleValue implements \Stringable {
 
     public string $type;
     public string $lang;
-    public string | int | float | bool $value;
+    public string | int | float | bool | null $value;
 
     public function __toString(): string {
         return $this->value;
