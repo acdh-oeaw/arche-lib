@@ -416,7 +416,7 @@ class RepoDb implements RepoInterface {
         if (!is_array($config->orderBy) || count($config->orderBy) === 0) {
             return [$qp, $qp];
         }
-        $lang      = !empty($config->orderByLang) ? "AND (type <> ? OR lang = ?)" : '';
+        $lang      = !empty($config->orderByLang) ? ", lang = ? DESC NULLS LAST" : '';
         $collation = '';
         if (!empty($config->orderByCollation)) {
             $query = $this->pdo->prepare("SELECT count(*) FROM pg_collation WHERE collname = ?");
@@ -436,14 +436,14 @@ class RepoDb implements RepoInterface {
             }
             $qp->query     .= "
                 LEFT JOIN (
-                    SELECT id, min(value) AS _ob$n, min(value_t) AS _obt$n, min(value_n) AS _obn$n
-                    FROM metadata WHERE property = ? $lang GROUP BY 1
+                    SELECT DISTINCT ON (id) id, value AS _ob$n, value_t AS _obt$n, value_n AS _obn$n
+                    FROM metadata WHERE property = ?
+                    ORDER BY id $lang, value_t, value_n, value
                 ) t$n USING (id)
             ";
             $qp->param[]   = $property;
             $qp->columns[] = "_ob$n";
             if (!empty($config->orderByLang)) {
-                $qp->param[] = RDF::XSD_STRING;
                 $qp->param[] = $config->orderByLang;
             }
             $orderBy .= ($n > 0 ? ', ' : '') . "_obt$n $desc NULLS LAST, _obn$n $desc NULLS LAST, _ob$n $collation $desc NULLS LAST";
