@@ -31,7 +31,7 @@ namespace acdhOeaw\arche\lib;
  *
  * @author zozlak
  */
-class TripleValue {
+class TripleValue implements \Stringable {
 
     static public function fromDbRow(object $row) {
         $triple        = new TripleValue();
@@ -44,4 +44,8 @@ class TripleValue {
     public string $type;
     public string $lang;
     public string | int | float | bool $value;
+
+    public function __toString(): string {
+        return $this->value;
+    }
 }
