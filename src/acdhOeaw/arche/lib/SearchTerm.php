@@ -253,7 +253,6 @@ class SearchTerm {
         foreach ($properties as $property) {
             foreach ($values as $value) {
                 $term           = clone $this;
-                $term->operator = '=';
                 $term->property = $property;
                 $term->value    = $value;
                 $termQuery      = $term->getSqlQuery($baseUrl, $idProp, $nonRelationProperties);
