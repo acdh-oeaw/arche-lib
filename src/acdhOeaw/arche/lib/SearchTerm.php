@@ -369,7 +369,7 @@ class SearchTerm {
             // string values stored in the database can be too long to be indexed, 
             // therefore the index is set only on `substring(value, 1, self::STRING_MAX_LENGTH)`
             // and to benefit from it the predicate must strictly follow the index definition
-            if ($column === self::COLUMN_STRING && strlen((string) $this->value) < self::STRING_MAX_LENGTH) {
+            if ($column === self::COLUMN_STRING && $this->operator === '=' && strlen((string) $this->value) < self::STRING_MAX_LENGTH) {
                 $column = "substring(" . $column . ", 1, " . self::STRING_MAX_LENGTH . ")";
             }
             if (substr($column, 0, 7) !== 'value_t') {
