@@ -437,7 +437,10 @@ class RepoDb implements RepoInterface {
             $qp->query     .= "
                 LEFT JOIN (
                     SELECT DISTINCT ON (id) id, value AS _ob$n, value_t AS _obt$n, value_n AS _obn$n
-                    FROM metadata WHERE property = ?
+                    FROM metadata m
+                    WHERE
+                        property = ?
+                        AND EXISTS (SELECT 1 FROM allids WHERE id = m.id)
                     ORDER BY id $lang, value_t, value_n, value
                 ) t$n USING (id)
             ";
