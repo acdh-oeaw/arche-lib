@@ -110,11 +110,41 @@ class SmartSearch {
         return $this;
     }
 
+    /**
+     * 
+     * @param string $phrase
+     * @param string $language
+     * @param bool $inBinary
+     * @param bool $linkNamedEntities
+     * @param array<SearchTerm> $searchTerms
+     * @return void
+     */
     public function search(string $phrase, string $language = '',
-                           bool $inBinary = true, bool $linkNamedEntities = true): void {
+                           bool $inBinary = true,
+                           bool $linkNamedEntities = true,
+                           array $allowedProperties = [],
+                           array $searchTerms = []): void {
         $this->phrase = $phrase;
         $query        = "WITH\n";
         $param        = [];
+
+        // FILTERS
+        $filtersFrom = '';
+        if (count($searchTerms) > 0) {
+            $filtersFrom = "JOIN filters ON coalesce(f.id, f.iid, sm.id) = filters.id";
+            $baseUrl     = $this->repo->getBaseUrl();
+            $idProp      = $this->repo->getSchema()->id;
+            $query       .= "filters AS (\nSELECT id FROM\n";
+            foreach ($searchTerms as $n => $st) {
+                /* @var $st SearchTerm */
+                $qp    = $st->getSqlQuery($baseUrl, $idProp, []);
+                $query .= $n > 0 ? "JOIN (" : "(";
+                $query .= $qp->query;
+                $query .= $n > 0 ? ") f$n USING (id)\n" : ") f$n\n";
+                $param = array_merge($param, $qp->param);
+            }
+            $query .= "),\n";
+        }
 
         // WEIGHTS
         $queryTmp = $this->getWeightsWith($this->propWeights, 'weight_p');
@@ -156,10 +186,16 @@ class SmartSearch {
         }
 
         // INITIAL SEARCH
-        $langMatch = !empty($language) ? "sm.lang = ?" : "?";
-        $language  = empty($language) ? 0 : $language;
-        $inBinary  = $inBinary ? "" : "AND f.id IS NULL";
-        $query     = "$query
+        $langMatch   = !empty($language) ? "sm.lang = ?" : "?::bool";
+        $language    = !empty($language) ? $language : 0;
+        $inBinary    = $inBinary ? "" : "AND f.id IS NULL";
+        $propsFilter = '';
+        if (count($allowedProperties) > 0) {
+            $plhd             = substr(str_repeat(', ?', count($allowedProperties)), 2);
+            $propsFilterCond  = "AND CASE WHEN sm.property IS NOT NULL THEN sm.property WHEN f.iid IS NOT NULL THEN ? ELSE 'BINARY' END IN ($plhd)";
+            $propsFilterParam = array_merge([$this->schema->id], $allowedProperties);
+        }
+        $query  = "$query
             search AS (
                 SELECT
                     coalesce(f.id, f.iid, sm.id) AS id,
@@ -177,19 +213,22 @@ class SmartSearch {
                 FROM
                     full_text_search f
                     LEFT JOIN metadata sm using (mid)
+                    $filtersFrom
                     $searchFrom
                 WHERE
                     websearch_to_tsquery('simple', ?) @@ segments
                     $inBinary
+                    $propsFilterCond
             )
         ";
-        $param     = array_merge(
+        $param  = array_merge(
             $param,
             [$this->schema->id, $phrase, $language],
             $searchParam,
             [SearchTerm::escapeFts($phrase)],
+                                   $propsFilterParam
         );
-        $curTab    = 'search';
+        $curTab = 'search';
 
         // WEIGHTS
         $query  = "$query,
@@ -288,7 +327,7 @@ class SmartSearch {
             SELECT id, ? AS property, ? AS type, '' AS lang, weight::text AS value
             FROM page
         ";
-        $param = [
+        $param     = [
             $offset, $pageSize,
             $this->schema->searchCount, RDF::XSD_INTEGER,
             $this->schema->searchOrder, RDF::XSD_INTEGER,
@@ -301,7 +340,7 @@ class SmartSearch {
         }
         $query = $this->pdo->prepare($query);
         $query->execute($param);
-        while ($row       = $query->fetchObject()) {
+        while ($row   = $query->fetchObject()) {
             yield $row;
         }
 
@@ -320,7 +359,12 @@ class SmartSearch {
     }
 
     public function getSearchFacets(): array {
-        $stats = [];
+        $stats = [
+            'property' => [
+                'continues' => false,
+                'values'    => []
+            ]
+        ];
         $query = $this->pdo->query("
             SELECT property AS value, count(*) AS count 
             FROM " . self::TEMPTABNAME . "
@@ -328,18 +372,23 @@ class SmartSearch {
             ORDER BY 2 DESC
         ");
         while ($row   = $query->fetchObject()) {
-            $stats['property'][$row->value] = $row->count;
+            $stats['property']['values'][$row->value] = $row->count;
         }
 
         foreach (array_keys($this->facets) as $n => $key) {
-            $query = $this->pdo->query("
+            $query       = $this->pdo->query("
                 SELECT meta_$n AS value, count(*) AS count 
                 FROM " . self::TEMPTABNAME . "
                 GROUP BY 1 
                 ORDER BY 2 DESC
             ");
-            while ($row   = $query->fetchObject()) {
-                $stats[$key][$row->value] = $row->count;
+            $stats[$key] = [
+                'values'    => [],
+                'continues' => !is_array($this->facets[$key]),
+            ];
+            while ($row         = $query->fetchObject()) {
+                $value                         = is_numeric($row->value) ? (float) $row->value : $row->value;
+                $stats[$key]['values'][$value] = $row->count;
             }
         }
         return $stats;
