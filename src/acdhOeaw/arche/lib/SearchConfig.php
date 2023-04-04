@@ -268,7 +268,7 @@ class SearchConfig {
         $options = '';
         foreach (self::$highlightParam as $i) {
             $ii = 'fts' . $i;
-            if (isset($this->$ii) && $this->ii !== null) {
+            if (isset($this->$ii) && $this->$ii !== null) {
                 $options .= " ,$i=" . $this->$ii;
             }
         }
