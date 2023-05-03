@@ -60,16 +60,17 @@ class SearchTerm {
      * @var array<string, string|null>
      */
     static private array $operators = [
-        '='  => null,
-        '>'  => null,
-        '<'  => null,
-        '<=' => null,
-        '>=' => null,
-        '~'  => self::TYPE_STRING,
-        '@@' => self::TYPE_FTS,
-        '&&' => self::TYPE_SPATIAL,
-        '&>' => self::TYPE_SPATIAL,
-        '&<' => self::TYPE_SPATIAL,
+        '='   => null,
+        '>'   => null,
+        '<'   => null,
+        '<='  => null,
+        '>='  => null,
+        '~'   => self::TYPE_STRING,
+        '@@'  => self::TYPE_FTS,
+        '&&'  => self::TYPE_SPATIAL,
+        '&&&' => self::TYPE_SPATIAL,
+        '&>'  => self::TYPE_SPATIAL,
+        '&<'  => self::TYPE_SPATIAL,
     ];
 
     /**
@@ -324,21 +325,24 @@ class SearchTerm {
     private function getSqlQuerySpatial(): QueryPart {
         $param      = [$this->value];
         $valueQuery = 'st_geomfromtext(?, 4326)';
-        switch (substr($this->operator ?? '', 1, 1)) {
-            case '>':
+        switch ($this->operator ?? '') {
+            case '&>':
                 $func = "st_contains(geom::geometry, $valueQuery)";
                 break;
-            case '<':
+            case '&<':
                 $func = "st_contains($valueQuery, geom::geometry)";
                 break;
-            case '&':
+            case '&&&':
+                $func = "st_intersects(geom, $valueQuery)";
+                break;
+            case '&&':
             default:
                 $dist = (int) substr($this->operator ?? '', 2);
                 if ($dist > 0) {
                     $func    = "st_dwithin(geom, $valueQuery::geography, ?, false)";
                     $param[] = $dist;
                 } else {
-                    $func = "st_intersects(geom, $valueQuery)";
+                    $func = "geom && $valueQuery";
                 }
                 break;
         }
