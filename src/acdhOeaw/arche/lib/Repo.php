@@ -344,7 +344,11 @@ class Repo implements RepoInterface {
                     case 410:
                         return new RejectedPromise(new Deleted());
                     case 409:
-                        return new RejectedPromise(new Conflict((string) $e->getResponse()?->getBody()));
+                        if ($e instanceof RequestException) {
+                            return new RejectedPromise(new Conflict((string) $e->getResponse()?->getBody()));
+                        } else {
+                            return new RejectedPromise($e);
+                        }
                     case 404:
                         return new RejectedPromise(new NotFound());
                     default:
