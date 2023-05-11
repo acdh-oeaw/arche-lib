@@ -674,7 +674,10 @@ class SmartSearch {
 
         // RANGE FACETS
         foreach ($this->rangeFacets as $fid => $facet) {
-            $param = [];
+            $param = [
+                $facet->min ?? null, $facet->max ?? null,
+                $facet->max ?? null, $facet->min ?? null
+            ];
 
             if ($facet->precision === 0) {
                 $stepExpr = "CASE WHEN range > least(?, nd) THEN range / least(?, nd) ELSE 1 END";
@@ -689,9 +692,9 @@ class SmartSearch {
                 WITH
                     limits AS (
                         SELECT 
-                            min(lower(meta_$mn)) AS start,
-                            max(upper(meta_$mn)) AS stop,
-                            (max(upper(meta_$mn)) - min(lower(meta_$mn))) AS range,
+                            greatest(min(lower(meta_$mn)), ?::numeric) AS start,
+                            least(max(upper(meta_$mn)), ?::numeric) AS stop,
+                            least(max(upper(meta_$mn)), ?::numeric) - greatest(min(lower(meta_$mn)), ?::numeric) AS range,
                             count(DISTINCT meta_$mn) AS nd
                         FROM " . self::TEMPTABNAME . "
                     ),
@@ -721,7 +724,9 @@ class SmartSearch {
                 SELECT 
                     null AS value, 
                     bin::text AS label, 
-                    count(DISTINCT id) AS count
+                    count(DISTINCT id) AS count,
+                    lower(bin) AS lower,
+                    upper(bin) AS upper
                 FROM
                     bins b
                     JOIN " . self::TEMPTABNAME . " m ON b.bin && m.meta_$mn
@@ -731,10 +736,14 @@ class SmartSearch {
             $param       = array_merge($param, [$facet->precision]);
             $query       = $this->pdo->prepare($query);
             $query->execute($param);
+            $values      = $query->fetchAll(PDO::FETCH_OBJ);
             $stats[$fid] = [
                 'continues' => true,
-                'values'    => $query->fetchAll(PDO::FETCH_OBJ),
+                'values'    => $values,
+                'min'       => (float) reset($values)?->lower,
+                'max'       => (float) end($values)?->upper,
             ];
+
             $mn++;
         }
 
