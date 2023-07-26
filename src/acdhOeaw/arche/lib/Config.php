@@ -113,6 +113,7 @@ use function GuzzleHttp\json_encode;
  * @property array<string, string>  $namespaces
  * @property array<string> $nonRelationProperties
  * @property array<string> $options
+ * @property int    $outputTriplesCache
  * @property array  $parameters
  * @property string $parent
  * @property string $path

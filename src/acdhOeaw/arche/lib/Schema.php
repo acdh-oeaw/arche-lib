@@ -41,11 +41,20 @@ use function GuzzleHttp\json_encode;
  * @property string $parent
  * @property string $delete
  * @property string $binarySize
+ * @property string $hash
+ * @property string $mime
+ * @property string $fileName
  * @property string $searchCount
  * @property string $searchFts
  * @property string $searchMatch
  * @property string $searchOrder
  * @property string $searchOrderValue
+ * @property string $creationDate
+ * @property string $creationUser
+ * @property string $modificationDate
+ * @property string $modificationUser
+ * @property string $binaryModificationDate
+ * @property string $binaryModificationUser
  * @property object $test
  */
 class Schema {
