@@ -117,7 +117,6 @@ class SearchTest extends TestBase {
         $term                         = new SearchTerm('https://lorem.ipsum', 'ipsum', '@@');
         $config                       = new SearchConfig();
         $config->ftsQuery             = 'ipsum';
-        $config->ftsProperty          = 'https://lorem.ipsum';
         $config->ftsStartSel          = '#';
         $config->ftsStopSel           = '#';
         $config->ftsMinWords          = 2;
@@ -128,9 +127,10 @@ class SearchTest extends TestBase {
         $result        = iterator_to_array(self::$repo->getResourcesBySearchTerms([
                 $term], $config));
         $this->assertEquals(2, count($result));
-        $ftsProp       = self::$repo->getSchema()->searchFts;
-        $ftsHighlight1 = (string) $result[0]->getMetadata()->getLiteral($ftsProp);
-        $ftsHighlight2 = (string) $result[1]->getMetadata()->getLiteral($ftsProp);
+        $ftsValueProp  = self::$repo->getSchema()->searchFts;
+        $ftsPropProp   = self::$repo->getSchema()->searchFts;
+        $ftsHighlight1 = (string) $result[0]->getMetadata()->getLiteral($ftsValueProp . '1');
+        $ftsHighlight2 = (string) $result[1]->getMetadata()->getLiteral($ftsValueProp . '1');
         $date1         = (string) $result[0]->getMetadata()->getLiteral('https://date.prop');
         $date2         = (string) $result[1]->getMetadata()->getLiteral('https://date.prop');
         $expected      = [
@@ -139,6 +139,8 @@ class SearchTest extends TestBase {
         ];
         $this->assertEquals($expected[$date1], $ftsHighlight1);
         $this->assertEquals($expected[$date2], $ftsHighlight2);
+        $this->assertEquals('https://lorem.ipsum', (string) $result[0]->getMetadata()->getLiteral($ftsPropProp . '1'));
+        $this->assertEquals('https://lorem.ipsum', (string) $result[1]->getMetadata()->getLiteral($ftsPropProp . '1'));
     }
 
     /**
