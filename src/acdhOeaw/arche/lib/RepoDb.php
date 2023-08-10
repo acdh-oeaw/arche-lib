@@ -239,10 +239,11 @@ class RepoDb implements RepoInterface {
         $pagingQP = $this->getPagingQuery($config);
         list($orderByQP1, $orderByQP2) = $this->getOrderByQuery($config);
 
+        $ftsWithQp       = new QueryPart();
         $searchMetaQuery = '';
         $searchMetaParam = [];
         if ($config->skipArtificialProperties === false) {
-            $ftsQP           = $this->getFtsQuery($config);
+            list($ftsWithQp, $ftsQP) = $this->getFtsQuery($config);
             $searchMetaQuery = "
               UNION
                 SELECT id, ?::text AS property, ?::text AS type, ''::text AS lang, ?::text AS value FROM ids
@@ -331,10 +332,11 @@ class RepoDb implements RepoInterface {
                     $orderByQP1->query
                     $pagingQP->query
                 )
+                $ftsWithQp->query
             $metaQuery
             $searchMetaQuery
         ";
-        $param = array_merge($parameters, $authQP->param, $orderByQP1->param, $pagingQP->param, $metaParam, $searchMetaParam);
+        $param = array_merge($parameters, $authQP->param, $orderByQP1->param, $pagingQP->param, $ftsWithQp->param, $metaParam, $searchMetaParam);
         $this->logQuery($query, $param);
 
         $query = $this->pdo->prepare($query);
@@ -376,34 +378,73 @@ class RepoDb implements RepoInterface {
      * Prepares an SQL query adding a full text search query results as 
      * metadata graph edges.
      * 
-     * @return QueryPart
+     * @return array<QueryPart>
      */
-    private function getFtsQuery(SearchConfig $cfg): QueryPart {
-        $query = '';
-        $param = [];
+    private function getFtsQuery(SearchConfig $cfg): array {
+        $query     = '';
+        $param     = [];
+        $withQuery = '';
+        $withParam = [];
         if (!empty($cfg->ftsQuery)) {
-            $join       = 'JOIN ids USING (id)';
-            $idSrc      = 'fts';
-            $where      = '';
-            $whereParam = [];
-            if (!empty($cfg->ftsProperty) && $cfg->ftsProperty !== SearchTerm::PROPERTY_BINARY) {
-                $where        = "WHERE property = ?";
-                $whereParam[] = $cfg->ftsProperty;
-                $join         = "JOIN metadata m USING (mid) JOIN ids ON m.id = ids.id";
-                $idSrc        = 'm';
+            $withQuery = "
+                , fts AS (
+                    SELECT 
+                        coalesce(fts.id, fts.iid, m.id) AS id,
+                        CASE 
+                            WHEN fts.mid IS NOT NULL THEN m.property 
+                            WHEN fts.iid IS NOT NULL THEN ?::text 
+                            ELSE ?::text
+                        END AS property,
+                        coalesce(m.lang, '') AS lang,
+                        ts_headline('simple', raw, websearch_to_tsquery('simple', ?), ?) AS value,
+                        row_number() OVER () AS no
+                    FROM 
+                        full_text_search fts 
+                        LEFT JOIN metadata m USING (mid) 
+                        JOIN ids i ON i.id = coalesce(fts.id, fts.iid, m.id)
+                    WHERE
+                        websearch_to_tsquery('simple', ?) @@ segments
+            ";
+            $withParam = [
+                $this->schema->id,
+                SearchTerm::PROPERTY_BINARY,
+                $cfg->ftsQuery,
+                $cfg->getTsHeadlineOptions(),
+                $cfg->ftsQuery,
+            ];
+
+            $cfg->ftsProperty ??= [];
+            if (!is_array($cfg->ftsProperty)) {
+                $cfg->ftsProperty = [$cfg->ftsProperty];
             }
+            if (count($cfg->ftsProperty) > 0) {
+                $withQuery .= "AND (property IN (" . substr(str_repeat(', ?', count($cfg->ftsProperty)), 2) . ")";
+                $withParam = array_merge($withParam, $cfg->ftsProperty);
+                if (in_array($this->schema->id, $cfg->ftsProperty)) {
+                    $withQuery .= " OR fts.iid IS NOT NULL";
+                }
+                if (in_array(SearchTerm::PROPERTY_BINARY, $cfg->ftsProperty)) {
+                    $withQuery .= " OR fts.id IS NOT NULL";
+                }
+                $withQuery .= ")\n";
+            }
+
+            $withQuery .= ")";
 
             $query = "
               UNION
-                SELECT $idSrc.id, ? AS property, ? AS type, '' AS lang, ts_headline('simple', raw, websearch_to_tsquery('simple', ?), ?) AS value 
-                FROM full_text_search fts $join
-                $where
+                SELECT id, ?::text || no::text AS property, ?::text AS type, lang, value
+                FROM fts
+              UNION
+                SELECT id, ?::text || no::text AS property, ?::text AS type, '' AS lang, property AS value
+                FROM fts
             ";
-            $prop  = $this->schema->searchFts;
-            $type  = RDF::XSD_STRING;
-            $param = array_merge([$prop, $type, $cfg->ftsQuery, $cfg->getTsHeadlineOptions()], $whereParam);
+            $param = [
+                $this->schema->searchFts, RDF::XSD_STRING,
+                $this->schema->searchFtsProperty, RDF::XSD_STRING,
+            ];
         }
-        return new QueryPart($query, $param);
+        return [new QueryPart($withQuery, $withParam), new QueryPart($query, $param)];
     }
 
     /**

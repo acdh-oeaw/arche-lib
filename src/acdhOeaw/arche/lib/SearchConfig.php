@@ -33,7 +33,7 @@ namespace acdhOeaw\arche\lib;
  */
 class SearchConfig {
 
-    const FTS_BINARY                     = 'BINARY';
+    const FTS_BINARY = 'BINARY';
 
     /**
      * 
@@ -158,13 +158,13 @@ class SearchConfig {
     public ?string $ftsQuery = null;
 
     /**
-     * Data to be used for full text search results highlighting.
+     * Limits highlighting to indicated properties.
      * 
-     * - `null` if both resource metadata and binary content should be used;
-     * - an RDF property if a given metadata property should be used
-     * - `SearchConfig::FTS_BINARY` if the resource binary content should be used
+     * Use `SearchConfig::FTS_BINARY` to indicate binary content.
+     * 
+     * @var null|string|array<string>
      */
-    public ?string $ftsProperty = null;
+    public null | string | array $ftsProperty = null;
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
