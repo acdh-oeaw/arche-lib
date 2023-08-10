@@ -397,7 +397,7 @@ class RepoDb implements RepoInterface {
                         END AS property,
                         coalesce(m.lang, '') AS lang,
                         ts_headline('simple', raw, websearch_to_tsquery('simple', ?), ?) AS value,
-                        row_number() OVER () AS no
+                        row_number() OVER (PARTITION BY coalesce(fts.id, fts.iid, m.id)) AS no
                     FROM 
                         full_text_search fts 
                         LEFT JOIN metadata m USING (mid) 

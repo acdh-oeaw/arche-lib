@@ -128,7 +128,7 @@ class SearchTest extends TestBase {
                 $term], $config));
         $this->assertEquals(2, count($result));
         $ftsValueProp  = self::$repo->getSchema()->searchFts;
-        $ftsPropProp   = self::$repo->getSchema()->searchFts;
+        $ftsPropProp   = self::$repo->getSchema()->searchFtsProperty;
         $ftsHighlight1 = (string) $result[0]->getMetadata()->getLiteral($ftsValueProp . '1');
         $ftsHighlight2 = (string) $result[1]->getMetadata()->getLiteral($ftsValueProp . '1');
         $date1         = (string) $result[0]->getMetadata()->getLiteral('https://date.prop');

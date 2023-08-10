@@ -15,6 +15,7 @@ schema:
     delete: delete://delete
     searchMatch: search://match
     searchFts: search://fts
+    searchFtsProperty: search://ftsProperty
     searchCount: search://count
     searchWeight: search://weight
     searchOrder: search://order
