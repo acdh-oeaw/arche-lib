@@ -52,6 +52,7 @@ class SearchTerm {
     const TYPE_SPATIAL      = 'spatial';
     const TYPE_ID           = 'id';
     const OPERATOR_IN       = 'in';
+    const OPERATOR_FTS      = '@@';
     const COLUMN_STRING     = 'value';
     const STRING_MAX_LENGTH = 1000;
 
@@ -60,17 +61,17 @@ class SearchTerm {
      * @var array<string, string|null>
      */
     static private array $operators = [
-        '='   => null,
-        '>'   => null,
-        '<'   => null,
-        '<='  => null,
-        '>='  => null,
-        '~'   => self::TYPE_STRING,
-        '@@'  => self::TYPE_FTS,
-        '&&'  => self::TYPE_SPATIAL,
-        '&&&' => self::TYPE_SPATIAL,
-        '&>'  => self::TYPE_SPATIAL,
-        '&<'  => self::TYPE_SPATIAL,
+        '='                => null,
+        '>'                => null,
+        '<'                => null,
+        '<='               => null,
+        '>='               => null,
+        '~'                => self::TYPE_STRING,
+        self::OPERATOR_FTS => self::TYPE_FTS,
+        '&&'               => self::TYPE_SPATIAL,
+        '&&&'              => self::TYPE_SPATIAL,
+        '&>'               => self::TYPE_SPATIAL,
+        '&<'               => self::TYPE_SPATIAL,
     ];
 
     /**

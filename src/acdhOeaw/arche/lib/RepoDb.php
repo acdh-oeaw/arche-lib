@@ -381,13 +381,18 @@ class RepoDb implements RepoInterface {
      * @return array<QueryPart>
      */
     private function getFtsQuery(SearchConfig $cfg): array {
+        $cfg       = $cfg->getSanitizedCopy();
         $query     = '';
         $param     = [];
         $withQuery = '';
         $withParam = [];
         if (!empty($cfg->ftsQuery)) {
-            $withQuery = "
-                , fts AS (
+            $withQuery = ", fts AS (SELECT *, row_number() OVER () AS no FROM (";
+            for ($n = 0; $n < count($cfg->ftsQuery); $n++) {
+                $ftsQuery    = $cfg->ftsQuery[$n];
+                $ftsProperty = $cfg->ftsProperty[$n] ?? [];
+
+                $withQuery .= ($n > 0 ? "UNION" : "") . "
                     SELECT 
                         coalesce(fts.id, fts.iid, m.id) AS id,
                         CASE 
@@ -397,39 +402,39 @@ class RepoDb implements RepoInterface {
                         END AS property,
                         coalesce(m.lang, '') AS lang,
                         ts_headline('simple', raw, websearch_to_tsquery('simple', ?), ?) AS value,
-                        row_number() OVER (PARTITION BY coalesce(fts.id, fts.iid, m.id)) AS no
+                        ?::text AS query
                     FROM 
                         full_text_search fts 
                         LEFT JOIN metadata m USING (mid) 
                         JOIN ids i ON i.id = coalesce(fts.id, fts.iid, m.id)
                     WHERE
                         websearch_to_tsquery('simple', ?) @@ segments
-            ";
-            $withParam = [
-                $this->schema->id,
-                SearchTerm::PROPERTY_BINARY,
-                $cfg->ftsQuery,
-                $cfg->getTsHeadlineOptions(),
-                $cfg->ftsQuery,
-            ];
+                ";
+                $withParam = array_merge(
+                    $withParam,
+                    [
+                        $this->schema->id,
+                        SearchTerm::PROPERTY_BINARY,
+                        $ftsQuery,
+                        $cfg->getTsHeadlineOptions($n),
+                        $ftsQuery,
+                        $ftsQuery,
+                    ]
+                );
 
-            $cfg->ftsProperty ??= [];
-            if (!is_array($cfg->ftsProperty)) {
-                $cfg->ftsProperty = [$cfg->ftsProperty];
-            }
-            if (count($cfg->ftsProperty) > 0) {
-                $withQuery .= "AND (property IN (" . substr(str_repeat(', ?', count($cfg->ftsProperty)), 2) . ")";
-                $withParam = array_merge($withParam, $cfg->ftsProperty);
-                if (in_array($this->schema->id, $cfg->ftsProperty)) {
-                    $withQuery .= " OR fts.iid IS NOT NULL";
+                if (count($ftsProperty) > 0) {
+                    $withQuery .= "AND (property IN (" . substr(str_repeat(', ?', count($ftsProperty)), 2) . ")";
+                    $withParam = array_merge($withParam, $ftsProperty);
+                    if (in_array($this->schema->id, $ftsProperty)) {
+                        $withQuery .= " OR fts.iid IS NOT NULL";
+                    }
+                    if (in_array(SearchTerm::PROPERTY_BINARY, $ftsProperty)) {
+                        $withQuery .= " OR fts.id IS NOT NULL";
+                    }
+                    $withQuery .= ")\n";
                 }
-                if (in_array(SearchTerm::PROPERTY_BINARY, $cfg->ftsProperty)) {
-                    $withQuery .= " OR fts.id IS NOT NULL";
-                }
-                $withQuery .= ")\n";
             }
-
-            $withQuery .= ")";
+            $withQuery .= ") t)";
 
             $query = "
               UNION
@@ -438,10 +443,14 @@ class RepoDb implements RepoInterface {
               UNION
                 SELECT id, ?::text || no::text AS property, ?::text AS type, '' AS lang, property AS value
                 FROM fts
+              UNION
+                SELECT id, ?::text || no::text AS property, ?::text AS type, '' AS lang, query AS value
+                FROM fts
             ";
             $param = [
                 $this->schema->searchFts, RDF::XSD_STRING,
                 $this->schema->searchFtsProperty, RDF::XSD_STRING,
+                $this->schema->searchFtsQuery, RDF::XSD_STRING,
             ];
         }
         return [new QueryPart($withQuery, $withParam), new QueryPart($query, $param)];

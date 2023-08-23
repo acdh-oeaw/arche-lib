@@ -151,60 +151,114 @@ class SearchConfig {
      * See https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES
      * and the websearch_to_tsquery() function documentation.
      * 
-     * Remember this query is applied only to the search results and is not used to
-     * perform an actual search (yes, technically you can search by one term
-     * and highlight results using the other).
+     * @var string|array<string>
      */
-    public ?string $ftsQuery = null;
+    public string | array $ftsQuery = [];
 
     /**
      * Limits highlighting to indicated properties.
      * 
+     * 
+     * If single value is used, it is applied to all FTS queries.
+     * If array is used, it has to have same length as the $ftsQuery
+     * and values are applied to corresponding queries.
+     * 
+     * A value can be either a string or an array of string (meaning any of
+     * given properties).
+     * 
      * Use `SearchConfig::FTS_BINARY` to indicate binary content.
      * 
-     * @var null|string|array<string>
+     * @var array<string|array<string>>
      */
-    public null | string | array $ftsProperty = null;
+    public array $ftsProperty = [];
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
+     * 
+     * If single value is used, it is applied to all FTS queries.
+     * If array is used, it has to have same length as the $ftsQuery
+     * and values are applied to corresponding queries.
+     * 
+     * @var string|array<string>
      */
-    public ?string $ftsStartSel = null;
+    public string | array $ftsStartSel = [];
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
+     * 
+     * If single value is used, it is applied to all FTS queries.
+     * If array is used, it has to have same length as the $ftsQuery
+     * and values are applied to corresponding queries.
+     * 
+     * @var string|array<string>
      */
-    public ?string $ftsStopSel = null;
+    public string | array $ftsStopSel = [];
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
+     * 
+     * If single value is used, it is applied to all FTS queries.
+     * If array is used, it has to have same length as the $ftsQuery
+     * and values are applied to corresponding queries.
+     * 
+     * @var int|array<int>
      */
-    public ?int $ftsMaxWords = null;
+    public int | array $ftsMaxWords = [];
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
+     * 
+     * If single value is used, it is applied to all FTS queries.
+     * If array is used, it has to have same length as the $ftsQuery
+     * and values are applied to corresponding queries.
+     * 
+     * @var int|array<int>
      */
-    public ?int $ftsMinWords = null;
+    public int | array $ftsMinWords = [];
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
+     * 
+     * If single value is used, it is applied to all FTS queries.
+     * If array is used, it has to have same length as the $ftsQuery
+     * and values are applied to corresponding queries.
+     * 
+     * @var int|array<int>
      */
-    public ?int $ftsShortWord = null;
+    public int | array $ftsShortWord = [];
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
+     * 
+     * If single value is used, it is applied to all FTS queries.
+     * If array is used, it has to have same length as the $ftsQuery
+     * and values are applied to corresponding queries.
+     * 
+     * @var bool|array<bool>
      */
-    public ?bool $ftsHighlightAll = null;
+    public bool | array $ftsHighlightAll = [];
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
+     * 
+     * If single value is used, it is applied to all FTS queries.
+     * If array is used, it has to have same length as the $ftsQuery
+     * and values are applied to corresponding queries.
+     * 
+     * @var int|array<int>
      */
-    public ?int $ftsMaxFragments = null;
+    public int | array $ftsMaxFragments = [];
 
     /**
      * Full text search highlighting options see - https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE
+     * 
+     * If single value is used, it is applied to all FTS queries.
+     * If array is used, it has to have same length as the $ftsQuery
+     * and values are applied to corresponding queries.
+     * 
+     * @var string|array<string>
      */
-    public ?string $ftsFragmentDelimiter = null;
+    public string | array $ftsFragmentDelimiter = [];
 
     /**
      * An optional class of the for the objects returned as the search results
@@ -264,14 +318,73 @@ class SearchConfig {
         return http_build_query($this->toArray());
     }
 
-    public function getTsHeadlineOptions(): string {
+    public function getTsHeadlineOptions(int $offset): string {
         $options = '';
         foreach (self::$highlightParam as $i) {
             $ii = 'fts' . $i;
-            if (isset($this->$ii) && $this->$ii !== null) {
-                $options .= " ,$i=" . $this->$ii;
+            $v  = is_array($this->$ii) ? ($this->$ii[$offset] ?? null) : $this->$ii;
+            if ($v !== null) {
+                $options .= ",$i=$v";
             }
         }
-        return substr($options, 2);
+        return substr($options, 1);
+    }
+
+    /**
+     * Fills up $ftsQuery and $ftsProperty property values based on
+     * the supported SearchTerm list.
+     * 
+     * @param array<SearchTerm> $terms
+     */
+    public function readFtsConfigFromTerms(array $terms): void {
+        if (!is_array($this->ftsQuery)) {
+            $this->ftsQuery = [$this->ftsQuery];
+        }
+        if (!is_array($this->ftsProperty)) {
+            $this->ftsProperty = [$this->ftsProperty];
+        }
+        foreach ($terms as $term) {
+            /* @var $term SearchTerm */
+            if ($term->operator === SearchTerm::OPERATOR_FTS && !empty($term->value)) {
+                $properties = [];
+                if (!empty($term->property)) {
+                    $properties = !is_array($term->property) ? [$term->property] : $term->property;
+                }
+                $values = is_array($term->value) ? $term->value : [$term->value];
+                foreach ($values as $value) {
+                    if (!empty($value)) {
+                        $this->ftsQuery[]    = $value;
+                        $this->ftsProperty[] = $properties;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns an object with all fts properties being arrays of the same count 
+     * as the $ftsQuery property. Also, all $ftsProperty value is assured to be
+     * an array.
+     * 
+     * @return self
+     */
+    public function getSanitizedCopy(): self {
+        $ret = clone $this;
+        if (!is_array($ret->ftsQuery)) {
+            $ret->ftsQuery = [$ret->ftsQuery];
+        }
+        $n = count($ret->ftsQuery);
+        foreach (get_object_vars($ret) as $k => $v) {
+            if (str_starts_with($k, 'fts') && !is_array($v)) {
+                $ret->$k = array_fill(0, $n, $ret->$k);
+            }
+        }
+        foreach ($ret->ftsProperty as &$i) {
+            if (!is_array($i)) {
+                $i = [$i];
+            }
+        }
+        unset($i);
+        return $ret;
     }
 }
