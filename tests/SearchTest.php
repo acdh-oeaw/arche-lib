@@ -116,7 +116,7 @@ class SearchTest extends TestBase {
     public function testSearchFtsHighlight(): void {
         $term                         = new SearchTerm('https://lorem.ipsum', 'ipsum', '@@');
         $config                       = new SearchConfig();
-        $config->ftsQuery             = 'ipsum';
+        $config->readFtsConfigFromTerms([$term]);
         $config->ftsStartSel          = '#';
         $config->ftsStopSel           = '#';
         $config->ftsMinWords          = 2;
@@ -124,11 +124,12 @@ class SearchTest extends TestBase {
         $config->ftsMaxFragments      = 10;
         $config->ftsFragmentDelimiter = '|';
 
-        $result        = iterator_to_array(self::$repo->getResourcesBySearchTerms([
-                $term], $config));
+        $result        = self::$repo->getResourcesBySearchTerms([$term], $config);
+        $result        = iterator_to_array($result);
         $this->assertEquals(2, count($result));
         $ftsValueProp  = self::$repo->getSchema()->searchFts;
         $ftsPropProp   = self::$repo->getSchema()->searchFtsProperty;
+        $ftsQueryProp  = self::$repo->getSchema()->searchFtsQuery;
         $ftsHighlight1 = (string) $result[0]->getMetadata()->getLiteral($ftsValueProp . '1');
         $ftsHighlight2 = (string) $result[1]->getMetadata()->getLiteral($ftsValueProp . '1');
         $date1         = (string) $result[0]->getMetadata()->getLiteral('https://date.prop');
@@ -141,6 +142,60 @@ class SearchTest extends TestBase {
         $this->assertEquals($expected[$date2], $ftsHighlight2);
         $this->assertEquals('https://lorem.ipsum', (string) $result[0]->getMetadata()->getLiteral($ftsPropProp . '1'));
         $this->assertEquals('https://lorem.ipsum', (string) $result[1]->getMetadata()->getLiteral($ftsPropProp . '1'));
+        $this->assertEquals('ipsum', (string) $result[0]->getMetadata()->getLiteral($ftsQueryProp . '1'));
+        $this->assertEquals('ipsum', (string) $result[1]->getMetadata()->getLiteral($ftsQueryProp . '1'));
+    }
+
+    /**
+     * @group search
+     */
+    public function testSearchFtsHighlight2(): void {
+        $term                         = new SearchTerm('https://lorem.ipsum', 'ipsum', '@@');
+        $config                       = new SearchConfig();
+        $config->ftsQuery             = ['ipsum', 'dolor'];
+        $config->ftsStartSel          = ['#', '@'];
+        $config->ftsStopSel           = ['%', '^'];
+        $config->ftsMinWords          = [1, 1];
+        $config->ftsMaxWords          = [2, 3];
+        $config->ftsMaxFragments      = [2, 2];
+        $config->ftsFragmentDelimiter = ['|', '~'];
+
+        $result        = iterator_to_array(self::$repo->getResourcesBySearchTerms([
+                $term], $config));
+        $this->assertEquals(2, count($result));
+        $ftsValueProp  = self::$repo->getSchema()->searchFts;
+        $ftsPropProp   = self::$repo->getSchema()->searchFtsProperty;
+        $ftsQueryProp  = self::$repo->getSchema()->searchFtsQuery;
+        $date1         = (string) $result[0]->getMetadata()->getLiteral('https://date.prop');
+        $date2         = (string) $result[1]->getMetadata()->getLiteral('https://date.prop');
+        $ftsHighlight1 = [
+            (string) $result[0]->getMetadata()->getLiteral($ftsValueProp . '1'),
+            (string) $result[0]->getMetadata()->getLiteral($ftsValueProp . '2'),
+        ];
+        $ftsHighlight2 = [
+            (string) $result[1]->getMetadata()->getLiteral($ftsValueProp . '1'),
+            (string) $result[1]->getMetadata()->getLiteral($ftsValueProp . '2'),
+        ];
+        $ftsQuery1     = [
+            (string) $result[0]->getMetadata()->getLiteral($ftsQueryProp . '1'),
+            (string) $result[0]->getMetadata()->getLiteral($ftsQueryProp . '2'),
+        ];
+        $ftsQuery2     = [
+            (string) $result[1]->getMetadata()->getLiteral($ftsQueryProp . '1'),
+            (string) $result[1]->getMetadata()->getLiteral($ftsQueryProp . '2'),
+        ];
+        $order1        = $ftsQuery1[0] === 'ipsum' ? [0, 1] : [1, 0];
+        $order2        = $ftsQuery2[0] === 'ipsum' ? [0, 1] : [1, 0];
+        $expected      = [
+            '2019-01-01' => ['#ipsum% dolor', 'ipsum @dolor^~@dolor^ non neque'],
+            '2019-02-01' => ['#ipsum% dolor|#ipsum%', 'ipsum @dolor^~@dolor^ non neque'],
+        ];
+        for ($i = 0; $i < 2; $i++) {
+            $this->assertEquals($config->ftsQuery[$order1[$i]], $ftsQuery1[$i]);
+            $this->assertEquals($config->ftsQuery[$order2[$i]], $ftsQuery2[$i]);
+            $this->assertEquals($expected[$date1][$order1[$i]], $ftsHighlight1[$i]);
+            $this->assertEquals($expected[$date2][$order2[$i]], $ftsHighlight2[$i]);
+        }
     }
 
     /**

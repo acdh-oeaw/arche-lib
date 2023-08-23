@@ -387,7 +387,7 @@ class RepoDb implements RepoInterface {
         $withQuery = '';
         $withParam = [];
         if (!empty($cfg->ftsQuery)) {
-            $withQuery = ", fts AS (SELECT *, row_number() OVER () AS no FROM (";
+            $withQuery = ", fts AS (SELECT *, row_number() OVER (PARTITION BY id) AS no FROM (";
             for ($n = 0; $n < count($cfg->ftsQuery); $n++) {
                 $ftsQuery    = $cfg->ftsQuery[$n];
                 $ftsProperty = $cfg->ftsProperty[$n] ?? [];
