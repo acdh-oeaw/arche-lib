@@ -450,7 +450,7 @@ class RepoDb implements RepoInterface {
             $param = [
                 $this->schema->searchFts, RDF::XSD_STRING,
                 $this->schema->searchFtsProperty, RDF::XSD_STRING,
-                $this->schema->searchFtsQuery, RDF::XSD_STRING,
+                $this->schema->searchFtsQuery, 'URI',
             ];
         }
         return [new QueryPart($withQuery, $withParam), new QueryPart($query, $param)];
