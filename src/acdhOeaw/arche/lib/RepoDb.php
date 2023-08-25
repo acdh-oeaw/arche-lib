@@ -401,6 +401,10 @@ class RepoDb implements RepoInterface {
                             ELSE ?::text
                         END AS property,
                         coalesce(m.lang, '') AS lang,
+                        CASE
+                            WHEN fts.id IS NOT NULL THEN ?::text
+                            ELSE 'URI'
+                        END AS type,
                         ts_headline('simple', raw, websearch_to_tsquery('simple', ?), ?) AS value,
                         ?::text AS query
                     FROM 
@@ -415,6 +419,7 @@ class RepoDb implements RepoInterface {
                     [
                         $this->schema->id,
                         SearchTerm::PROPERTY_BINARY,
+                        RDF::XSD_STRING,
                         $ftsQuery,
                         $cfg->getTsHeadlineOptions($n),
                         $ftsQuery,
@@ -441,7 +446,7 @@ class RepoDb implements RepoInterface {
                 SELECT id, ?::text || no::text AS property, ?::text AS type, lang, value
                 FROM fts
               UNION
-                SELECT id, ?::text || no::text AS property, ?::text AS type, '' AS lang, property AS value
+                SELECT id, ?::text || no::text AS property, type, '' AS lang, property AS value
                 FROM fts
               UNION
                 SELECT id, ?::text || no::text AS property, ?::text AS type, '' AS lang, query AS value
@@ -449,7 +454,7 @@ class RepoDb implements RepoInterface {
             ";
             $param = [
                 $this->schema->searchFts, RDF::XSD_STRING,
-                $this->schema->searchFtsProperty, 'URI',
+                $this->schema->searchFtsProperty,
                 $this->schema->searchFtsQuery, RDF::XSD_STRING,
             ];
         }
