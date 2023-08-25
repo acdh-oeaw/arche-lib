@@ -140,8 +140,8 @@ class SearchTest extends TestBase {
         ];
         $this->assertEquals($expected[$date1], $ftsHighlight1);
         $this->assertEquals($expected[$date2], $ftsHighlight2);
-        $this->assertEquals('https://lorem.ipsum', (string) $result[0]->getMetadata()->getResource($ftsPropProp . '1'));
-        $this->assertEquals('https://lorem.ipsum', (string) $result[1]->getMetadata()->getResource($ftsPropProp . '1'));
+        $this->assertEquals('https://lorem.ipsum', (string) $result[0]->getMetadata()->get($ftsPropProp . '1'));
+        $this->assertEquals('https://lorem.ipsum', (string) $result[1]->getMetadata()->get($ftsPropProp . '1'));
         $this->assertEquals('ipsum', (string) $result[0]->getMetadata()->getLiteral($ftsQueryProp . '1'));
         $this->assertEquals('ipsum', (string) $result[1]->getMetadata()->getLiteral($ftsQueryProp . '1'));
     }
