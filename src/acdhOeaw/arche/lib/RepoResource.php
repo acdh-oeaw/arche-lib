@@ -34,7 +34,6 @@ use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Http\Message\ResponseInterface;
 use acdhOeaw\arche\lib\exception\RepoLibException;
-use acdhOeaw\arche\lib\promise\RepoResourcePromise;
 use acdhOeaw\arche\lib\promise\ResponsePromise;
 
 /**

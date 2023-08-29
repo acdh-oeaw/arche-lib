@@ -27,7 +27,6 @@
 namespace acdhOeaw\arche\lib;
 
 use PDOStatement;
-use zozlak\queryPart\QueryPart;
 use acdhOeaw\arche\lib\exception\RepoLibException;
 
 /**
