@@ -51,8 +51,10 @@ use function GuzzleHttp\json_encode;
  * @property string $class
  * @property int    $checkInterval
  * @property array<string, string> $classLoader
+ * @property int    $configDate
  * @property string $connStr
  * @property string $cors
+ * @property array<string> $copying
  * @property Config $create
  * @property string $creationDate
  * @property string $creationUser
@@ -79,6 +81,7 @@ use function GuzzleHttp\json_encode;
  * @property array<string, array<Config>> $fixed
  * @property Config $fullTextSearch
  * @property string $function
+ * @property array<string> $forbidden
  * @property string $guest
  * @property Config $handlers
  * @property string $hash
