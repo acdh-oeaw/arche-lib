@@ -26,7 +26,8 @@
 
 namespace acdhOeaw\arche\lib;
 
-use EasyRdf\Resource;
+use rdfInterface\DatasetInterface;
+use rdfInterface\DatasetNodeInterface;
 
 /**
  *
@@ -157,10 +158,10 @@ interface RepoResourceInterface {
      * A reference to the metadata is returned meaning adjusting the returned object
      * automatically affects the resource metadata.
      * 
-     * @return Resource
+     * @return DatasetNodeInterface
      * @see getMetadata()
      */
-    public function getGraph(): Resource;
+    public function getGraph(): DatasetNodeInterface;
 
     /**
      * Returns resource metadata.
@@ -172,26 +173,26 @@ interface RepoResourceInterface {
      * does not automatically affect the resource metadata.
      * Use the setMetadata() method to write back the changes you made.
      * 
-     * @return Resource
+     * @return DatasetNodeInterface
      * @see setMetadata()
      * @see getGraph()
      */
-    public function getMetadata(): Resource;
+    public function getMetadata(): DatasetNodeInterface;
 
     /**
-     * Replaces resource metadata with a given RDF resource graph. A reference
+     * Replaces resource metadata with a given RDF graph. A reference
      * to the provided metadata is stored meaning future modifications of the
      * $metadata object automatically affect the resource metadata.
      * 
      * New metadata are not automatically written back to the repository.
      * Use the updateMetadata() method to write them back.
      * 
-     * @param Resource $resource
+     * @param DatasetInterface $metadata
      * @return void
      * @see updateMetadata()
      * @see setMetadata()
      */
-    public function setGraph(Resource $resource): void;
+    public function setGraph(DatasetInterface $metadata): void;
 
     /**
      * Replaces resource metadata with a given RDF resource graph. A deep copy
@@ -201,11 +202,11 @@ interface RepoResourceInterface {
      * New metadata are not automatically written back to the repository.
      * Use the `updateMetadata()` method to write them back.
      * 
-     * @param Resource $metadata
+     * @param DatasetNodeInterface $metadata
      * @see updateMetadata()
      * @see setGraph()
      */
-    public function setMetadata(Resource $metadata): void;
+    public function setMetadata(DatasetNodeInterface $metadata): void;
 
     /**
      * Naivly checks if the resource is of a given class.

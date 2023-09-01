@@ -13,11 +13,14 @@
     ],
     "require": {
         "php": ">=8.0 <8.3",
-        "guzzlehttp/guzzle": "^7 | ^6",
-        "acdh-oeaw/easyrdf": ">=0.13.5",
+        "guzzlehttp/guzzle": "^7",
         "zozlak/rdf-constants": "^1",
         "zozlak/query-part": "^2",
-        "psr/log": "*"
+        "psr/log": "*",
+        "sweetrdf/rdf-interface": "^2.0.0-RC3",
+        "sweetrdf/quick-rdf": "dev-master",
+        "sweetrdf/quick-rdf-io": "dev-master",
+        "sweetrdf/term-templates": "^2"
     },
     "autoload": {
         "psr-4": {

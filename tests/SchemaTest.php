@@ -25,6 +25,7 @@
  */
 
 namespace acdhOeaw\arche\lib\tests;
+
 use acdhOeaw\arche\lib\Schema;
 
 /**
@@ -35,16 +36,15 @@ use acdhOeaw\arche\lib\Schema;
 class SchemaTest extends \PHPUnit\Framework\TestCase {
 
     public function testComplexStructure(): void {
-        $tmp = json_encode(['test' => ['b' => 'c']]);
-        if (is_string($tmp)) {
-            $schema = new Schema(json_decode($tmp));
-            $x      = $schema->test;
-            if (isset($x->b)) {
-                $x->b = 'd';
-            }
-            $y = $schema->test;
-            $this->assertEquals((object) ['b' => 'd'], $x);
-            $this->assertEquals((object) ['b' => 'c'], $y);
+        $schema = new Schema(json_decode('{"test": {"b": "c"}}'));
+        $x      = $schema->test;
+        $this->assertTrue(\quickRdf\DataFactory::namedNode('c')->equals($x->b));
+        $this->assertNull($x->foo);
+        try {
+            $x->b = 'foo';
+            $this->assertTrue(false);
+        } catch (\BadMethodCallException $ex) {
+            $this->assertTrue(true);
         }
     }
 }

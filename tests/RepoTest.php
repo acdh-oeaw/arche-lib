@@ -26,14 +26,14 @@
 
 namespace acdhOeaw\arche\lib\tests;
 
-use EasyRdf\Literal;
 use GuzzleHttp\Exception\ClientException;
 use zozlak\RdfConstants as RDF;
+use quickRdf\DataFactory as DF;
+use termTemplates\PredicateTemplate as PT;
 use acdhOeaw\arche\lib\BinaryPayload;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\RepoResource;
 use acdhOeaw\arche\lib\exception\AmbiguousMatch;
-use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
 use acdhOeaw\arche\lib\exception\ExceptionUtil;
 
@@ -88,42 +88,41 @@ class RepoTest extends TestBase {
 
     public function testCreateBinaryResource(): void {
         $labelProp = self::$schema->label;
-        $metadata  = $this->getMetadata([$labelProp => 'sampleTitle']);
+        $labelTmpl = new PT($labelProp);
+        $metadata  = $this->getMetadata(['label' => 'sampleTitle']);
         $binary    = new BinaryPayload(null, __FILE__);
 
         self::$repo->begin();
         $res1 = self::$repo->createResource($metadata, $binary);
-        $this->noteResource($res1);
         $this->assertEquals(file_get_contents(__FILE__), (string) $res1->getContent()->getBody(), 'file content mismatch');
-        $this->assertEquals('sampleTitle', (string) $res1->getMetadata()->getLiteral($labelProp));
+        $this->assertEquals('sampleTitle', $res1->getMetadata()->getObjectValue($labelTmpl));
         self::$repo->commit();
 
         $res2 = new RepoResource($res1->getUri(), self::$repo);
         $this->assertEquals(file_get_contents(__FILE__), (string) $res2->getContent()->getBody(), 'file content mismatch');
-        $this->assertEquals('sampleTitle', (string) $res2->getMetadata()->getLiteral($labelProp));
+        $this->assertEquals('sampleTitle', $res2->getMetadata()->GetObjectValue($labelTmpl));
     }
 
     public function testCreateResource(): void {
         $labelProp = self::$schema->label;
-        $metadata  = $this->getMetadata([$labelProp => 'sampleTitle']);
+        $labelTmpl = new PT($labelProp);
+        $metadata  = $this->getMetadata(['label'=> 'sampleTitle']);
 
         self::$repo->begin();
         $res1 = self::$repo->createResource($metadata);
-        $this->noteResource($res1);
-        $this->assertEquals('sampleTitle', (string) $res1->getMetadata()->getLiteral($labelProp));
+        $this->assertEquals('sampleTitle', (string) $res1->getMetadata()->GetObjectValue($labelTmpl));
         self::$repo->commit();
 
         $res2 = new RepoResource($res1->getUri(), self::$repo);
-        $this->assertEquals('sampleTitle', (string) $res2->getMetadata()->getLiteral($labelProp));
+        $this->assertEquals('sampleTitle', (string) $res2->getMetadata()->GetObjectValue($labelTmpl));
     }
 
     public function testSearchById(): void {
         $idProp = self::$schema->id;
         $id     = 'https://a.b/' . rand();
-        $meta   = $this->getMetadata([$idProp => $id]);
+        $meta   = $this->getMetadata(['id' => $id]);
         self::$repo->begin();
         $res1   = self::$repo->createResource($meta);
-        $this->noteResource($res1);
         self::$repo->commit();
 
         $res2 = self::$repo->getResourceById($id);
@@ -139,13 +138,11 @@ class RepoTest extends TestBase {
         $idProp = self::$schema->id;
         $id1    = 'https://a.b/' . rand();
         $id2    = 'https://a.b/' . rand();
-        $meta1  = $this->getMetadata([$idProp => $id1]);
-        $meta2  = $this->getMetadata([$idProp => $id2]);
+        $meta1  = $this->getMetadata(['id' => $id1]);
+        $meta2  = $this->getMetadata(['id' => $id2]);
         self::$repo->begin();
         $res1   = self::$repo->createResource($meta1);
-        $this->noteResource($res1);
         $res2   = self::$repo->createResource($meta2);
-        $this->noteResource($res2);
         self::$repo->commit();
 
         $this->expectException(AmbiguousMatch::class);
@@ -153,17 +150,18 @@ class RepoTest extends TestBase {
     }
 
     public function testMap(): void {
-        $prop    = 'http://foo/bar';
-        $valueOk = rand();
-        $metaOk  = $this->getMetadata([$prop => $valueOk]);
-        $metaBad = $this->getMetadata([$prop => new Literal('baz', null, RDF::XSD_DATE)]);
+        $prop     = 'http://foo/bar';
+        $propTmpl = new PT($prop);
+        $valueOk  = rand();
+        $metaOk   = $this->getMetadata([$prop => $valueOk]);
+        $metaBad  = $this->getMetadata([$prop => DF::literal('baz', null, RDF::XSD_DATE)]);
         self::$repo->begin();
 
         // REJEST_SKIP
         $results = self::$repo->map([$metaOk, $metaBad], fn($meta) => self::$repo->createResourceAsync($meta), 1, Repo::REJECT_SKIP);
         $this->assertCount(1, $results);
         $this->assertInstanceOf(RepoResource::class, $results[0]);
-        $this->assertEquals($valueOk, (string) $results[0]->getGraph()->get($prop));
+        $this->assertEquals($valueOk, (string) $results[0]->getGraph()->getObjectValue($propTmpl));
 
         // REJECT_INCLUDE
         $results   = self::$repo->map([$metaOk, $metaBad], fn($meta) => self::$repo->createResourceAsync($meta), 1, Repo::REJECT_INCLUDE);
@@ -178,7 +176,7 @@ class RepoTest extends TestBase {
         }
         $this->assertNotNull($rejected);
         $this->assertNotNull($fulfilled);
-        $this->assertEquals($valueOk, (string) $fulfilled->getGraph()->get($prop));
+        $this->assertEquals($valueOk, (string) $fulfilled->getGraph()->getObjectValue($propTmpl));
         $this->assertEquals(400, $rejected->getResponse()->getStatusCode());
         $this->assertStringContainsString('Wrong property value', (string) $rejected->getResponse()->getBody());
 

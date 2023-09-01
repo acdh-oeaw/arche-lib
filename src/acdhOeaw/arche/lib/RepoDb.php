@@ -30,8 +30,9 @@ use Generator;
 use PDO;
 use PDOException;
 use PDOStatement;
-use EasyRdf\Graph;
-use EasyRdf\Literal;
+use quickRdf\Dataset;
+use quickRdf\DataFactory as DF;
+use termTemplates\QuadTemplate as QT;
 use zozlak\RdfConstants as RDF;
 use zozlak\queryPart\QueryPart;
 use acdhOeaw\arche\lib\RepoResourceInterface AS RRI;
@@ -55,7 +56,7 @@ class RepoDb implements RepoInterface {
      * 
      * @var string
      */
-    static public $resourceClass = '\acdhOeaw\arche\lib\RepoResourceDb';
+    static public $resourceClass = RepoResourceDb::class;
 
     /**
      * Creates a repository object instance from a given configuration file.
@@ -151,12 +152,12 @@ class RepoDb implements RepoInterface {
      * 
      * @param array<SearchTerm> $searchTerms
      * @param SearchConfig $config
-     * @return Generator<RepoResourceDb>
+     * @return Generator<RepoResourceInterface>
      */
     public function getResourcesBySearchTerms(array $searchTerms,
                                               SearchConfig $config): Generator {
         $graph = $this->getGraphBySearchTerms($searchTerms, $config);
-        yield from $this->parseSearchGraph($graph, $config);
+        yield from $this->extractResourcesFromGraph($graph, $config);
     }
 
     /**
@@ -165,25 +166,25 @@ class RepoDb implements RepoInterface {
      * @param string $query
      * @param array<mixed> $parameters
      * @param SearchConfig $config
-     * @return Generator<RepoResourceDb>
+     * @return Generator<RepoResourceInterface>
      */
     public function getResourcesBySqlQuery(string $query, array $parameters,
                                            SearchConfig $config): Generator {
         $graph = $this->getGraphBySqlQuery($query, $parameters, $config);
-        yield from $this->parseSearchGraph($graph, $config);
+        yield from $this->extractResourcesFromGraph($graph, $config);
     }
 
     /**
      * 
      * @param array<SearchTerm> $searchTerms
      * @param SearchConfig $config
-     * @return Graph
+     * @return Dataset
      */
     public function getGraphBySearchTerms(array $searchTerms,
-                                          SearchConfig $config): Graph {
+                                          SearchConfig $config): Dataset {
         $query         = $this->getPdoStatementBySearchTerms($searchTerms, $config);
         $graph         = $this->parsePdoStatement($query);
-        $config->count = (int) ((string) $graph->resource($this->getBaseUrl())->getLiteral($this->schema->searchCount));
+        $config->count = (int) ($graph->getObjectValue(new QT(DF::namedNode($this->getBaseUrl()), $this->getSchema()->searchCount)) ?? 0);
         return $graph;
     }
 
@@ -192,13 +193,13 @@ class RepoDb implements RepoInterface {
      * @param string $query
      * @param array<mixed> $parameters
      * @param SearchConfig $config
-     * @return Graph
+     * @return Dataset
      */
     public function getGraphBySqlQuery(string $query, array $parameters,
-                                       SearchConfig $config): Graph {
+                                       SearchConfig $config): Dataset {
         $query         = $this->getPdoStatementBySqlQuery($query, $parameters, $config);
         $graph         = $this->parsePdoStatement($query);
-        $config->count = (int) ((string) $graph->resource($this->getBaseUrl())->getLiteral($this->schema->searchCount));
+        $config->count = (int) ($graph->getObjectValue(new QT(DF::namedNode($this->getBaseUrl()), $this->getSchema()->searchCount)) ?? 0);
         return $graph;
     }
 
@@ -453,9 +454,9 @@ class RepoDb implements RepoInterface {
                 FROM fts
             ";
             $param = [
-                $this->schema->searchFts, RDF::XSD_STRING,
-                $this->schema->searchFtsProperty,
-                $this->schema->searchFtsQuery, RDF::XSD_STRING,
+                $this->schema->searchFts->getValue(), RDF::XSD_STRING,
+                $this->schema->searchFtsProperty->getValue(),
+                $this->schema->searchFtsQuery->getValue(), RDF::XSD_STRING,
             ];
         }
         return [new QueryPart($withQuery, $withParam), new QueryPart($query, $param)];
@@ -541,55 +542,31 @@ class RepoDb implements RepoInterface {
      * Parses SQL query results containing resources metadata into an RDF graph.
      * 
      * @param PDOStatement $query
-     * @return Graph
+     * @return Dataset
      */
-    public function parsePdoStatement(PDOStatement $query): Graph {
+    public function parsePdoStatement(PDOStatement $query): Dataset {
         $idProp  = $this->schema->id;
         $baseUrl = $this->getBaseUrl();
-        $graph   = new Graph();
+        $graph   = new Dataset();
         while ($triple  = $query->fetchObject()) {
-            $triple->id = $baseUrl . $triple->id;
-            $resource   = $graph->resource($triple->id);
+            $sbj  = DF::namedNode($baseUrl . $triple->id);
+            $pred = $triple->type === 'ID' ? $idProp : DF::namedNode($triple->property);
             switch ($triple->type) {
                 case 'ID':
-                    $resource->addResource($idProp, $triple->value);
+                case 'URI':
+                    $obj          = DF::namedNode($triple->value);
                     break;
                 case 'REL':
-                    $resource->addResource($triple->property, $baseUrl . $triple->value);
-                    break;
-                case 'URI':
-                    $resource->addResource($triple->property, $triple->value);
+                    $obj          = DF::namedNode($baseUrl . $triple->value);
                     break;
                 case 'GEOM':
                     $triple->type = RDF::XSD_STRING;
                 default:
-                    $type         = empty($triple->lang) & $triple->type !== RDF::XSD_STRING ? $triple->type : null;
-                    $literal      = new Literal($triple->value, !empty($triple->lang) ? $triple->lang : null, $type);
-                    $resource->add($triple->property, $literal);
+                    $obj          = DF::literal($triple->value, $triple->lang, $triple->type);
             }
+            $graph->add(DF::quad($sbj, $pred, $obj));
         }
         return $graph;
-    }
-
-    /**
-     * 
-     * @param Graph $graph
-     * @param SearchConfig $config
-     * @return Generator<RepoResourceDb>
-     */
-    private function parseSearchGraph(Graph $graph, SearchConfig $config): Generator {
-        $class = $config->class ?? RepoResourceDb::class;
-
-        $resources = $graph->resourcesMatching($this->schema->searchMatch);
-        $this->sortMatchingResources($resources, $this->schema->searchOrder);
-        foreach ($resources as $i) {
-            $i->delete($this->schema->searchMatch);
-            $i->delete($this->schema->searchOrder);
-            $obj = new $class($i->getUri(), $this);
-            /** @var RepoResourceDb $obj */
-            $obj->setGraph($i);
-            yield $obj;
-        }
     }
 
     /**

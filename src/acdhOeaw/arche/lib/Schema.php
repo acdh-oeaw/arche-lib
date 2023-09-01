@@ -26,8 +26,8 @@
 
 namespace acdhOeaw\arche\lib;
 
-use function GuzzleHttp\json_decode;
-use function GuzzleHttp\json_encode;
+use quickRdf\DataFactory as DF;
+use quickRdf\NamedNode;
 
 /**
  * A container for configuration properties.
@@ -36,26 +36,29 @@ use function GuzzleHttp\json_encode;
  * surprising configuration modifications.
  *
  * @author zozlak
- * @property string $id
- * @property string $label
- * @property string $parent
- * @property string $delete
- * @property string $binarySize
- * @property string $hash
- * @property string $mime
- * @property string $fileName
- * @property string $searchCount
- * @property string $searchFts
- * @property string $searchMatch
- * @property string $searchOrder
- * @property string $searchOrderValue
- * @property string $creationDate
- * @property string $creationUser
- * @property string $modificationDate
- * @property string $modificationUser
- * @property string $binaryModificationDate
- * @property string $binaryModificationUser
- * @property object $test
+ * @property NamedNode $id
+ * @property NamedNode $label
+ * @property NamedNode $parent
+ * @property NamedNode $delete
+ * @property NamedNode $binarySize
+ * @property NamedNode $hash
+ * @property NamedNode $mime
+ * @property NamedNode $fileName
+ * @property NamedNode $searchCount
+ * @property float $searchWeight
+ * @property NamedNode $searchFts
+ * @property NamedNode $searchFtsQuery
+ * @property NamedNode $searchFtsProperty
+ * @property NamedNode $searchMatch
+ * @property NamedNode $searchOrder
+ * @property NamedNode $searchOrderValue
+ * @property NamedNode $creationDate
+ * @property NamedNode $creationUser
+ * @property NamedNode $modificationDate
+ * @property NamedNode $modificationUser
+ * @property NamedNode $binaryModificationDate
+ * @property NamedNode $binaryModificationUser
+ * @property Schema $test
  */
 class Schema {
 
@@ -67,6 +70,14 @@ class Schema {
      * @param object $schema object with configuration properties
      */
     public function __construct(object $schema) {
+        foreach (get_object_vars($schema) as $k => $v) {
+            if (is_object($v)) {
+                $schema->$k = new Schema($v);
+            } else {
+                $schema->$k = DF::namedNode($v);
+            }
+        }
+        unset($v);
         $this->schema = $schema;
     }
 
@@ -74,15 +85,13 @@ class Schema {
      * Magic method implementing accessing properties.
      * 
      * @param string $name configuration property to be returned
-     * @return mixed
+     * @return Schema|NamedNode|null
      */
-    public function __get(string $name): mixed {
-        if (!isset($this->schema->$name)) {
-            return null;
-        } elseif (is_object($this->schema->$name)) {
-            return json_decode(json_encode($this->schema->$name));
-        } else {
-            return $this->schema->$name;
-        }
+    public function __get(string $name): Schema | NamedNode | null {
+        return $this->schema->$name ?? null;
+    }
+    
+    public function __set(string $name, mixed $value) {
+        throw new \BadMethodCallException();
     }
 }

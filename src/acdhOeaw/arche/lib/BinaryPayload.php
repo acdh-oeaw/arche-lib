@@ -38,13 +38,8 @@ use acdhOeaw\arche\lib\exception\RepoLibException;
  */
 class BinaryPayload {
 
-    static private int $guzzleVersion;
-
     static public function guzzleMimetype(string $fileName): ?string {
-        if (!isset(self::$guzzleVersion)) {
-            self::$guzzleVersion = (int) InstalledVersions::getVersion('guzzlehttp/psr7');
-        }
-        return self::$guzzleVersion >= 2 || self::$guzzleVersion === 0 ? \GuzzleHttp\Psr7\MimeType::fromFilename($fileName) : \GuzzleHttp\Psr7\mimetype_from_filename($fileName);
+        return \GuzzleHttp\Psr7\MimeType::fromFilename($fileName);
     }
 
     /**

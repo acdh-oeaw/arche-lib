@@ -28,8 +28,6 @@ namespace acdhOeaw\arche\lib;
 
 use Generator;
 use RuntimeException;
-use EasyRdf\Graph;
-use EasyRdf\Resource;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
@@ -37,6 +35,16 @@ use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Promise\RejectedPromise;
 use Psr\Http\Message\ResponseInterface;
+use rdfInterface\DatasetInterface;
+use rdfInterface\DatasetNodeInterface;
+use rdfInterface\QuadInterface;
+use rdfInterface\TermInterface;
+use quickRdf\Dataset;
+use quickRdf\DatasetNode;
+use quickRdf\DataFactory as DF;
+use quickRdfIo\NQuadsSerializer;
+use quickRdfIo\Util as RdfIoUtil;
+use termTemplates\QuadTemplate as QT;
 use acdhOeaw\arche\lib\exception\Conflict;
 use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
@@ -244,14 +252,14 @@ class Repo implements RepoInterface {
             throw new RepoLibException("This version of arche-lib requires ARCHE version " . self::ARCHE_CORE_MIN_VERSION . " while the repository version is $version");
         }
         $this->schema  = new Schema($config->schema);
-        $this->headers = new Schema($config->rest->headers);
+        $this->headers = $config->rest->headers;
         $this->baseUrl = $config->rest->urlBase . $config->rest->pathBase;
     }
 
     /**
      * Creates a repository resource.
      * 
-     * @param Resource $metadata resource metadata
+     * @param DatasetNodeInterface $metadata resource metadata
      * @param BinaryPayload $payload resource binary payload (can be null)
      * @param string $class an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
@@ -261,7 +269,7 @@ class Repo implements RepoInterface {
      *   read mode denoted by the $readMode parameter
      * @return RepoResource
      */
-    public function createResource(Resource $metadata,
+    public function createResource(DatasetNodeInterface $metadata,
                                    BinaryPayload $payload = null,
                                    string $class = null,
                                    string $readMode = RepoResourceInterface::META_RESOURCE,
@@ -272,7 +280,7 @@ class Repo implements RepoInterface {
     /**
      * Asynchronous version of createResource()
      * 
-     * @param Resource $metadata
+     * @param DatasetNodeInterface $metadata
      * @param BinaryPayload $payload
      * @param string $class
      * @param string $readMode
@@ -280,14 +288,15 @@ class Repo implements RepoInterface {
      * @return RepoResourcePromise
      * @see createResource()
      */
-    public function createResourceAsync(Resource $metadata,
+    public function createResourceAsync(DatasetNodeInterface $metadata,
                                         BinaryPayload $payload = null,
                                         string $class = null,
                                         string $readMode = RepoResourceInterface::META_RESOURCE,
                                         ?string $parentProperty = null): RepoResourcePromise {
-        $graph       = new Graph();
-        $metadata    = $body        = $metadata->copy([], '/^$/', $this->baseUrl, $graph);
-        $body        = $graph->serialise('application/n-triples');
+        $sbj         = DF::namedNode($this->baseUrl);
+        $metadata    = $metadata->map(fn(QuadInterface $x) => $x->withSubject($sbj))->withNode($sbj);
+        $serializer  = new NQuadsSerializer();
+        $body        = $serializer->serialize($metadata);
         $headers     = ['Content-Type' => 'application/n-triples'];
         $req         = new Request('post', $this->baseUrl . 'metadata', $headers, $body);
         $readModeTmp = $payload === null ? $readMode : RepoResourceInterface::META_NONE;
@@ -459,21 +468,17 @@ class Repo implements RepoInterface {
         $req          = new Request('post', $url, $headers, $body);
         $promise      = $this->sendRequestAsync($req);
         $promise      = $promise->then(function (ResponseInterface $resp) use ($class) {
-            $format  = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
-            $graph   = new Graph();
-            $graph->parse($resp->getBody(), $format);
-            $matches = $graph->resourcesMatching($this->schema->searchMatch);
+            $graph   = new Dataset();
+            $graph->add(RdfIoUtil::parse($resp, new DF()));
+            $matches = $graph->listSubjects(new QT(predicate: $this->schema->searchMatch))->getValues();
             switch (count($matches)) {
                 case 0:
                     return new RejectedPromise(new NotFound());
                 case 1;
                     $class = $class ?? self::$resourceClass;
-                    return new $class($matches[0]->getUri(), $this);
+                    return new $class($matches[0], $this);
                 default:
-                    $uris  = implode(', ', array_map(function ($x) {
-                            return $x->getUri();
-                        }, $matches));
-                    return new RejectedPromise(new AmbiguousMatch("Many resources match the search: $uris"));
+                    return new RejectedPromise(new AmbiguousMatch("Many resources match the search: " . implode(', ', $matches)));
             }
         });
         return new RepoResourcePromise($promise);
@@ -505,7 +510,7 @@ class Repo implements RepoInterface {
                                                 array $parameters,
                                                 SearchConfig $config): GeneratorPromise {
         $promise = $this->getGraphBySqlQueryAsync($query, $parameters, $config);
-        $promise = $promise->then(function (Graph $graph) use ($config): Generator {
+        $promise = $promise->then(function (Dataset $graph) use ($config): Generator {
             yield from $this->extractResourcesFromGraph($graph, $config);
         });
         return new GeneratorPromise($promise);
@@ -534,7 +539,7 @@ class Repo implements RepoInterface {
     public function getResourcesBySearchTermsAsync(array $searchTerms,
                                                    SearchConfig $config): GeneratorPromise {
         $promise = $this->getGraphBySearchTermsAsync($searchTerms, $config);
-        $promise = $promise->then(function (Graph $graph) use ($config): Generator {
+        $promise = $promise->then(function (Dataset $graph) use ($config): Generator {
             yield from $this->extractResourcesFromGraph($graph, $config);
         });
         return new GeneratorPromise($promise);
@@ -546,10 +551,10 @@ class Repo implements RepoInterface {
      * @param string $query
      * @param array<mixed> $parameters
      * @param SearchConfig $config
-     * @return Graph
+     * @return DatasetInterface
      */
     public function getGraphBySqlQuery(string $query, array $parameters,
-                                       SearchConfig $config): Graph {
+                                       SearchConfig $config): DatasetInterface {
         return $this->getGraphBySqlQueryAsync($query, $parameters, $config)->wait(true) ?? throw new RuntimeException('Promise returned null');
     }
 
@@ -564,19 +569,20 @@ class Repo implements RepoInterface {
      */
     public function getGraphBySqlQueryAsync(string $query, array $parameters,
                                             SearchConfig $config): GraphPromise {
-        $headers = [
+        $headers    = [
             'Accept'       => 'application/n-triples',
             'Content-Type' => 'application/x-www-form-urlencoded',
         ];
-        $headers = array_merge($headers, $config->getHeaders($this));
-        $body    = array_merge(
+        $headers    = array_merge($headers, $config->getHeaders($this));
+        $parameters = array_map(fn($x) => $x instanceof TermInterface ? $x->getValue() : $x, $parameters);
+        $body       = array_merge(
             ['sql' => $query, 'sqlParam' => $parameters],
             $config->toArray()
         );
-        $body    = http_build_query($body);
-        $req     = new Request('post', $this->baseUrl . 'search', $headers, $body);
-        $promise = $this->sendRequestAsync($req);
-        $promise = $promise->then(function (ResponseInterface $resp) use ($config): Graph {
+        $body       = http_build_query($body);
+        $req        = new Request('post', $this->baseUrl . 'search', $headers, $body);
+        $promise    = $this->sendRequestAsync($req);
+        $promise    = $promise->then(function (ResponseInterface $resp) use ($config): Dataset {
             return $this->parseSearchResponse($resp, $config);
         });
         return new GraphPromise($promise);
@@ -586,10 +592,10 @@ class Repo implements RepoInterface {
      * 
      * @param array<SearchTerm> $searchTerms
      * @param SearchConfig $config
-     * @return Graph
+     * @return Dataset
      */
     public function getGraphBySearchTerms(array $searchTerms,
-                                          SearchConfig $config): Graph {
+                                          SearchConfig $config): Dataset {
         return $this->getGraphBySearchTermsAsync($searchTerms, $config)->wait(true) ?? throw new RuntimeException('Promise returned null');
     }
 
@@ -618,7 +624,7 @@ class Repo implements RepoInterface {
         $req  = new Request('post', $this->baseUrl . 'search', $headers, $body);
 
         $promise = $this->sendRequestAsync($req);
-        $promise = $promise->then(function (ResponseInterface $resp) use ($config): Graph {
+        $promise = $promise->then(function (ResponseInterface $resp) use ($config): Dataset {
             return $this->parseSearchResponse($resp, $config);
         });
         return new GraphPromise($promise);
@@ -711,46 +717,14 @@ class Repo implements RepoInterface {
      * 
      * @param ResponseInterface $resp PSR-7 search request response
      * @param SearchConfig $config search configuration object
-     * @return Graph
+     * @return Dataset
      */
     private function parseSearchResponse(ResponseInterface $resp,
-                                         SearchConfig $config): Graph {
-        $graph = new Graph();
-        $body  = (string) $resp->getBody();
-        if (!empty($body)) {
-            $format = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
-            $graph->parse($body, $format);
-
-            $config->count = (int) ((string) $graph->resource($this->getBaseUrl())->getLiteral($this->getSchema()->searchCount));
-        } else {
-            $config->count = 0;
-        }
+                                         SearchConfig $config): Dataset {
+        $graph         = new Dataset();
+        $graph->add(RdfIoUtil::parse($resp, new DF()));
+        $config->count = (int) ($graph->getObjectValue(new QT(DF::namedNode($this->getBaseUrl()), $this->getSchema()->searchCount)) ?? 0);
         return $graph;
-    }
-
-    /**
-     * Extracts collection of RepoResource objects from the EasyRdf graph being
-     * parsed from a search response.
-     * 
-     * @param Graph $graph graph returned by the parseSearchResponse() method
-     * @param SearchConfig $config search configuration object
-     * @return Generator<RepoResource>
-     */
-    private function extractResourcesFromGraph(Graph $graph,
-                                               SearchConfig $config): Generator {
-        $class     = $config->class ?? self::$resourceClass;
-        $resources = $graph->resourcesMatching($this->schema->searchMatch);
-
-        $this->sortMatchingResources($resources, $this->schema->searchOrder);
-
-        foreach ($resources as $i) {
-            $i->delete($this->schema->searchMatch);
-            $i->delete($this->schema->searchOrder);
-            $obj = new $class($i->getUri(), $this);
-            /** @var RepoResource $obj */
-            $obj->setGraph($i);
-            yield $obj;
-        }
     }
 
     private function withReadHeaders(Request $request, string $mode,
@@ -758,6 +732,6 @@ class Repo implements RepoInterface {
         return $request->
                 withHeader('Accept', 'application/n-triples')->
                 withHeader($this->getHeaderName('metadataReadMode'), $mode)->
-                withHeader($this->getHeaderName('metadataParentProperty'), $parentProperty ?? $this->schema->parent);
+                withHeader($this->getHeaderName('metadataParentProperty'), $parentProperty ?? $this->schema->parent->getValue());
     }
 }

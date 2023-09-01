@@ -26,8 +26,11 @@
 
 namespace acdhOeaw\arche\lib;
 
-use EasyRdf\Resource;
-use acdhOeaw\arche\lib\exception\RepoLibException;
+use rdfInterface\DatasetInterface;
+use rdfInterface\DatasetNodeInterface;
+use rdfInterface\QuadInterface;
+use quickRdf\DataFactory as DF;
+use termTemplates\QuadTemplate as QT;
 use zozlak\RdfConstants as RDF;
 
 /**
@@ -38,10 +41,9 @@ use zozlak\RdfConstants as RDF;
  */
 trait RepoResourceTrait {
 
-    private ?Resource $metadata = null;
+    private DatasetNodeInterface $metadata;
     private bool $metaSynced;
     private RepoInterface $repoInt;
-    private string $url;
 
     /**
      * Returns the repository resource URL.
@@ -49,7 +51,7 @@ trait RepoResourceTrait {
      * @return string
      */
     public function getUri(): string {
-        return $this->url;
+        return $this->metadata->getNode()->getValue();
     }
 
     /**
@@ -69,11 +71,7 @@ trait RepoResourceTrait {
     public function getIds(): array {
         $idProp = $this->repoInt->getSchema()->id;
         $this->loadMetadata();
-        $ids    = [];
-        foreach ($this->metadata?->allResources($idProp) ?? [] as $i) {
-            $ids[] = (string) $i;
-        }
-        return $ids;
+        return $this->metadata->listObjects(new QT(predicate: $idProp))->getValues();
     }
 
     /**
@@ -83,11 +81,7 @@ trait RepoResourceTrait {
      */
     public function getClasses(): array {
         $this->loadMetadata();
-        $ret = [];
-        foreach ($this->metadata?->allResources(RDF::RDF_TYPE) ?? [] as $i) {
-            $ret[] = $i->getUri();
-        }
-        return $ret;
+        return $this->metadata->listObjects(new QT(predicate: DF::namedNode(RDF::RDF_TYPE)))->getValues();
     }
 
     /**
@@ -100,14 +94,14 @@ trait RepoResourceTrait {
      * does not automatically affect the resource metadata.
      * Use the setMetadata() method to write back the changes you made.
      * 
-     * @return Resource
+     * @return DatasetNodeInterface
      * @see setMetadata()
      * @see setGraph()
      * @see getGraph()
      */
-    public function getMetadata(): Resource {
+    public function getMetadata(): DatasetNodeInterface {
         $this->loadMetadata();
-        return $this->metadata?->copy() ?? throw new RepoLibException('Metadata not loaded');
+        return $this->metadata->copy();
     }
 
     /**
@@ -119,13 +113,13 @@ trait RepoResourceTrait {
      * A reference to the metadata is returned meaning adjusting the returned object
      * automatically affects the resource metadata.
      * 
-     * @return Resource
+     * @return DatasetNodeInterface
      * @see setGraph()
      * @see getMetadata()
      */
-    public function getGraph(): Resource {
+    public function getGraph(): DatasetNodeInterface {
         $this->loadMetadata();
-        return $this->metadata ?? throw new RepoLibException('Metadata not loaded');
+        return $this->metadata;
     }
 
     /**
@@ -133,33 +127,36 @@ trait RepoResourceTrait {
      * of the provided metadata is stored meaning future modifications of the
      * $metadata object don't affect the resource metadata.
      * 
-     * New metadata are not automatically written back to the repository.
+     * New metadata is not automatically written back to the repository.
      * Use the `updateMetadata()` method to write them back.
      * 
-     * @param Resource $metadata
+     * @param DatasetNodeInterface $metadata
      * @see updateMetadata()
      * @see setGraph()
      */
-    public function setMetadata(Resource $metadata): void {
-        $this->metadata   = $metadata->copy([], '/^$/', $this->getUri());
+    public function setMetadata(DatasetNodeInterface $metadata): void {
+        $sbj              = $this->metadata->getNode();
+        $metadata         = $metadata->withDataset($metadata->getDataset()->copy());
+        $metadata->forEach(fn(QuadInterface $x) => $x->withSubject($sbj));
+        $this->metadata   = $this->metadata->withDataset($metadata->getDataset());
         $this->metaSynced = false;
     }
 
     /**
-     * Replaces resource metadata with a given RDF resource graph. A reference
+     * Replaces resource metadata with a given RDF graph. A reference
      * to the provided metadata is stored meaning future modifications of the
      * $metadata object automatically affect the resource metadata.
      * 
      * New metadata are not automatically written back to the repository.
      * Use the updateMetadata() method to write them back.
      * 
-     * @param Resource $resource
+     * @param DatasetInterface $metadata
      * @return void
      * @see updateMetadata()
      * @see setMetadata()
      */
-    public function setGraph(Resource $resource): void {
-        $this->metadata   = $resource;
+    public function setGraph(DatasetInterface $metadata): void {
+        $this->metadata   = $this->metadata->withDataset($metadata);
         $this->metaSynced = false;
     }
 

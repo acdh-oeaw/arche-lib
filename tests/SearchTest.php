@@ -26,10 +26,12 @@
 
 namespace acdhOeaw\arche\lib\tests;
 
+use quickRdf\DataFactory as DF;
+use termTemplates\QuadTemplate as QT;
 use acdhOeaw\arche\lib\RepoResource;
 use acdhOeaw\arche\lib\SearchConfig;
 use acdhOeaw\arche\lib\SearchTerm;
-use zozlak\RdfConstants as C;
+use zozlak\RdfConstants as RDF;
 
 /**
  * Description of SearchTest
@@ -41,29 +43,26 @@ class SearchTest extends TestBase {
     public function setUp(): void {
         parent::setUp();
 
-        $relProp = self::$repo->getSchema()->parent;
         self::$repo->begin();
 
         $meta1 = $this->getMetadata([
-            self::$schema->id     => 'https://an.unique.id',
-            self::$schema->label  => 'sample label for the first resource',
+            'id'                  => 'https://an.unique.id',
+            'label'               => 'sample label for the first resource',
             'https://number.prop' => 150,
             'https://lorem.ipsum' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed iaculis nisl enim, malesuada tempus nisl ultrices ut. Duis egestas at arcu in blandit. Nulla eget sem urna. Sed hendrerit enim ut ultrices luctus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur non dolor non neque venenatis aliquet vitae venenatis est.',
+            'https://date.prop'   => DF::literal('2019-01-01', null, RDF::XSD_DATE),
         ]);
-        $meta1->add('https://date.prop', new \EasyRdf\Literal('2019-01-01', null, C::XSD_DATE));
         $res1  = self::$repo->createResource($meta1);
-        $this->noteResource($res1);
 
         $meta2 = $this->getMetadata([
-            self::$schema->id     => 'https://res2.id',
-            $relProp              => $res1->getUri(),
-            self::$schema->label  => 'a more original title for a resource',
+            'id'                  => 'https://res2.id',
+            'parent'              => $res1->getUri(),
+            'label'               => 'a more original title for a resource',
             'https://number.prop' => 20,
             'https://lorem.ipsum' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur non dolor non neque venenatis aliquet vitae venenatis est. Aenean eleifend ipsum eu placerat sagittis. Aenean ullamcorper dignissim enim, ut congue turpis tristique eu.',
+            'https://date.prop'   => DF::literal('2019-02-01', null, RDF::XSD_DATE),
         ]);
-        $meta2->add('https://date.prop', new \EasyRdf\Literal('2019-02-01', null, C::XSD_DATE));
-        $res2  = self::$repo->createResource($meta2);
-        $this->noteResource($res2);
+        self::$repo->createResource($meta2);
 
         self::$repo->commit();
     }
@@ -76,15 +75,15 @@ class SearchTest extends TestBase {
         $param  = [self::$schema->label];
         $result = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, new SearchConfig()));
         $this->assertEquals(1, count($result));
-        $this->assertEquals('a more original title for a resource', (string) $result[0]->getMetadata()->getLiteral(self::$schema->label));
+        $this->assertEquals('a more original title for a resource', (string) $result[0]->getMetadata()->getObjectValue(new QT(predicate: self::$schema->label)));
     }
 
     /**
      * @group search
      */
     public function testSearchBySqlQueryEmpty(): void {
-        $result = self::$repo->getResourcesBySqlQuery("SELECT -1 AS id WHERE false", [
-            ], new SearchConfig());
+        $param  = [];
+        $result = self::$repo->getResourcesBySqlQuery("SELECT -1 AS id WHERE false", $param, new SearchConfig());
         $this->assertEquals([], iterator_to_array($result));
     }
 
@@ -92,20 +91,21 @@ class SearchTest extends TestBase {
      * @group search
      */
     public function testSearchBySearchTerms(): void {
-        $term1  = new SearchTerm('https://number.prop', 30, '<=', C::XSD_DECIMAL);
-        $term2  = new SearchTerm('https://date.prop', '2019-01-15', '>=', C::XSD_DATE);
-        $term3  = new SearchTerm('https://lorem.ipsum', 'ipsum', '@@');
-        $result = iterator_to_array(self::$repo->getResourcesBySearchTerms([$term1,
-                $term2, $term3], new SearchConfig()));
+        $terms  = [
+            new SearchTerm('https://number.prop', 30, '<=', RDF::XSD_DECIMAL),
+            new SearchTerm('https://date.prop', '2019-01-15', '>=', RDF::XSD_DATE),
+            new SearchTerm('https://lorem.ipsum', 'ipsum', '@@'),
+        ];
+        $result = iterator_to_array(self::$repo->getResourcesBySearchTerms($terms, new SearchConfig()));
         $this->assertEquals(1, count($result));
-        $this->assertEquals('a more original title for a resource', (string) $result[0]->getMetadata()->getLiteral(self::$schema->label));
+        $this->assertEquals('a more original title for a resource', (string) $result[0]->getMetadata()->getObjectValue(new QT(predicate: self::$schema->label)));
     }
 
     /**
      * @group search
      */
     public function testSearchWrongDataType(): void {
-        $term1  = new SearchTerm('https://number.prop', 30, '<=', C::XSD_STRING);
+        $term1  = new SearchTerm('https://number.prop', 30, '<=', RDF::XSD_STRING);
         $result = iterator_to_array(self::$repo->getResourcesBySearchTerms([$term1], new SearchConfig()));
         $this->assertEquals(2, count($result));
     }
@@ -114,6 +114,11 @@ class SearchTest extends TestBase {
      * @group search
      */
     public function testSearchFtsHighlight(): void {
+        $ftsValueTmpl = new QT(predicate: self::$schema->searchFts->getValue() . '1');
+        $ftsPropTmpl  = new QT(predicate: self::$schema->searchFtsProperty->getValue() . '1');
+        $ftsQueryTmpl = new QT(predicate: self::$schema->searchFtsQuery->getValue() . '1');
+        $dateTmpl     = new QT(predicate: 'https://date.prop');
+
         $term                         = new SearchTerm('https://lorem.ipsum', 'ipsum', '@@');
         $config                       = new SearchConfig();
         $config->readFtsConfigFromTerms([$term]);
@@ -125,32 +130,35 @@ class SearchTest extends TestBase {
         $config->ftsFragmentDelimiter = '|';
 
         $result        = self::$repo->getResourcesBySearchTerms([$term], $config);
-        $result        = iterator_to_array($result);
-        $this->assertEquals(2, count($result));
-        $ftsValueProp  = self::$repo->getSchema()->searchFts;
-        $ftsPropProp   = self::$repo->getSchema()->searchFtsProperty;
-        $ftsQueryProp  = self::$repo->getSchema()->searchFtsQuery;
-        $ftsHighlight1 = (string) $result[0]->getMetadata()->getLiteral($ftsValueProp . '1');
-        $ftsHighlight2 = (string) $result[1]->getMetadata()->getLiteral($ftsValueProp . '1');
-        $date1         = (string) $result[0]->getMetadata()->getLiteral('https://date.prop');
-        $date2         = (string) $result[1]->getMetadata()->getLiteral('https://date.prop');
+        $meta          = array_map(fn($x) => $x->getMetadata(), iterator_to_array($result));
+        $this->assertEquals(2, count($meta));
+        $ftsHighlight1 = $meta[0]->getObjectValue($ftsValueTmpl);
+        $ftsHighlight2 = $meta[1]->getObjectValue($ftsValueTmpl);
+        $date1         = $meta[0]->getObjectValue($dateTmpl);
+        $date2         = $meta[1]->getObjectValue($dateTmpl);
         $expected      = [
             '2019-01-01' => 'Lorem #ipsum# dolor',
             '2019-02-01' => 'Lorem #ipsum# dolor|eleifend #ipsum#',
         ];
         $this->assertEquals($expected[$date1], $ftsHighlight1);
         $this->assertEquals($expected[$date2], $ftsHighlight2);
-        $this->assertEquals('https://lorem.ipsum', (string) $result[0]->getMetadata()->get($ftsPropProp . '1'));
-        $this->assertEquals('https://lorem.ipsum', (string) $result[1]->getMetadata()->get($ftsPropProp . '1'));
-        $this->assertEquals('ipsum', (string) $result[0]->getMetadata()->getLiteral($ftsQueryProp . '1'));
-        $this->assertEquals('ipsum', (string) $result[1]->getMetadata()->getLiteral($ftsQueryProp . '1'));
+        $this->assertEquals('https://lorem.ipsum', $meta[0]->getObjectValue($ftsPropTmpl));
+        $this->assertEquals('https://lorem.ipsum', $meta[1]->getObjectValue($ftsPropTmpl));
+        $this->assertEquals('ipsum', $meta[0]->getObjectValue($ftsQueryTmpl));
+        $this->assertEquals('ipsum', $meta[1]->getObjectValue($ftsQueryTmpl));
     }
 
     /**
      * @group search
      */
     public function testSearchFtsHighlight2(): void {
-        $term                         = new SearchTerm('https://lorem.ipsum', 'ipsum', '@@');
+        $ftsValue1Tmpl = new QT(predicate: self::$schema->searchFts->getValue() . '1');
+        $ftsValue2Tmpl = new QT(predicate: self::$schema->searchFts->getValue() . '2');
+        $ftsQuery1Tmpl = new QT(predicate: self::$schema->searchFtsQuery->getValue() . '1');
+        $ftsQuery2Tmpl = new QT(predicate: self::$schema->searchFtsQuery->getValue() . '2');
+        $dateTmpl      = new QT(predicate: 'https://date.prop');
+
+        $terms                        = [new SearchTerm('https://lorem.ipsum', 'ipsum', '@@')];
         $config                       = new SearchConfig();
         $config->ftsQuery             = ['ipsum', 'dolor'];
         $config->ftsStartSel          = ['#', '@'];
@@ -160,28 +168,26 @@ class SearchTest extends TestBase {
         $config->ftsMaxFragments      = [2, 2];
         $config->ftsFragmentDelimiter = ['|', '~'];
 
-        $result        = iterator_to_array(self::$repo->getResourcesBySearchTerms([
-                $term], $config));
-        $this->assertEquals(2, count($result));
-        $ftsValueProp  = self::$repo->getSchema()->searchFts;
-        $ftsQueryProp  = self::$repo->getSchema()->searchFtsQuery;
-        $date1         = (string) $result[0]->getMetadata()->getLiteral('https://date.prop');
-        $date2         = (string) $result[1]->getMetadata()->getLiteral('https://date.prop');
+        $result        = self::$repo->getResourcesBySearchTerms($terms, $config);
+        $meta          = array_map(fn($x) => $x->getMetadata(), iterator_to_array($result));
+        $this->assertEquals(2, count($meta));
+        $date1         = $meta[0]->getObjectValue($dateTmpl);
+        $date2         = $meta[1]->getObjectValue($dateTmpl);
         $ftsHighlight1 = [
-            (string) $result[0]->getMetadata()->getLiteral($ftsValueProp . '1'),
-            (string) $result[0]->getMetadata()->getLiteral($ftsValueProp . '2'),
+            $meta[0]->getObjectValue($ftsValue1Tmpl),
+            $meta[0]->getObjectValue($ftsValue2Tmpl),
         ];
         $ftsHighlight2 = [
-            (string) $result[1]->getMetadata()->getLiteral($ftsValueProp . '1'),
-            (string) $result[1]->getMetadata()->getLiteral($ftsValueProp . '2'),
+            $meta[1]->getObjectValue($ftsValue1Tmpl),
+            $meta[1]->getObjectValue($ftsValue2Tmpl),
         ];
         $ftsQuery1     = [
-            (string) $result[0]->getMetadata()->getLiteral($ftsQueryProp . '1'),
-            (string) $result[0]->getMetadata()->getLiteral($ftsQueryProp . '2'),
+            $meta[0]->getObjectValue($ftsQuery1Tmpl),
+            $meta[0]->getObjectValue($ftsQuery2Tmpl),
         ];
         $ftsQuery2     = [
-            (string) $result[1]->getMetadata()->getLiteral($ftsQueryProp . '1'),
-            (string) $result[1]->getMetadata()->getLiteral($ftsQueryProp . '2'),
+            $meta[1]->getObjectValue($ftsQuery1Tmpl),
+            $meta[1]->getObjectValue($ftsQuery2Tmpl),
         ];
         $order1        = $ftsQuery1[0] === 'ipsum' ? [0, 1] : [1, 0];
         $order2        = $ftsQuery2[0] === 'ipsum' ? [0, 1] : [1, 0];
@@ -201,24 +207,28 @@ class SearchTest extends TestBase {
      * @group search
      */
     public function testSearchRelatives(): void {
+        $dateTmpl = new QT(predicate: 'https://date.prop');
+
         $query                          = "SELECT id FROM metadata WHERE property = ? AND value = ?";
         $param                          = ['https://date.prop', '2019-02-01'];
         $config                         = new SearchConfig();
         $config->metadataMode           = RepoResource::META_RELATIVES;
-        $config->metadataParentProperty = self::$repo->getSchema()->parent;
+        $config->metadataParentProperty = self::$schema->parent;
 
-        $result     = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, $config));
+        $result = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, $config));
         $this->assertEquals(1, count($result));
-        $meta       = $result[0]->getGraph();
-        $this->assertEquals('2019-02-01', (string) $meta->getLiteral('https://date.prop'));
-        $parentProp = self::$repo->getSchema()->parent;
-        $this->assertEquals('2019-01-01', (string) $meta->getResource($parentProp)?->getLiteral('https://date.prop'));
+        $meta   = $result[0]->getGraph();
+        $this->assertEquals('2019-02-01', $meta->getObjectValue($dateTmpl));
+        $parent = $meta->getObject(new QT(predicate: self::$schema->parent));
+        $this->assertEquals('2019-01-01', $meta->getDataset()->getObjectValue(new QT($parent, $dateTmpl->getPredicate())));
     }
 
     /**
      * @group search
      */
     public function testSearchPaging(): void {
+        $dateTmpl = new QT(predicate: 'https://date.prop');
+
         $query         = "SELECT id FROM metadata WHERE property = ? ORDER BY id";
         $param         = ['https://date.prop'];
         $config        = new SearchConfig();
@@ -228,7 +238,7 @@ class SearchTest extends TestBase {
         $result         = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, $config));
         $this->assertEquals(1, count($result));
         $meta           = $result[0]->getGraph();
-        $this->assertEquals('2019-01-01', (string) $meta->getLiteral('https://date.prop'));
+        $this->assertEquals('2019-01-01', $meta->getObjectValue($dateTmpl));
         $this->assertEquals(2, $config->count);
 
         $config->offset = 1;
@@ -236,7 +246,7 @@ class SearchTest extends TestBase {
         $result         = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, $config));
         $this->assertEquals(1, count($result));
         $meta           = $result[0]->getGraph();
-        $this->assertEquals('2019-02-01', (string) $meta->getLiteral('https://date.prop'));
+        $this->assertEquals('2019-02-01', $meta->getObjectValue($dateTmpl));
         $this->assertEquals(2, $config->count);
     }
 
@@ -245,20 +255,21 @@ class SearchTest extends TestBase {
      */
     public function testSearchOrder(): void {
         $dateProp = 'https://date.prop';
+        $dateTmpl = new QT(predicate: $dateProp);
         $query    = "SELECT id FROM metadata WHERE property = ? ORDER BY id";
         $param    = [$dateProp];
         $config   = new SearchConfig();
 
         $config->orderBy = [$dateProp];
         $results         = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, $config));
-        $first           = (string) $results[0]->getGraph()->get($dateProp);
-        $second          = (string) $results[1]->getGraph()->get($dateProp);
+        $first           = $results[0]->getGraph()->getObjectValue($dateTmpl);
+        $second          = $results[1]->getGraph()->getObjectValue($dateTmpl);
         $this->assertGreaterThan($first, $second);
 
         $config->orderBy = ["^$dateProp"];
         $results         = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, $config));
-        $first           = (string) $results[0]->getGraph()->get($dateProp);
-        $second          = (string) $results[1]->getGraph()->get($dateProp);
+        $first           = $results[0]->getGraph()->getObjectValue($dateTmpl);
+        $second          = $results[1]->getGraph()->getObjectValue($dateTmpl);
         $this->assertLessThan($first, $second);
     }
 
@@ -269,7 +280,7 @@ class SearchTest extends TestBase {
         $terms  = [new SearchTerm(['https://date.prop', 'https://number.prop'], 20)];
         $result = iterator_to_array(self::$repo->getResourcesBySearchTerms($terms, new SearchConfig()));
         $this->assertEquals(1, count($result));
-        $this->assertEquals('a more original title for a resource', (string) $result[0]->getMetadata()->getLiteral(self::$schema->label));
+        $this->assertEquals('a more original title for a resource', $result[0]->getMetadata()->getObjectValue(new QT(predicate: self::$schema->label)));
     }
 
     /**
@@ -278,10 +289,10 @@ class SearchTest extends TestBase {
      * @group search
      */
     public function testSearchRelation(): void {
-        $terms  = [new SearchTerm(self::$repo->getSchema()->parent, 'https://an.unique.id')];
+        $terms  = [new SearchTerm(self::$schema->parent, 'https://an.unique.id')];
         $result = iterator_to_array(self::$repo->getResourcesBySearchTerms($terms, new SearchConfig()));
         $this->assertEquals(1, count($result));
-        $this->assertEquals('a more original title for a resource', (string) $result[0]->getMetadata()->getLiteral(self::$schema->label));
+        $this->assertEquals('a more original title for a resource', $result[0]->getMetadata()->getObjectValue(new QT(predicate: self::$schema->label)));
     }
 
     /**
@@ -290,11 +301,11 @@ class SearchTest extends TestBase {
      */
     public function testSearchInverseRelation(): void {
         $terms  = [new SearchTerm(
-                SearchTerm::PROPERTY_NEGATE . self::$repo->getSchema()->parent,
+                SearchTerm::PROPERTY_NEGATE . self::$schema->parent,
                 'https://res2.id'
         )];
         $result = iterator_to_array(self::$repo->getResourcesBySearchTerms($terms, new SearchConfig()));
         $this->assertEquals(1, count($result));
-        $this->assertEquals('sample label for the first resource', (string) $result[0]->getMetadata()->getLiteral(self::$schema->label));
+        $this->assertEquals('sample label for the first resource', $result[0]->getMetadata()->getObjectValue(new QT(predicate: self::$schema->label)));
     }
 }

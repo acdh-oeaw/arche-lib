@@ -123,6 +123,7 @@ use function GuzzleHttp\json_encode;
  * @property string $pathBase
  * @property string $password
  * @property int    $port
+ * @property array<string> $properties
  * @property string $publicRole
  * @property string $queue
  * @property Config|null $rabbitMq
@@ -147,6 +148,9 @@ use function GuzzleHttp\json_encode;
  * @property string $tikaLocation
  * @property int    $timeout
  * @property int    $lockTimeout
+ * @property string $searchFts
+ * @property string $searchFtsProperty
+ * @property string $searchFtsQuery
  * @property int    $statementTimeout
  * @property string $tmpDir
  * @property Config $transactionController
@@ -159,6 +163,7 @@ use function GuzzleHttp\json_encode;
  * @property string $value
  * @property bool   $verifyCert
  * @property float  $version
+ * @property string $withReferences
  */
 class Config {
 

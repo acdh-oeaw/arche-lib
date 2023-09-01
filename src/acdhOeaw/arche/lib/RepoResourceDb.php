@@ -27,6 +27,8 @@
 namespace acdhOeaw\arche\lib;
 
 use PDOStatement;
+use quickRdf\DataFactory as DF;
+use quickRdf\DatasetNode;
 use acdhOeaw\arche\lib\exception\RepoLibException;
 
 /**
@@ -54,10 +56,10 @@ class RepoResourceDb implements RepoResourceInterface {
         if (!is_numeric($urlOrId)) {
             $urlOrId = preg_replace('/^.*[^0-9]/', '', $urlOrId);
         }
-        $this->id      = (int) $urlOrId;
-        $this->repo    = $repo;
-        $this->repoInt = $repo;
-        $this->url     = $this->repo->getBaseUrl() . $this->id;
+        $this->id       = (int) $urlOrId;
+        $this->repo     = $repo;
+        $this->repoInt  = $repo;
+        $this->metadata = new DatasetNode(DF::namedNode($this->repo->getBaseUrl() . $this->id));
     }
 
     /**
@@ -89,7 +91,7 @@ class RepoResourceDb implements RepoResourceInterface {
         }
         $stmt           = $this->getMetadataStatement($mode, $parentProperty, $resourceProperties, $relativesProperties);
         $graph          = $this->repo->parsePdoStatement($stmt);
-        $this->metadata = $graph->resource($this->getUri());
+        $this->metadata = $this->metadata->withDataset($graph);
     }
 
     /**
