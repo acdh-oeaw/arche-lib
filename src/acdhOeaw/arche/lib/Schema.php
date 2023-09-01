@@ -71,7 +71,7 @@ class Schema {
      */
     public function __construct(object $schema) {
         foreach (get_object_vars($schema) as $k => $v) {
-            if (is_object($v)) {
+            if ($v instanceof \stdClass) {
                 $schema->$k = new Schema($v);
             } else {
                 $schema->$k = DF::namedNode($v);
@@ -90,7 +90,7 @@ class Schema {
     public function __get(string $name): Schema | NamedNode | null {
         return $this->schema->$name ?? null;
     }
-    
+
     public function __set(string $name, mixed $value) {
         throw new \BadMethodCallException();
     }
