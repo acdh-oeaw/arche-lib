@@ -359,7 +359,7 @@ class SearchTerm {
                                      string $idProp): QueryPart {
         $column      = self::$typesToColumns[$type];
         $columnRaw   = $column;
-        $otherTables = empty($this->value);
+        $otherTables = true;
 
         $where = $param = [];
         if (!empty($this->property)) {
@@ -409,7 +409,7 @@ class SearchTerm {
             WHERE $where
         ";
         if ($otherTables) {
-            $where = str_replace($column, $columnRaw, $where);
+            $where = str_replace($column ?? '', $columnRaw ?? '', $where);
             $query .= "
               UNION
                 SELECT DISTINCT id
