@@ -357,20 +357,22 @@ class SearchTerm {
 
     private function getSqlQueryMeta(string $type, string $baseUrl,
                                      string $idProp): QueryPart {
+        $column      = self::$typesToColumns[$type];
+        $columnRaw   = $column;
+        $otherTables = empty($this->value);
+
         $where = $param = [];
         if (!empty($this->property)) {
             $where[] = 'property = ?';
             $param[] = $this->property;
         }
         if (!empty($this->language)) {
-            $where[] = 'lang = ?';
-            $param[] = $this->language;
+            $where[]     = 'lang = ?';
+            $param[]     = $this->language;
+            $otherTables = false;
         }
-        $otherTables = false;
         if (!empty($this->value) && is_scalar($this->value)) {
-            $column      = self::$typesToColumns[$type];
-            $columnRaw   = $column;
-            $otherTables = $column === self::COLUMN_STRING;
+            $otherTables = $otherTables && $column === self::COLUMN_STRING;
             // string values stored in the database can be too long to be indexed, 
             // therefore the index is set only on `substring(value, 1, self::STRING_MAX_LENGTH)`
             // and to benefit from it the predicate must strictly follow the index definition
