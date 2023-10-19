@@ -359,7 +359,7 @@ class SearchTerm {
                                      string $idProp): QueryPart {
         $column      = self::$typesToColumns[$type];
         $columnRaw   = $column;
-        $otherTables = empty($this->value);
+        $otherTables = true;
 
         $where = $param = [];
         if (!empty($this->property)) {
