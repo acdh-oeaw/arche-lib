@@ -279,7 +279,8 @@ class RepoDb implements RepoInterface {
                 $metaParam   = [$this->schema->label];
                 break;
             default:
-                $getRelParam = $this->parseMetadataReadMode($mode);
+                $getRelParam = $this->parseMetadataReadMode($mode, $config->metadataParentProperty);
+                $relQuery    = count($getRelParam) > 0 ? '(get_relatives(id::bigint, ?::text, ?::int, ?::int, ?::bool, ?::bool)).id' : 'id';
                 $metaQuery   = "
                     , relatives AS (SELECT DISTINCT (get_relatives(id::bigint, ?::text, ?::int, ?::int, ?::bool, ?::bool)).id FROM ids),
                     meta AS (
@@ -294,7 +295,6 @@ class RepoDb implements RepoInterface {
                     )
                 ";
                 $metaParam   = array_merge(
-                    [$config->metadataParentProperty],
                     $getRelParam,
                     [$this->schema->id]
                 );
@@ -571,18 +571,19 @@ class RepoDb implements RepoInterface {
 
     /**
      * @param string $mode
+     * @param string|null $parent
      * @return array<int>
      */
-    private function parseMetadataReadMode(string $mode): array {
+    private function parseMetadataReadMode(string $mode, ?string $parent): array {
         $param = match ($mode) {
-            RRI::META_RESOURCE => [0, 0, 0, 0],
-            RRI::META_NEIGHBORS => [0, 0, 1, 1],
-            RRI::META_RELATIVES => [999999, -999999, 1, 0],
-            RRI::META_RELATIVES_ONLY => [999999, -999999, 0, 0],
-            RRI::META_RELATIVES_REVERSE => [999999, -999999, 1, 1],
-            RRI::META_PARENTS => [0, -999999, 1, 0],
-            RRI::META_PARENTS_ONLY => [0, -999999, 0, 0],
-            RRI::META_PARENTS_REVERSE => [0, -999999, 1, 1],
+            RRI::META_RESOURCE => [$parent, 0, 0, 0, 0],
+            RRI::META_NEIGHBORS => [$parent, 0, 0, 1, 1],
+            RRI::META_RELATIVES => [$parent, 999999, -999999, 1, 0],
+            RRI::META_RELATIVES_ONLY => [$parent, 999999, -999999, 0, 0],
+            RRI::META_RELATIVES_REVERSE => [$parent, 999999, -999999, 1, 1],
+            RRI::META_PARENTS => [$parent, 0, -999999, 1, 0],
+            RRI::META_PARENTS_ONLY => [$parent, 0, -999999, 0, 0],
+            RRI::META_PARENTS_REVERSE => [$parent, 0, -999999, 1, 1],
             default => null,
         };
         if ($param === null) {
@@ -593,8 +594,9 @@ class RepoDb implements RepoInterface {
                 throw new RepoLibException('Bad metadata mode ' . $mode, 400);
             }
             $param[1] = -$param[1];
+            array_unshift($param, $parent);
         }
-        return $param;
+        return array_sum($param) === 0 ? [] : $param;
     }
 
     /**
