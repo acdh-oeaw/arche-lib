@@ -594,10 +594,10 @@ class RepoDb implements RepoInterface {
 
     /**
      * @param string $mode
-     * @param string $parent
+     * @param string|null $parent
      * @return array<int>
      */
-    private function parseMetadataReadMode(string $mode, string $parent): array {
+    private function parseMetadataReadMode(string $mode, ?string $parent): array {
         $param = match ($mode) {
             RRI::META_RESOURCE => [$parent, 0, 0, 0, 0],
             RRI::META_NEIGHBORS => [$parent, 0, 0, 1, 1],
