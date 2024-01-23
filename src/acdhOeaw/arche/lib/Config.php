@@ -56,9 +56,11 @@ use function GuzzleHttp\json_encode;
  * @property Config $classes
  * @property int    $checkInterval
  * @property bool   $checkAutoCreatedResources
- * @property bool   $checkRanges
+ * @property Config $checkRanges
  * @property bool   $checkUnknownProperties
  * @property bool   $checkVocabularyValues
+ * @property string $clarinSet
+ * @property string $clarinSetProperty
  * @property array<string, string> $classLoader
  * @property string $cmdi
  * @property string $cmdiPid
@@ -69,6 +71,7 @@ use function GuzzleHttp\json_encode;
  * @property string $countCumulative
  * @property array<string> $copying
  * @property Config $create
+ * @property string $createValue
  * @property string $creationDate
  * @property string $creationUser
  * @property array<string> $creatorRights
@@ -89,7 +92,7 @@ use function GuzzleHttp\json_encode;
  * @property Config $doorkeeper
  * @property bool   $enforceCompleteness
  * @property bool   $enforceOnMetadata
- * @property string $epicPid
+ * @property Config $epicPid
  * @property bool   $exceptionOnTimeout
  * @property string $file
  * @property string $fileName
@@ -146,12 +149,15 @@ use function GuzzleHttp\json_encode;
  * @property string $password
  * @property string $pid
  * @property int    $port
+ * @property string $prefix
  * @property array<string> $properties
+ * @property string $pswd
  * @property string $publicRole
  * @property string $queue
  * @property Config|null $rabbitMq
  * @property string $read
  * @property array<string> $relativesProperties
+ * @property string $resolver
  * @property string $resource
  * @property array<string> $resourceProperties
  * @property Config $rest
@@ -184,6 +190,7 @@ use function GuzzleHttp\json_encode;
  * @property string $transactionId
  * @property string $type
  * @property string $uri
+ * @property string $url
  * @property string $urlBase
  * @property string $user
  * @property string $userCol
