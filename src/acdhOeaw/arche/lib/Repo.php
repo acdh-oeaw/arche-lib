@@ -50,7 +50,7 @@ use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
 use acdhOeaw\arche\lib\exception\AmbiguousMatch;
 use acdhOeaw\arche\lib\exception\RepoLibException;
-use acdhOeaw\arche\lib\promise\GeneratorPromise;
+use acdhOeaw\arche\lib\promise\RepoResourceGeneratorPromise;
 use acdhOeaw\arche\lib\promise\GraphPromise;
 use acdhOeaw\arche\lib\promise\ResponsePromise;
 use acdhOeaw\arche\lib\promise\RepoResourcePromise;
@@ -503,17 +503,17 @@ class Repo implements RepoInterface {
      * @param string $query
      * @param array<mixed> $parameters
      * @param SearchConfig $config
-     * @return GeneratorPromise
+     * @return RepoResourceGeneratorPromise
      * @see getResourcesBySqlQuery()
      */
     public function getResourcesBySqlQueryAsync(string $query,
                                                 array $parameters,
-                                                SearchConfig $config): GeneratorPromise {
+                                                SearchConfig $config): RepoResourceGeneratorPromise {
         $promise = $this->getGraphBySqlQueryAsync($query, $parameters, $config);
         $promise = $promise->then(function (Dataset $graph) use ($config): Generator {
             yield from $this->extractResourcesFromGraph($graph, $config);
         });
-        return new GeneratorPromise($promise);
+        return new RepoResourceGeneratorPromise($promise);
     }
 
     /**
@@ -533,16 +533,16 @@ class Repo implements RepoInterface {
      * 
      * @param array<SearchTerm> $searchTerms
      * @param SearchConfig $config
-     * @return GeneratorPromise
+     * @return RepoResourceGeneratorPromise
      * @see getResourcesBySearchTerms()
      */
     public function getResourcesBySearchTermsAsync(array $searchTerms,
-                                                   SearchConfig $config): GeneratorPromise {
+                                                   SearchConfig $config): RepoResourceGeneratorPromise {
         $promise = $this->getGraphBySearchTermsAsync($searchTerms, $config);
         $promise = $promise->then(function (Dataset $graph) use ($config): Generator {
             yield from $this->extractResourcesFromGraph($graph, $config);
         });
-        return new GeneratorPromise($promise);
+        return new RepoResourceGeneratorPromise($promise);
     }
 
     /**
