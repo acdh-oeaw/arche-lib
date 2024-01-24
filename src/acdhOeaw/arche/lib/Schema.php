@@ -43,6 +43,7 @@ use quickRdf\NamedNode;
  * @property NamedNode $delete
  * @property NamedNode $binarySize
  * @property NamedNode $hash
+ * @property object    $ingest
  * @property NamedNode $mime
  * @property NamedNode $fileName
  * @property NamedNode $isNewVersionOf
