@@ -44,6 +44,8 @@ use quickRdf\NamedNode;
  * @property NamedNode $hash
  * @property NamedNode $mime
  * @property NamedNode $fileName
+ * @property NamedNode $isNewVersionOf
+ * @property NamedNode $pid
  * @property NamedNode $searchCount
  * @property float $searchWeight
  * @property NamedNode $searchFts
@@ -91,6 +93,12 @@ class Schema {
         return $this->schema->$name ?? null;
     }
 
+    /**
+     * 
+     * @param string $name
+     * @param mixed $value
+     * @throws \BadMethodCallException
+     */
     public function __set(string $name, mixed $value) {
         throw new \BadMethodCallException();
     }

@@ -197,6 +197,7 @@ use function GuzzleHttp\json_encode;
  * @property string $value
  * @property bool   $verifyCert
  * @property float  $version
+ * @property string $vid
  * @property string $withReferences
  * @property string $wkt
  */
