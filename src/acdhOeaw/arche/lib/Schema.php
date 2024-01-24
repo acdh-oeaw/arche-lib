@@ -37,6 +37,7 @@ use quickRdf\NamedNode;
  *
  * @author zozlak
  * @property NamedNode $id
+ * @property object    $classes
  * @property NamedNode $label
  * @property NamedNode $parent
  * @property NamedNode $delete
@@ -45,6 +46,7 @@ use quickRdf\NamedNode;
  * @property NamedNode $mime
  * @property NamedNode $fileName
  * @property NamedNode $isNewVersionOf
+ * @property object    $namespaces
  * @property NamedNode $pid
  * @property NamedNode $searchCount
  * @property float $searchWeight
