@@ -41,24 +41,24 @@ class ConfigTest extends TestBase {
 
         // TODO - not sure if this is a preferred behavior but it works like that
         // since ever and it wasn't an issue yet
-        $this->assertNull($cfg1->foo);
-        $this->assertNull($cfg2->foo);
-        $cfg1->foo = 'bar';
-        $this->assertEquals('bar', $cfg1->foo);
-        $this->assertEquals('bar', $cfg2->foo);
+        $this->assertNull($cfg1->uri);
+        $this->assertNull($cfg2->uri);
+        $cfg1->uri = 'bar';
+        $this->assertEquals('bar', $cfg1->uri);
+        $this->assertEquals('bar', $cfg2->uri);
     }
     
     public function testSerialization(): void {
         $cfg = new Config(new \stdClass());
-        $cfg->foo = 'bar';
+        $cfg->uri = 'bar';
         
         $cfgProps = $cfg->asObject();
         $this->assertInstanceOf(\stdClass::class, $cfgProps);
-        $this->assertEquals('bar', $cfgProps->foo ?? null);
+        $this->assertEquals('bar', $cfgProps->uri ?? null);
         
         $cfgProps = $cfg->asArray();
         $this->assertIsArray($cfgProps);
-        $this->assertEquals('bar', $cfgProps['foo'] ?? null);
+        $this->assertEquals('bar', $cfgProps['uri'] ?? null);
         
         $yaml = $cfg->asYaml();
         $this->assertEquals(yaml_emit($cfgProps), $yaml);

@@ -36,12 +36,12 @@ use acdhOeaw\arche\lib\Schema;
 class SchemaTest extends \PHPUnit\Framework\TestCase {
 
     public function testComplexStructure(): void {
-        $schema = new Schema(json_decode('{"test": {"b": "c"}}'));
+        $schema = new Schema(json_decode('{"test": {"mime": "c"}}'));
         $x      = $schema->test;
-        $this->assertTrue(\quickRdf\DataFactory::namedNode('c')->equals($x->b));
-        $this->assertNull($x->foo);
+        $this->assertTrue(\quickRdf\DataFactory::namedNode('c')->equals($x->mime));
+        $this->assertNull($x->hash);
         try {
-            $x->b = 'foo';
+            $x->mime = 'foo';
             $this->assertTrue(false);
         } catch (\BadMethodCallException $ex) {
             $this->assertTrue(true);

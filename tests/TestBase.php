@@ -55,8 +55,6 @@ class TestBase extends \PHPUnit\Framework\TestCase {
         
     }
 
-    private int $dbResId;
-
     public function setUp(): void {
         exec("docker exec -u www-data arche psql -c 'TRUNCATE resources CASCADE' 2>&1 > /dev/null");
         if (file_exists(__DIR__ . '/../log/rest.log')) {
