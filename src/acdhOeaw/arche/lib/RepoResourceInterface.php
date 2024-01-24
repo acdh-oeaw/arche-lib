@@ -28,6 +28,7 @@ namespace acdhOeaw\arche\lib;
 
 use rdfInterface\DatasetInterface;
 use rdfInterface\DatasetNodeInterface;
+use rdfInterface\TermInterface;
 
 /**
  *
@@ -107,15 +108,11 @@ interface RepoResourceInterface {
 
     /**
      * Returns the repository resource URL.
-     * 
-     * @return string
      */
-    public function getUri(): string;
+    public function getUri(): TermInterface;
 
     /**
      * Returns repository connection object associated with the given resource object.
-     * 
-     * @return RepoInterface
      */
     public function getRepo(): RepoInterface;
 

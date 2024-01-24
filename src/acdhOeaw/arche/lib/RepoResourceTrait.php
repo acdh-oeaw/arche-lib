@@ -28,6 +28,7 @@ namespace acdhOeaw\arche\lib;
 
 use rdfInterface\DatasetInterface;
 use rdfInterface\DatasetNodeInterface;
+use rdfInterface\TermInterface;
 use rdfInterface\QuadInterface;
 use quickRdf\DataFactory as DF;
 use termTemplates\QuadTemplate as QT;
@@ -47,17 +48,13 @@ trait RepoResourceTrait {
 
     /**
      * Returns the repository resource URL.
-     * 
-     * @return string
      */
-    public function getUri(): string {
-        return $this->metadata->getNode()->getValue();
+    public function getUri(): TermInterface {
+        return $this->metadata->getNode();
     }
 
     /**
      * Returns repository connection object associated with the given resource object.
-     * 
-     * @return RepoInterface
      */
     public function getRepo(): RepoInterface {
         return $this->repoInt;
@@ -66,7 +63,7 @@ trait RepoResourceTrait {
     /**
      * Returns an array with all repository resource identifiers.
      * 
-     * @return string[]
+     * @return array<string>
      */
     public function getIds(): array {
         $idProp = $this->repoInt->getSchema()->id;
