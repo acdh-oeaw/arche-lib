@@ -282,7 +282,7 @@ class RepoDb implements RepoInterface {
                 $getRelParam = $this->parseMetadataReadMode($mode, $config->metadataParentProperty);
                 $relQuery    = count($getRelParam) > 0 ? '(get_relatives(id::bigint, ?::text, ?::int, ?::int, ?::bool, ?::bool)).id' : 'id';
                 $metaQuery   = "
-                    , relatives AS (SELECT DISTINCT (get_relatives(id::bigint, ?::text, ?::int, ?::int, ?::bool, ?::bool)).id FROM ids),
+                    , relatives AS (SELECT DISTINCT $relQuery FROM ids),
                     meta AS (
                         SELECT id, ?::text AS property, 'ID'::text AS type, null::text AS lang, ids AS value, false AS revrel
                         FROM relatives JOIN identifiers USING (id)
