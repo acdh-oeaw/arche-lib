@@ -44,7 +44,7 @@ use function GuzzleHttp\json_encode;
  * @property string $admin
  * @property array<string> $adminRoles
  * @property array<string> $allowedRoles
- * @property array<string, string> $assignRoles
+ * @property array<string, array<string>> $assignRoles
  * @property Config $autoAddIds
  * @property Config $auth
  * @property array<Config> $authMethods
@@ -104,7 +104,7 @@ use function GuzzleHttp\json_encode;
  * @property Config $handlers
  * @property string $hash
  * @property string $hashAlgorithm
- * @property Config $headers
+ * @property object $headers
  * @property string $highlighting
  * @property string $host
  * @property Config $httpBasic
