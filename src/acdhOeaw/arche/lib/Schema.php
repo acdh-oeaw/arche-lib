@@ -76,8 +76,8 @@ class Schema {
      */
     public function __construct(object $schema) {
         foreach (get_object_vars($schema) as $k => $v) {
-            if ($v instanceof \stdClass) {
-                $schema->$k = new Schema($v);
+            if ($v instanceof \stdClass || is_array($v)) {
+                $schema->$k = new Schema((object) $v);
             } else {
                 $schema->$k = DF::namedNode($v);
             }
