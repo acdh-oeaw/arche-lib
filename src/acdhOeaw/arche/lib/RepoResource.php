@@ -154,7 +154,7 @@ class RepoResource implements RepoResourceInterface {
                                        ?string $parentProperty = null,
                                        array $resourceProperties = [],
                                        array $relativesProperties = []): PromiseInterface {
-        $request = new Request('put', $this->getUri());
+        $request = new Request('put', (string) $this->getUri());
         $request = $content->attachTo($request);
         $request = $this->withReadHeaders($request, $readMode, $parentProperty, $resourceProperties, $relativesProperties);
         $promise = $this->repo->sendRequestAsync($request);
@@ -222,7 +222,7 @@ class RepoResource implements RepoResourceInterface {
                 $this->repo->getHeaderName('metadataWriteMode') => $updateMode,
             ];
             $body    = (new NQuadsSerializer())->serialize($this->metadata);
-            $req     = new Request('patch', $this->getUri() . '/metadata', $headers, $body);
+            $req     = new Request('patch', (string) $this->getUri() . '/metadata', $headers, $body);
             $req     = $this->withReadHeaders($req, $readMode, $parentProperty, $resourceProperties, $relativesProperties);
             $promise = $this->repo->sendRequestAsync($req);
             $promise = $promise->then(function (ResponseInterface $resp): void {
@@ -282,7 +282,7 @@ class RepoResource implements RepoResourceInterface {
         if (!empty($recursiveProperty)) {
             $headers[$this->repo->getHeaderName('metadataParentProperty')] = $recursiveProperty;
         }
-        $req            = new Request('delete', $this->getUri(), $headers);
+        $req            = new Request('delete', (string) $this->getUri(), $headers);
         $promise        = $this->repo->sendRequestAsync($req);
         $this->metadata = $this->metadata->withDataset(new Dataset());
 
@@ -352,7 +352,7 @@ class RepoResource implements RepoResourceInterface {
                                       array $resourceProperties = [],
                                       array $relativesProperties = []): ?PromiseInterface {
         if (count($this->metadata) === 0 || $force) {
-            $req     = new Request('get', $this->getUri() . '/metadata');
+            $req     = new Request('get', (string) $this->getUri() . '/metadata');
             $req     = $this->withReadHeaders($req, $mode, $parentProperty, $resourceProperties, $relativesProperties);
             $promise = $this->repo->sendRequestAsync($req);
             $promise = $promise->then(function (ResponseInterface $resp): void {
