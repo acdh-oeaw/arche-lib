@@ -111,7 +111,7 @@ class RepoResource implements RepoResourceInterface {
      * @see getContent()
      */
     public function getContentAsync(): ResponsePromise {
-        $request = new Request('get', $this->getUri());
+        $request = new Request('get', (string) $this->getUri());
         return $this->repo->sendRequestAsync($request);
     }
 
