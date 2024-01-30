@@ -122,7 +122,7 @@ class Schema implements \Iterator {
     }
 
     public function rewind(): void {
-        rewind($this->schema);
+        reset($this->schema);
     }
 
     public function valid(): bool {
