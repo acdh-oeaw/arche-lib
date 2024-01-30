@@ -33,10 +33,17 @@ use quickRdf\NamedNode;
  * An immutable container for RDF property mappings schema.
  * 
  * @author zozlak
+ * @property NamedNode $accessRestriction
+ * @property NamedNode $accessRestrictionAgg
+ * @property NamedNode $accessRole
  * @property NamedNode $binaryModificationDate
  * @property NamedNode $binaryModificationUser
  * @property NamedNode $binarySize
+ * @property NamedNode $binarySizeCumulative
  * @property object    $classes
+ * @property NamedNode $cmdi
+ * @property NamedNode $cmdiPid
+ * @property NamedNode $countCumulative
  * @property NamedNode $creationDate
  * @property NamedNode $creationUser
  * @property NamedNode $dateStart
@@ -49,10 +56,15 @@ use quickRdf\NamedNode;
  * @property Schema    $ingest
  * @property NamedNode $isNewVersionOf
  * @property NamedNode $label
+ * @property NamedNode $latitude
+ * @property NamedNode $license
+ * @property NamedNode $licenseAgg
+ * @property NamedNode $longitude
  * @property NamedNode $mime
  * @property NamedNode $modificationDate
  * @property NamedNode $modificationUser
  * @property Schema    $namespaces
+ * @property NamedNode $ontology
  * @property NamedNode $parent
  * @property NamedNode $pid
  * @property NamedNode $searchCount
@@ -66,6 +78,8 @@ use quickRdf\NamedNode;
  * @property Schema    $test
  * @property NamedNode $url
  * @property NamedNode $version
+ * @property NamedNode $vid
+ * @property NamedNode $wkt
  */
 class Schema implements \Iterator {
 
