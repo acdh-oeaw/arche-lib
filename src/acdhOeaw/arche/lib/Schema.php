@@ -30,60 +30,63 @@ use quickRdf\DataFactory as DF;
 use quickRdf\NamedNode;
 
 /**
- * A container for configuration properties.
+ * An immutable container for RDF property mappings schema.
  * 
- * Assures deep copies of complex configuration objects being returned to prevent
- * surprising configuration modifications.
- *
  * @author zozlak
- * @property NamedNode $id
- * @property object    $classes
- * @property NamedNode $label
- * @property NamedNode $parent
- * @property NamedNode $delete
+ * @property NamedNode $binaryModificationDate
+ * @property NamedNode $binaryModificationUser
  * @property NamedNode $binarySize
- * @property NamedNode $hash
- * @property object    $ingest
- * @property NamedNode $mime
+ * @property object    $classes
+ * @property NamedNode $creationDate
+ * @property NamedNode $creationUser
+ * @property NamedNode $dateStart
+ * @property NamedNode $dateEnd
+ * @property NamedNode $delete
  * @property NamedNode $fileName
+ * @property NamedNode $hash
+ * @property NamedNode $id
+ * @property NamedNode $info
+ * @property Schema    $ingest
  * @property NamedNode $isNewVersionOf
- * @property object    $namespaces
+ * @property NamedNode $label
+ * @property NamedNode $mime
+ * @property NamedNode $modificationDate
+ * @property NamedNode $modificationUser
+ * @property Schema    $namespaces
+ * @property NamedNode $parent
  * @property NamedNode $pid
  * @property NamedNode $searchCount
- * @property float $searchWeight
  * @property NamedNode $searchFts
  * @property NamedNode $searchFtsQuery
  * @property NamedNode $searchFtsProperty
  * @property NamedNode $searchMatch
  * @property NamedNode $searchOrder
  * @property NamedNode $searchOrderValue
- * @property NamedNode $creationDate
- * @property NamedNode $creationUser
- * @property NamedNode $modificationDate
- * @property NamedNode $modificationUser
- * @property NamedNode $binaryModificationDate
- * @property NamedNode $binaryModificationUser
- * @property Schema $test
+ * @property float     $searchWeight
+ * @property Schema    $test
+ * @property NamedNode $url
+ * @property NamedNode $version
  */
-class Schema {
+class Schema implements \Iterator {
 
-    private object $schema;
+    private array $schema;
 
     /**
      * Creates the Schema object.
      * 
-     * @param object $schema object with configuration properties
+     * @param object|array<mixed> $schema object with configuration properties
      */
-    public function __construct(object $schema) {
-        foreach (get_object_vars($schema) as $k => $v) {
-            if ($v instanceof \stdClass || is_array($v)) {
-                $schema->$k = new Schema((object) $v);
+    public function __construct(object|array $schema) {
+        if (is_object($schema)) {
+            $schema = get_object_vars($schema);
+        }
+        foreach ($schema as $k => $v) {
+            if (is_object($v) || is_array($v)) {
+                $this->schema[$k] = new Schema($v);
             } else {
-                $schema->$k = DF::namedNode($v);
+                $this->schema[$k] = DF::namedNode((string) $v);
             }
         }
-        unset($v);
-        $this->schema = $schema;
     }
 
     /**
@@ -93,7 +96,7 @@ class Schema {
      * @return Schema|NamedNode|null
      */
     public function __get(string $name): Schema | NamedNode | null {
-        return $this->schema->$name ?? null;
+        return $this->schema[$name] ?? null;
     }
 
     /**
@@ -104,5 +107,25 @@ class Schema {
      */
     public function __set(string $name, mixed $value) {
         throw new \BadMethodCallException();
+    }
+
+    public function current(): mixed {
+        return current($this->schema);
+    }
+
+    public function key(): mixed {
+        return key($this->schema);
+    }
+
+    public function next(): void {
+        next($this->schema);
+    }
+
+    public function rewind(): void {
+        rewind($this->schema);
+    }
+
+    public function valid(): bool {
+        return valid($this->schema);
     }
 }
