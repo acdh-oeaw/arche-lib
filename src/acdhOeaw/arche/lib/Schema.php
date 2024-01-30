@@ -76,7 +76,7 @@ class Schema implements \Iterator {
      * 
      * @param object|array<mixed> $schema object with configuration properties
      */
-    public function __construct(object|array $schema) {
+    public function __construct(object | array $schema) {
         if (is_object($schema)) {
             $schema = get_object_vars($schema);
         }
@@ -126,6 +126,6 @@ class Schema implements \Iterator {
     }
 
     public function valid(): bool {
-        return valid($this->schema);
+        return current($this->schema) !== false;
     }
 }
