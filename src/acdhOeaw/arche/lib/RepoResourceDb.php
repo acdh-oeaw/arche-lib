@@ -86,12 +86,11 @@ class RepoResourceDb implements RepoResourceInterface {
                                  string $parentProperty = null,
                                  array $resourceProperties = [],
                                  array $relativesProperties = []): void {
-        if (!$force && $this->metadata !== null) {
-            return;
+        if ($force || count($this->metadata) === 0) {
+            $stmt           = $this->getMetadataStatement($mode, $parentProperty, $resourceProperties, $relativesProperties);
+            $graph          = $this->repo->parsePdoStatement($stmt);
+            $this->metadata = $this->metadata->withDataset($graph);
         }
-        $stmt           = $this->getMetadataStatement($mode, $parentProperty, $resourceProperties, $relativesProperties);
-        $graph          = $this->repo->parsePdoStatement($stmt);
-        $this->metadata = $this->metadata->withDataset($graph);
     }
 
     /**
