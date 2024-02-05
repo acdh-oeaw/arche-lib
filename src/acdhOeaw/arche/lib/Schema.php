@@ -40,6 +40,7 @@ use quickRdf\NamedNode;
  * @property NamedNode $binaryModificationUser
  * @property NamedNode $binarySize
  * @property NamedNode $binarySizeCumulative
+ * @property NamedNode $class
  * @property object    $classes
  * @property NamedNode $cmdi
  * @property NamedNode $cmdiPid
@@ -49,8 +50,10 @@ use quickRdf\NamedNode;
  * @property NamedNode $dateStart
  * @property NamedNode $dateEnd
  * @property NamedNode $delete
+ * @property Schema    $dissService
  * @property NamedNode $fileName
  * @property NamedNode $hash
+ * @property NamedNode $hasService
  * @property NamedNode $id
  * @property NamedNode $info
  * @property Schema    $ingest
@@ -59,14 +62,22 @@ use quickRdf\NamedNode;
  * @property NamedNode $latitude
  * @property NamedNode $license
  * @property NamedNode $licenseAgg
+ * @property NamedNode $location
  * @property NamedNode $longitude
+ * @property NamedNode $matchProperty
+ * @property NamedNode $matchRequired
+ * @property NamedNode $matchValue
  * @property NamedNode $mime
  * @property NamedNode $modificationDate
  * @property NamedNode $modificationUser
  * @property Schema    $namespaces
  * @property NamedNode $ontology
  * @property NamedNode $parent
+ * @property NamedNode $parameterDefaultValue
+ * @property NamedNode $parameterRdfProperty
  * @property NamedNode $pid
+ * @property NamedNode $returnFormat
+ * @property NamedNode $revProxy
  * @property NamedNode $searchCount
  * @property NamedNode $searchFts
  * @property NamedNode $searchFtsQuery
