@@ -16,12 +16,12 @@
         "guzzlehttp/guzzle": "^7",
         "zozlak/rdf-constants": "^1",
         "zozlak/query-part": "^2",
-        "psr/log": "*",
-        "sweetrdf/rdf-interface": "dev-master",
-        "sweetrdf/quick-rdf": "dev-master",
-        "sweetrdf/quick-rdf-io": "dev-master",
-        "sweetrdf/term-templates": "dev-dev",
-        "sweetrdf/rdf-helpers": "dev-dev"
+        "psr/log": "^3",
+        "sweetrdf/rdf-interface": "^2.0.0-RC7",
+        "sweetrdf/quick-rdf": "^2.0.0-RC7",
+        "sweetrdf/quick-rdf-io": "^1.0.5",
+        "sweetrdf/term-templates": "^2.0.1",
+        "sweetrdf/rdf-helpers": "^2.0.0-RC1"
     },
     "autoload": {
         "psr-4": {
