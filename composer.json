@@ -17,11 +17,8 @@
         "zozlak/rdf-constants": "^1",
         "zozlak/query-part": "^2",
         "psr/log": "^3",
-        "sweetrdf/rdf-interface": "^2.0.0-RC7",
-        "sweetrdf/quick-rdf": "^2.0.0-RC7",
-        "sweetrdf/quick-rdf-io": "^1.0.5",
-        "sweetrdf/term-templates": "^2.0.1",
-        "sweetrdf/rdf-helpers": "^2.0.0-RC1"
+        "sweetrdf/quick-rdf": "^2",
+        "sweetrdf/quick-rdf-io": "^1.0.6"
     },
     "autoload": {
         "psr-4": {
