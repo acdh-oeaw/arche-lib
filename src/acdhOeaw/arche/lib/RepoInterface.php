@@ -26,8 +26,8 @@
 
 namespace acdhOeaw\arche\lib;
 
-use EasyRdf\Graph;
 use Generator;
+use rdfInterface\DatasetInterface;
 use acdhOeaw\arche\lib\SearchTerm;
 
 /**
@@ -107,18 +107,18 @@ interface RepoInterface {
      * @param string $query
      * @param array<mixed> $parameters
      * @param SearchConfig $config
-     * @return Graph
+     * @return DatasetInterface
      */
     public function getGraphBySqlQuery(string $query, array $parameters,
-                                       SearchConfig $config): Graph;
+                                       SearchConfig $config): DatasetInterface;
 
     /**
      * Returns RDF metadata graph of the search results.
      * 
      * @param array<SearchTerm> $searchTerms
      * @param SearchConfig $config
-     * @return Graph
+     * @return DatasetInterface
      */
     public function getGraphBySearchTerms(array $searchTerms,
-                                          SearchConfig $config): Graph;
+                                          SearchConfig $config): DatasetInterface;
 }

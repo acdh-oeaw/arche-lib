@@ -33,7 +33,7 @@ namespace acdhOeaw\arche\lib;
  */
 class TripleValue implements \Stringable {
 
-    static public function fromDbRow(object $row) {
+    static public function fromDbRow(object $row): TripleValue {
         $triple        = new TripleValue();
         $triple->type  = $row->type;
         $triple->lang  = (string) $row->lang;

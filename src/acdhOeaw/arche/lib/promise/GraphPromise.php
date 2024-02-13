@@ -26,7 +26,7 @@
 
 namespace acdhOeaw\arche\lib\promise;
 
-use EasyRdf\Graph;
+use quickRdf\Dataset;
 use GuzzleHttp\Promise\PromiseInterface;
 
 /**
@@ -59,9 +59,9 @@ class GraphPromise implements PromiseInterface {
     /**
      * 
      * @param bool $unwrap
-     * @return Graph|null
+     * @return Dataset | null
      */
-    public function wait($unwrap = true): ?Graph {
+    public function wait($unwrap = true): Dataset | null {
         return $this->promise->wait($unwrap);
     }
 }

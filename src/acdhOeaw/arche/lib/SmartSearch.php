@@ -28,7 +28,6 @@ namespace acdhOeaw\arche\lib;
 
 use Generator;
 use PDO;
-use PDOStatement;
 use Psr\Log\AbstractLogger;
 use zozlak\queryPart\QueryPart;
 use zozlak\RdfConstants as RDF;

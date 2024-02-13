@@ -318,7 +318,7 @@ class SearchConfig {
         return http_build_query($this->toArray());
     }
 
-    public function getTsHeadlineOptions(int $offset): string {
+    public function getTsHeadlineOptions(int $offset = 0): string {
         $options = '';
         foreach (self::$highlightParam as $i) {
             $ii = 'fts' . $i;

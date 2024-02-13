@@ -28,13 +28,14 @@ namespace acdhOeaw\arche\lib\promise;
 
 use Generator;
 use GuzzleHttp\Promise\PromiseInterface;
+use acdhOeaw\arche\lib\RepoResource;
 
 /**
  * Description of ResponsePromise
  *
  * @author zozlak
  */
-class GeneratorPromise implements PromiseInterface {
+class RepoResourceGeneratorPromise implements PromiseInterface {
 
     use PromiseTrait;
 
@@ -59,7 +60,7 @@ class GeneratorPromise implements PromiseInterface {
     /**
      * 
      * @param bool $unwrap
-     * @return Generator<mixed>|null
+     * @return Generator<RepoResource>|null
      */
     public function wait($unwrap = true): ?Generator {
         return $this->promise->wait(true);

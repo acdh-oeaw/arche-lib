@@ -26,63 +26,132 @@
 
 namespace acdhOeaw\arche\lib;
 
-use function GuzzleHttp\json_decode;
-use function GuzzleHttp\json_encode;
+use quickRdf\DataFactory as DF;
+use quickRdf\NamedNode;
 
 /**
- * A container for configuration properties.
+ * An immutable container for RDF property mappings schema.
  * 
- * Assures deep copies of complex configuration objects being returned to prevent
- * surprising configuration modifications.
- *
  * @author zozlak
- * @property string $id
- * @property string $label
- * @property string $parent
- * @property string $delete
- * @property string $binarySize
- * @property string $hash
- * @property string $mime
- * @property string $fileName
- * @property string $searchCount
- * @property string $searchFts
- * @property string $searchMatch
- * @property string $searchOrder
- * @property string $searchOrderValue
- * @property string $creationDate
- * @property string $creationUser
- * @property string $modificationDate
- * @property string $modificationUser
- * @property string $binaryModificationDate
- * @property string $binaryModificationUser
- * @property object $test
+ * @property NamedNode $accessRestriction
+ * @property NamedNode $accessRestrictionAgg
+ * @property NamedNode $accessRole
+ * @property NamedNode $binaryModificationDate
+ * @property NamedNode $binaryModificationUser
+ * @property NamedNode $binarySize
+ * @property NamedNode $binarySizeCumulative
+ * @property NamedNode $class
+ * @property object    $classes
+ * @property NamedNode $cmdi
+ * @property NamedNode $cmdiPid
+ * @property NamedNode $countCumulative
+ * @property NamedNode $creationDate
+ * @property NamedNode $creationUser
+ * @property NamedNode $dateStart
+ * @property NamedNode $dateEnd
+ * @property NamedNode $delete
+ * @property Schema    $dissService
+ * @property NamedNode $fileName
+ * @property NamedNode $hash
+ * @property NamedNode $hasService
+ * @property NamedNode $id
+ * @property NamedNode $info
+ * @property Schema    $ingest
+ * @property NamedNode $isNewVersionOf
+ * @property NamedNode $label
+ * @property NamedNode $latitude
+ * @property NamedNode $license
+ * @property NamedNode $licenseAgg
+ * @property NamedNode $location
+ * @property NamedNode $longitude
+ * @property NamedNode $matchProperty
+ * @property NamedNode $matchRequired
+ * @property NamedNode $matchValue
+ * @property NamedNode $mime
+ * @property NamedNode $modificationDate
+ * @property NamedNode $modificationUser
+ * @property Schema    $namespaces
+ * @property NamedNode $ontology
+ * @property NamedNode $parent
+ * @property NamedNode $parameterClass
+ * @property NamedNode $parameterDefaultValue
+ * @property NamedNode $parameterRdfProperty
+ * @property NamedNode $pid
+ * @property NamedNode $returnFormat
+ * @property NamedNode $revProxy
+ * @property NamedNode $searchCount
+ * @property NamedNode $searchFts
+ * @property NamedNode $searchFtsQuery
+ * @property NamedNode $searchFtsProperty
+ * @property NamedNode $searchMatch
+ * @property NamedNode $searchOrder
+ * @property NamedNode $searchOrderValue
+ * @property float     $searchWeight
+ * @property Schema    $test
+ * @property NamedNode $url
+ * @property NamedNode $version
+ * @property NamedNode $vid
+ * @property NamedNode $wkt
  */
-class Schema {
+class Schema implements \Iterator {
 
-    private object $schema;
+    private array $schema;
 
     /**
      * Creates the Schema object.
      * 
-     * @param object $schema object with configuration properties
+     * @param object|array<mixed> $schema object with configuration properties
      */
-    public function __construct(object $schema) {
-        $this->schema = $schema;
+    public function __construct(object | array $schema) {
+        if (is_object($schema)) {
+            $schema = get_object_vars($schema);
+        }
+        foreach ($schema as $k => $v) {
+            if (is_object($v) || is_array($v)) {
+                $this->schema[$k] = new Schema($v);
+            } else {
+                $this->schema[$k] = DF::namedNode((string) $v);
+            }
+        }
     }
 
     /**
      * Magic method implementing accessing properties.
      * 
      * @param string $name configuration property to be returned
-     * @return mixed
+     * @return Schema|NamedNode|null
      */
-    public function __get(string $name): mixed {
-        if (!isset($this->schema->$name)) {
-            return null;
-        } elseif (is_object($this->schema->$name)) {
-            return json_decode(json_encode($this->schema->$name));
-        } else {
-            return $this->schema->$name;
-        }
+    public function __get(string $name): Schema | NamedNode | null {
+        return $this->schema[$name] ?? null;
+    }
+
+    /**
+     * 
+     * @param string $name
+     * @param mixed $value
+     * @throws \BadMethodCallException
+     */
+    public function __set(string $name, mixed $value) {
+        throw new \BadMethodCallException();
+    }
+
+    public function current(): mixed {
+        return current($this->schema);
+    }
+
+    public function key(): mixed {
+        return key($this->schema);
+    }
+
+    public function next(): void {
+        next($this->schema);
+    }
+
+    public function rewind(): void {
+        reset($this->schema);
+    }
+
+    public function valid(): bool {
+        return current($this->schema) !== false;
     }
 }

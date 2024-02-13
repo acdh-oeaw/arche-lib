@@ -26,11 +26,10 @@
 
 namespace acdhOeaw\arche\lib\tests;
 
-use zozlak\RdfConstants as C;
+use zozlak\RdfConstants as RDF;
+use termTemplates\PredicateTemplate as PT;
 use acdhOeaw\arche\lib\BinaryPayload;
-use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\RepoResource;
-use acdhOeaw\arche\lib\exception\AmbiguousMatch;
 use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
 
@@ -46,15 +45,14 @@ class RepoResourceTest extends TestBase {
 
         self::$repo->begin();
         $meta1 = $this->getMetadata([
-            C::RDF_TYPE           => ['https://class/1', 'https://class/2'],
-            self::$schema->id     => ['https://an.unique.id/1', 'https://an.unique.id/2'],
-            self::$schema->label  => 'sample label for the first resource',
+            RDF::RDF_TYPE         => ['https://class/1', 'https://class/2'],
+            'id'                  => ['https://an.unique.id/1', 'https://an.unique.id/2'],
+            'label'               => 'sample label for the first resource',
             'https://date.prop'   => '2019-01-01',
             'https://number.prop' => 150,
             'https://lorem.ipsum' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed iaculis nisl enim, malesuada tempus nisl ultrices ut. Duis egestas at arcu in blandit. Nulla eget sem urna. Sed hendrerit enim ut ultrices luctus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur non dolor non neque venenatis aliquet vitae venenatis est.',
         ]);
         $res1  = self::$repo->createResource($meta1);
-        $this->noteResource($res1);
         self::$repo->commit();
     }
 
@@ -120,17 +118,17 @@ class RepoResourceTest extends TestBase {
         $meta = $this->getMetadata([$p1 => 'v1', $p2 => 'v2', $p3 => 'v3']);
         self::$repo->begin();
         $res  = self::$repo->createResource($meta);
-        $this->assertEquals('v1', (string) $res->getMetadata()->get($p1));
-        $this->assertEquals('v2', (string) $res->getMetadata()->get($p2));
-        $this->assertEquals('v3', (string) $res->getMetadata()->get($p3));
+        $this->assertEquals('v1', $res->getMetadata()->getObjectValue(new PT($p1)));
+        $this->assertEquals('v2', $res->getMetadata()->getObjectValue(new PT($p2)));
+        $this->assertEquals('v3', $res->getMetadata()->getObjectValue(new PT($p3)));
 
-        $meta = $this->getMetadata([$p3 => 'v33', $p4 => 'v4', $pd => $p1]);
+        $meta = $this->getMetadata([$p3 => 'v33', $p4 => 'v4', $pd->getValue() => $p1]);
         $res->setMetadata($meta);
         $res->updateMetadata();
-        $this->assertEquals(null, $res->getMetadata()->get($p1));
-        $this->assertEquals('v2', (string) $res->getMetadata()->get($p2));
-        $this->assertEquals('v33', (string) $res->getMetadata()->get($p3));
-        $this->assertEquals('v4', (string) $res->getMetadata()->get($p4));
+        $this->assertEquals(null, $res->getMetadata()->getObjectValue(new PT($p1)));
+        $this->assertEquals('v2', $res->getMetadata()->getObjectValue(new PT($p2)));
+        $this->assertEquals('v33', $res->getMetadata()->getObjectValue(new PT($p3)));
+        $this->assertEquals('v4', $res->getMetadata()->getObjectValue(new PT($p4)));
 
         self::$repo->rollback();
     }
@@ -139,9 +137,8 @@ class RepoResourceTest extends TestBase {
         self::$repo->begin();
 
         $id    = 'https://a.b/' . rand();
-        $meta1 = $this->getMetadata([self::$schema->id => $id]);
+        $meta1 = $this->getMetadata(['id' => $id]);
         $res1  = self::$repo->createResource($meta1);
-        $this->noteResource($res1);
 
         $res1->delete(false, false);
         self::$repo->commit();
@@ -154,9 +151,8 @@ class RepoResourceTest extends TestBase {
         self::$repo->begin();
 
         $id    = 'https://a.b/' . rand();
-        $meta1 = $this->getMetadata([self::$schema->id => $id]);
+        $meta1 = $this->getMetadata(['id' => $id]);
         $res1  = self::$repo->createResource($meta1);
-        $this->noteResource($res1);
 
         $res1->delete(true, false);
         self::$repo->commit();
@@ -166,17 +162,14 @@ class RepoResourceTest extends TestBase {
     }
 
     public function testDeleteWithConflict(): void {
-        $relProp = 'https://some.prop';
         self::$repo->begin();
 
         $id    = 'https://a.b/' . rand();
-        $meta1 = $this->getMetadata([self::$schema->id => $id]);
+        $meta1 = $this->getMetadata(['id' => $id]);
         $res1  = self::$repo->createResource($meta1);
-        $this->noteResource($res1);
 
-        $meta2 = $this->getMetadata([$relProp => $res1->getUri()]);
+        $meta2 = $this->getMetadata(['parent' => $res1->getUri()]);
         $res2  = self::$repo->createResource($meta2);
-        $this->noteResource($res2);
 
         $this->expectExceptionCode(409);
         $res1->delete(true, false);
@@ -189,19 +182,17 @@ class RepoResourceTest extends TestBase {
         self::$repo->begin();
 
         $id    = 'https://a.b/' . rand();
-        $meta1 = $this->getMetadata([self::$schema->id => $id]);
+        $meta1 = $this->getMetadata(['id' => $id]);
         $res1  = self::$repo->createResource($meta1);
-        $this->noteResource($res1);
 
-        $meta2 = $this->getMetadata([$relProp => $res1->getUri()]);
+        $meta2 = $this->getMetadata(['parent' => $res1->getUri()]);
         $res2  = self::$repo->createResource($meta2);
-        $this->noteResource($res2);
 
         $res1->delete(true, true);
         self::$repo->commit();
 
         $res2->loadMetadata(true);
-        $this->assertNull($res2->getMetadata()->getResource($relProp));
+        $this->assertFalse($res2->getGraph()->any(new PT($relProp)));
         $this->expectExceptionCode(404);
         $res1->loadMetadata(true);
     }
@@ -211,13 +202,11 @@ class RepoResourceTest extends TestBase {
         self::$repo->begin();
 
         $id    = 'https://a.b/' . rand();
-        $meta1 = $this->getMetadata([self::$schema->id => $id]);
+        $meta1 = $this->getMetadata(['id' => $id]);
         $res1  = self::$repo->createResource($meta1);
-        $this->noteResource($res1);
 
         $meta2 = $this->getMetadata([$relProp => $res1->getUri()]);
         $res2  = self::$repo->createResource($meta2);
-        $this->noteResource($res2);
 
         $res1->delete(false, false, $relProp);
         self::$repo->commit();
@@ -242,19 +231,16 @@ class RepoResourceTest extends TestBase {
         self::$repo->begin();
 
         $id    = 'https://a.b/' . rand();
-        $meta1 = $this->getMetadata([self::$schema->id => $id]);
+        $meta1 = $this->getMetadata(['id' => $id]);
         $res1  = self::$repo->createResource($meta1);
-        $this->noteResource($res1);
 
         $meta2 = $this->getMetadata([$relProp => $res1->getUri()]);
         $res2  = self::$repo->createResource($meta2);
-        $this->noteResource($res2);
 
         $meta3 = $this->getMetadata([
             $otherProp => [$res1->getUri(), $res2->getUri()]
         ]);
         $res3  = self::$repo->createResource($meta3);
-        $this->noteResource($res3);
 
         $res1->delete(true, true, $relProp);
         self::$repo->commit();
@@ -272,7 +258,7 @@ class RepoResourceTest extends TestBase {
             $this->assertEquals(404, $e->getCode());
         }
         $res3->loadMetadata(true);
-        $this->assertNull($res3->getMetadata()->getResource($otherProp));
+        $this->assertFalse($res3->getMetadata()->any(new PT($otherProp)));
     }
 
     public function testMerge(): void {
@@ -284,29 +270,25 @@ class RepoResourceTest extends TestBase {
 
         $id1   = 'https://a.b/' . rand();
         $meta1 = $this->getMetadata([
-            $idProp => $id1,
-            $prop1  => 'foo1',
-            $prop2  => 'bar1',
+            'id'   => $id1,
+            $prop1 => 'foo1',
+            $prop2 => 'bar1',
         ]);
         $res1  = self::$repo->createResource($meta1);
-        $this->noteResource($res1);
 
         $id2     = 'https://a.b/' . rand();
         $meta2   = $this->getMetadata([
-            $idProp => $id2,
-            $prop2  => 'bar2',
-            $prop3  => 'baz2',
+            'id'   => $id2,
+            $prop2 => 'bar2',
+            $prop3 => 'baz2',
         ]);
         $res2    = self::$repo->createResource($meta2);
         $res2url = $res2->getUri();
-        $this->noteResource($res2);
 
         $res2->merge($id1);
         $meta = $res2->getMetadata();
         $this->assertEquals($res1->getUri(), $res2->getUri());
-        $ids  = array_map(function ($x) {
-            return $x->getUri();
-        }, $meta->all($idProp));
+        $ids  = $meta->listObjects(new PT($idProp))->getValues();
         $this->assertContains($id1, $ids);
         $this->assertContains($id2, $ids);
         $this->assertCount(3, $ids);

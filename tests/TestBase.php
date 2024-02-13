@@ -26,15 +26,12 @@
 
 namespace acdhOeaw\arche\lib\tests;
 
-use EasyRdf\Graph;
-use EasyRdf\Resource;
 use GuzzleHttp\Exception\ClientException;
+use quickRdf\DataFactory as DF;
+use quickRdf\DatasetNode;
 use acdhOeaw\arche\lib\Config;
 use acdhOeaw\arche\lib\Repo;
-use acdhOeaw\arche\lib\RepoResource;
 use acdhOeaw\arche\lib\Schema;
-use acdhOeaw\arche\lib\exception\Deleted;
-use acdhOeaw\arche\lib\exception\NotFound;
 
 /**
  * Description of TestBase
@@ -50,79 +47,68 @@ class TestBase extends \PHPUnit\Framework\TestCase {
     static public function setUpBeforeClass(): void {
         $cfgFile      = __DIR__ . '/config.yaml';
         self::$config = Config::fromYaml($cfgFile);
-        self::$schema = new Schema(self::$config->schema);
         self::$repo   = Repo::factory($cfgFile);
+        self::$schema = self::$repo->getSchema();
     }
 
     static public function tearDownAfterClass(): void {
         
     }
 
-    /**
-     * 
-     * @var array<RepoResource>
-     */
-    private array $resources;
-
     public function setUp(): void {
-        $this->resources = [];
+        exec("docker exec -u www-data arche psql -c 'TRUNCATE resources CASCADE' 2>&1 > /dev/null");
+        if (file_exists(__DIR__ . '/../log/rest.log')) {
+            unlink(__DIR__ . '/../log/rest.log');
+        }
+        if (file_exists(__DIR__ . '/../log/tx.log')) {
+            unlink(__DIR__ . '/../log/tx.log');
+        }
     }
 
     public function tearDown(): void {
-        try {
-            self::$repo->rollback();
-        } catch (ClientException $e) {
-            
-        }
-        self::$repo->begin();
-        foreach ($this->resources as $i) {
+        if (self::$repo->inTransaction()) {
             try {
-                $i->delete(true, true, self::$schema->parent);
-            } catch (Deleted $e) {
-                
-            } catch (NotFound $e) {
+                self::$repo->rollback();
+            } catch (ClientException) {
                 
             }
         }
-        self::$repo->commit();
-    }
-
-    protected function noteResource(RepoResource $res): void {
-        $this->resources[] = $res;
     }
 
     /**
      * 
      * @param array<string, mixed> $properties
-     * @return Resource
+     * @return DatasetNode
      */
-    protected function getMetadata(array $properties): Resource {
-        $graph = new Graph();
-        $res   = $graph->newBNode();
+    protected function getMetadata(array $properties): DatasetNode {
+        $res   = DF::blankNode();
+        $graph = new DatasetNode($res);
         foreach ($properties as $p => $v) {
             switch ($p) {
                 case 'id':
                     $p = self::$schema->id;
                     break;
                 case 'rel':
+                case 'parent':
                     $p = self::$schema->parent;
                     break;
                 case 'title':
                 case 'label':
                     $p = self::$schema->label;
                     break;
+                default:
+                    $p = DF::namedNode($p);
             }
             if (!is_array($v)) {
                 $v = [$v];
             }
             foreach ($v as $i) {
-                if (preg_match('|^https?://|', $i)) {
-                    $res->addResource($p, $i);
-                } else {
-                    $res->addLiteral($p, $i);
+                if (!is_object($i)) {
+                    $i = preg_match('|^https?://|', $i) ? DF::namedNode($i) : DF::literal($i);
                 }
+                $graph->add(DF::quad($res, $p, $i));
             }
         }
-        return $res;
+        return $graph;
     }
 }

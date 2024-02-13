@@ -27,12 +27,16 @@
 namespace acdhOeaw\arche\lib;
 
 use RuntimeException;
-use EasyRdf\Graph;
-use EasyRdf\Serialiser\Ntriples;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Http\Message\ResponseInterface;
+use quickRdf\DataFactory as DF;
+use quickRdf\Dataset;
+use quickRdf\DatasetNode;
+use quickRdfIo\NQuadsSerializer;
+use quickRdfIo\Util as RdfIoUtil;
+use termTemplates\QuadTemplate as QT;
 use acdhOeaw\arche\lib\exception\RepoLibException;
 use acdhOeaw\arche\lib\promise\ResponsePromise;
 
@@ -86,9 +90,9 @@ class RepoResource implements RepoResourceInterface {
         if (!$repo instanceof Repo) {
             throw new RepoLibException('The RepoResource object can be created only with a Repo repository connection handle');
         }
-        $this->url     = $url;
-        $this->repo    = $repo;
-        $this->repoInt = $repo;
+        $this->repo     = $repo;
+        $this->repoInt  = $repo;
+        $this->metadata = new DatasetNode(DF::namedNode($url));
     }
 
     /**
@@ -107,7 +111,7 @@ class RepoResource implements RepoResourceInterface {
      * @see getContent()
      */
     public function getContentAsync(): ResponsePromise {
-        $request = new Request('get', $this->url);
+        $request = new Request('get', (string) $this->getUri());
         return $this->repo->sendRequestAsync($request);
     }
 
@@ -150,7 +154,7 @@ class RepoResource implements RepoResourceInterface {
                                        ?string $parentProperty = null,
                                        array $resourceProperties = [],
                                        array $relativesProperties = []): PromiseInterface {
-        $request = new Request('put', $this->url);
+        $request = new Request('put', (string) $this->getUri());
         $request = $content->attachTo($request);
         $request = $this->withReadHeaders($request, $readMode, $parentProperty, $resourceProperties, $relativesProperties);
         $promise = $this->repo->sendRequestAsync($request);
@@ -167,7 +171,7 @@ class RepoResource implements RepoResourceInterface {
      */
     public function hasBinaryContent(): bool {
         $this->loadMetadata();
-        return (int) ((string) $this->metadata?->getLiteral($this->repo->getSchema()->binarySize)) > 0;
+        return $this->metadata->any(new QT(predicate: $this->repo->getSchema()->binarySize));
     }
 
     /**
@@ -217,8 +221,8 @@ class RepoResource implements RepoResourceInterface {
                 'Content-Type'                                  => 'application/n-triples',
                 $this->repo->getHeaderName('metadataWriteMode') => $updateMode,
             ];
-            $body    = $this->metadata?->getGraph()->serialise('application/n-triples');
-            $req     = new Request('patch', $this->url . '/metadata', $headers, $body);
+            $body    = (new NQuadsSerializer())->serialize($this->metadata);
+            $req     = new Request('patch', (string) $this->getUri() . '/metadata', $headers, $body);
             $req     = $this->withReadHeaders($req, $readMode, $parentProperty, $resourceProperties, $relativesProperties);
             $promise = $this->repo->sendRequestAsync($req);
             $promise = $promise->then(function (ResponseInterface $resp): void {
@@ -244,20 +248,17 @@ class RepoResource implements RepoResourceInterface {
     public function delete(bool $tombstone = false, bool $references = false,
                            string $recursiveProperty = ''): array {
         $result = $this->deleteAsync($tombstone, $references, $recursiveProperty)->wait();
-        $g      = new Graph();
+        $g      = new Dataset();
         if (!is_array($result)) {
             $result = [$result];
         }
-        foreach ($result as $i) {
-            $g->parse((string) $i->getBody());
-        }
         $deleted = [];
-        foreach ($g->resources() as $i) {
-            if (count($i->propertyUris()) > 0) {
-                $deleted[] = $i->getUri();
+        foreach ($result as $i) {
+            foreach (RdfIoUtil::parse($i, new DF()) as $triple) {
+                $deleted[$triple->getSubject()->getValue()] = '';
             }
         }
-        return $deleted;
+        return array_keys($deleted);
     }
 
     /**
@@ -281,31 +282,28 @@ class RepoResource implements RepoResourceInterface {
         if (!empty($recursiveProperty)) {
             $headers[$this->repo->getHeaderName('metadataParentProperty')] = $recursiveProperty;
         }
-        $req            = new Request('delete', $this->getUri(), $headers);
+        $req            = new Request('delete', (string) $this->getUri(), $headers);
         $promise        = $this->repo->sendRequestAsync($req);
-        $this->metadata = null;
+        $this->metadata = $this->metadata->withDataset(new Dataset());
 
         if ($tombstone) {
             $promise = $promise->then(function (ResponseInterface $resp): array {
-                $format  = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
-                $idProp  = Ntriples::escapeIri($this->repo->getSchema()->id);
-
-                $graph        = new Graph();
-                $graph->parse((string) $resp->getBody(), $format);
                 $respPromises = [];
-                foreach ($graph->resources() as $i) {
-                    if (count($i->propertyUris()) > 0) {
-                        $req  = new Request('delete', $i->getUri() . '/tombstone');
-                        $resp = $this->repo->sendRequest($req);
-                        if ($resp->getStatusCode() === 204) {
-                            // fake response of a delete without tombstone removal
-                            $uri  = Ntriples::escapeIri($i->getUri());
-                            $resp = $resp->
-                                withBody(\GuzzleHttp\Psr7\Utils::streamFor("<$uri> <$idProp> <$uri> ."))->
-                                withHeader('Content-Type', 'application/n-triples');
-                        }
-                        $respPromises[] = $resp;
+                $deleted      = [];
+                foreach (RdfIoUtil::parse($resp, new DF()) as $quad) {
+                    $deleted[$quad->getSubject()->getValue()] = $quad->getSubject();
+                }
+                foreach ($deleted as $i) {
+                    $req  = new Request('delete', $i->getValue() . '/tombstone');
+                    $resp = $this->repo->sendRequest($req);
+                    if ($resp->getStatusCode() === 204) {
+                        // fake response of a delete without tombstone removal
+                        $body = NQuadsSerializer::serializeQuad(DF::quad($i, $this->repo->getSchema()->id, $i));
+                        $resp = $resp->
+                            withBody(\GuzzleHttp\Psr7\Utils::streamFor($body))->
+                            withHeader('Content-Type', 'application/n-triples');
                     }
+                    $respPromises[] = $resp;
                 }
                 return $respPromises;
             });
@@ -353,8 +351,8 @@ class RepoResource implements RepoResourceInterface {
                                       ?string $parentProperty = null,
                                       array $resourceProperties = [],
                                       array $relativesProperties = []): ?PromiseInterface {
-        if ($this->metadata === null || $force) {
-            $req     = new Request('get', $this->url . '/metadata');
+        if (count($this->metadata) === 0 || $force) {
+            $req     = new Request('get', (string) $this->getUri() . '/metadata');
             $req     = $this->withReadHeaders($req, $mode, $parentProperty, $resourceProperties, $relativesProperties);
             $promise = $this->repo->sendRequestAsync($req);
             $promise = $promise->then(function (ResponseInterface $resp): void {
@@ -415,7 +413,7 @@ class RepoResource implements RepoResourceInterface {
         $request   = $this->withReadHeaders($request, $readMode, $parentProperty, $resourceProperties, $relativesProperties);
         $promise   = $this->repo->sendRequestAsync($request);
         $promise   = $promise->then(function (ResponseInterface $resp) use ($targetRes): void {
-            $this->url = $targetRes->getUri();
+            $this->metadata = $this->metadata->withNode(DF::namedNode($targetRes->getUri()));
             $this->parseMetadata($resp);
         });
         return $promise;
@@ -428,19 +426,18 @@ class RepoResource implements RepoResourceInterface {
      * @return void
      */
     private function parseMetadata(ResponseInterface $resp): void {
-        $format = explode(';', $resp->getHeader('Content-Type')[0] ?? '')[0];
-        $graph  = new Graph();
+        $graph = new Dataset();
         switch ($resp->getStatusCode()) {
             case 200:
             case 201:
-                $graph->parse($resp->getBody(), $format);
+                $graph->add(RdfIoUtil::parse($resp, new DF()));
                 break;
             case 204:
                 break;
             default:
                 throw new RepoLibException("Invalid response status code: " . $resp->getStatusCode() . " with body: " . $resp->getBody());
         }
-        $this->metadata   = $graph->resource($this->url);
+        $this->metadata   = $this->metadata->withDataset($graph);
         $this->metaSynced = true;
     }
 
@@ -460,7 +457,7 @@ class RepoResource implements RepoResourceInterface {
         $request = $request->
             withHeader('Accept', 'application/n-triples')->
             withHeader($this->repo->getHeaderName('metadataReadMode'), $mode)->
-            withHeader($this->repo->getHeaderName('metadataParentProperty'), $parentProperty ?? $this->repo->getSchema()->parent);
+            withHeader($this->repo->getHeaderName('metadataParentProperty'), $parentProperty ?? $this->repo->getSchema()->parent->getValue());
         if (count($resourceProperties) > 0) {
             $request = $request->withHeader($this->repo->getHeaderName('resourceProperties'), implode(',', $resourceProperties));
         }

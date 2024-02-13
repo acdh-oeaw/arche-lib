@@ -26,7 +26,6 @@
 
 namespace acdhOeaw\arche\lib;
 
-use acdhOeaw\arche\lib\exception\RepoLibException;
 use function GuzzleHttp\json_decode;
 use function GuzzleHttp\json_encode;
 
@@ -36,26 +35,43 @@ use function GuzzleHttp\json_encode;
  *
  * @author zozlak
  * @property Config $accessControl
+ * @property string $accessRestriction
+ * @property string $accessRestrictionAgg
+ * @property string $accessRole
+ * @property string $binarySizeCumulative
  * @property array<string>  $addNamespaces
  * @property string $address
  * @property string $admin
  * @property array<string> $adminRoles
  * @property array<string> $allowedRoles
- * @property array<string, string> $assignRoles
+ * @property array<string, array<string>> $assignRoles
  * @property Config $autoAddIds
  * @property Config $auth
  * @property array<Config> $authMethods
  * @property string $binaryModificationDate
  * @property string $binaryModificationUser
  * @property string $binarySize
+ * @property string $binarySizeCumulative
  * @property string $class
+ * @property Config $classes
  * @property int    $checkInterval
+ * @property bool   $checkAutoCreatedResources
+ * @property Config $checkRanges
+ * @property bool   $checkUnknownProperties
+ * @property bool   $checkVocabularyValues
+ * @property string $clarinSet
+ * @property string $clarinSetProperty
  * @property array<string, string> $classLoader
+ * @property string $cmdi
+ * @property string $cmdiPid
+ * @property string $collection
  * @property int    $configDate
  * @property string $connStr
  * @property string $cors
+ * @property string $countCumulative
  * @property array<string> $copying
  * @property Config $create
+ * @property string $createValue
  * @property string $creationDate
  * @property string $creationUser
  * @property array<string> $creatorRights
@@ -73,8 +89,10 @@ use function GuzzleHttp\json_encode;
  * @property string $delete
  * @property array<string> $denyNamespaces
  * @property string $dir
+ * @property Config $doorkeeper
  * @property bool   $enforceCompleteness
  * @property bool   $enforceOnMetadata
+ * @property Config $epicPid
  * @property bool   $exceptionOnTimeout
  * @property string $file
  * @property string $fileName
@@ -86,17 +104,22 @@ use function GuzzleHttp\json_encode;
  * @property Config $handlers
  * @property string $hash
  * @property string $hashAlgorithm
- * @property Config $headers
+ * @property object $headers
  * @property string $highlighting
  * @property string $host
  * @property Config $httpBasic
  * @property object $httpHeader
  * @property string $id
  * @property string $indexing
+ * @property string $isNewVersionOf
  * @property string $label
  * @property string $lang
+ * @property string $latitude
+ * @property string $longitude
  * @property string $level
  * @property int    $levels
+ * @property string $license
+ * @property string $licenseAgg
  * @property Config $logging
  * @property quickRdf\DatasetNode $meta
  * @property string $metadata
@@ -113,8 +136,10 @@ use function GuzzleHttp\json_encode;
  * @property string $modeDir
  * @property string $modificationDate
  * @property string $modificationUser
- * @property array<string, string>  $namespaces
+ * @property Config $namespaces
  * @property array<string> $nonRelationProperties
+ * @property string $licenseAgg
+ * @property string $ontology
  * @property array<string> $options
  * @property int    $outputTriplesCache
  * @property array  $parameters
@@ -122,14 +147,22 @@ use function GuzzleHttp\json_encode;
  * @property string $path
  * @property string $pathBase
  * @property string $password
+ * @property string $pid
  * @property int    $port
+ * @property string $prefix
+ * @property array<string> $properties
+ * @property string $pswd
  * @property string $publicRole
  * @property string $queue
  * @property Config|null $rabbitMq
  * @property string $read
  * @property array<string> $relativesProperties
+ * @property string $resolver
+ * @property string $resource
  * @property array<string> $resourceProperties
  * @property Config $rest
+ * @property string $rolePublic
+ * @property string $roleAcademic
  * @property Config $schema
  * @property string $searchCount
  * @property string $searchOrder
@@ -147,18 +180,26 @@ use function GuzzleHttp\json_encode;
  * @property string $tikaLocation
  * @property int    $timeout
  * @property int    $lockTimeout
+ * @property string $searchFts
+ * @property string $searchFtsProperty
+ * @property string $searchFtsQuery
  * @property int    $statementTimeout
  * @property string $tmpDir
+ * @property string $topCollection
  * @property Config $transactionController
  * @property string $transactionId
  * @property string $type
  * @property string $uri
+ * @property string $url
  * @property string $urlBase
  * @property string $user
  * @property string $userCol
  * @property string $value
  * @property bool   $verifyCert
  * @property float  $version
+ * @property string $vid
+ * @property string $withReferences
+ * @property string $wkt
  */
 class Config {
 

@@ -26,8 +26,14 @@
 
 namespace acdhOeaw\arche\lib;
 
+use Generator;
+use rdfInterface\DatasetNodeInterface;
+use quickRdf\DataFactory as DF;
+use quickRdf\Dataset;
+use quickRdf\DatasetNode;
+use quickRdf\NamedNode;
+use termTemplates\QuadTemplate as QT;
 use Psr\Log\AbstractLogger;
-use EasyRdf\Resource;
 use acdhOeaw\arche\lib\exception\RepoLibException;
 
 /**
@@ -45,7 +51,7 @@ trait RepoTrait {
     /**
      * An object providing mappings of repository REST API parameters to HTTP headers used by a given repository instance.
      */
-    private Schema $headers;
+    private object $headers;
 
     /**
      * An object providing mappings of repository concepts to RDF properties used to denote them by a given repository instance.
@@ -106,15 +112,45 @@ trait RepoTrait {
     }
 
     /**
+     * Extracts collection of RepoResource objects from the EasyRdf graph being
+     * parsed from a search response.
      * 
-     * @param array<Resource> $resources
-     * @param string $searchOrderProp
+     * @param Dataset $graph graph returned by the parseSearchResponse() method
+     * @param SearchConfig $config search configuration object
+     * @return Generator<RepoResourceInterface>
+     */
+    private function extractResourcesFromGraph(Dataset $graph,
+                                               SearchConfig $config): Generator {
+        $class = $config->class ?? static::$resourceClass;
+
+        $resources = [];
+        foreach ($graph->listSubjects(new QT(predicate: $this->schema->searchMatch)) as $sbj) {
+            $resources[] = (new DatasetNode($sbj))->withDataset($graph);
+        }
+        $this->sortMatchingResources($resources, $this->schema->searchOrder);
+        $graph->delete(new QT(predicate: $this->schema->searchMatch));
+        $graph->delete(new QT(predicate: $this->schema->searchOrder));
+
+        foreach ($resources as $i) {
+            $obj = new $class($i->getNode()->getValue(), $this);
+            /** @var RepoResource $obj */
+            $obj->setGraph($graph);
+            yield $obj;
+        }
+    }
+
+    /**
+     * 
+     * @param array<DatasetNodeInterface> $resources
+     * @param NamedNode $searchOrderProp
      * @return void
      */
     private function sortMatchingResources(array &$resources,
-                                           string $searchOrderProp): void {
-        usort($resources, function (Resource $a, Resource $b) use ($searchOrderProp) {
-            return $a->getLiteral($searchOrderProp) <=> $b->getLiteral($searchOrderProp);
+                                           NamedNode $searchOrderProp): void {
+        $tmpl = new QT(predicate: $searchOrderProp);
+        usort($resources, function (DatasetNodeInterface $a,
+                                    DatasetNodeInterface $b) use ($tmpl) {
+            return $a->getObjectValue($tmpl) <=> $b->getObjectValue($tmpl);
         });
     }
 }
