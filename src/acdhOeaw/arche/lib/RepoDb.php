@@ -111,6 +111,10 @@ class RepoDb implements RepoInterface {
         $this->auth                  = $auth;
     }
 
+    public function getSmartSearch(): SmartSearch {
+        return new SmartSearch($this->pdo, $this->getSchema(), $this->getBaseUrl());
+    }
+
     /**
      * Tries to find a single repository resource matching provided identifiers.
      * 
