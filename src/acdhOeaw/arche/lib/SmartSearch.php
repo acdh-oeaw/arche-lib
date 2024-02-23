@@ -28,6 +28,7 @@ namespace acdhOeaw\arche\lib;
 
 use Generator;
 use PDO;
+use PDOStatement;
 use Psr\Log\AbstractLogger;
 use zozlak\queryPart\QueryPart;
 use zozlak\RdfConstants as RDF;
@@ -295,16 +296,22 @@ class SmartSearch {
             $inBinaryF = $inBinary ? "" : "AND ss.id IS NULL";
             $query     .= "
                 search1 AS (
-                    SELECT
-                        coalesce(ss.id, m.id) AS id,
-                        -1::bigint AS ftsid,
-                        CASE
-                            WHEN m.property IS NOT NULL THEN m.property
-                            ELSE 'BINARY'
-                        END AS property,
-                        1.0 AS weight_m,
-                        null::text AS link_property
-                    FROM $qp->query $inBinaryF $propsFilter
+                    SELECT *
+                    FROM
+                        resources r
+                        JOIN (
+                            SELECT
+                                coalesce(ss.id, m.id) AS id,
+                                -1::bigint AS ftsid,
+                                CASE
+                                    WHEN m.property IS NOT NULL THEN m.property
+                                    ELSE 'BINARY'
+                                END AS property,
+                                1.0 AS weight_m,
+                                null::text AS link_property
+                            FROM $qp->query $inBinaryF $propsFilter
+                        ) USING (id)
+                    WHERE r.state = 'active'
                 )
             ";
             $param     = array_merge($param, $qp->param, $propsParam);
@@ -318,7 +325,10 @@ class SmartSearch {
                         null::text AS property,
                         1.0 AS weight_m,
                         null::text AS link_property
-                    FROM filters
+                    FROM
+                        resources
+                        JOIN filters USING (id)
+                    WHERE state = 'active'
                 )
             ";
             $curTab  = 'search1';
@@ -348,10 +358,12 @@ class SmartSearch {
                         CASE WHEN raw = ? THEN ? ELSE 1.0 END * CASE WHEN $langMatch THEN ? ELSE 1.0 END AS weight_m,
                         null::text AS link_property
                     FROM
-                        full_text_search f
+                        resources r
+                        JOIN full_text_search f USING (id)
                         LEFT JOIN metadata sm using (mid)
                     WHERE
-                        websearch_to_tsquery('simple', ?) @@ segments
+                        r.state = 'active'
+                        AND websearch_to_tsquery('simple', ?) @@ segments
                         $inBinaryF
                         $propsFilter
                 )
