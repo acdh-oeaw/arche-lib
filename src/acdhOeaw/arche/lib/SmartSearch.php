@@ -82,6 +82,8 @@ class SmartSearch {
     private array $namedEntityWeights       = [];
     private float $namedEntityDefaultWeight = 1.0;
     private string $phrase;
+    private string $orderProperty;
+    private bool $orderPropertyAsc         = true;
     private string $orderExp                 = '';
     private string $dateFacetsFormat         = 'YYYY-MM-DD';
     private ?AbstractLogger $queryLog;
@@ -172,6 +174,12 @@ class SmartSearch {
                                           float $defaultWeight = 1.0): self {
         $this->namedEntityWeights       = $weights;
         $this->namedEntityDefaultWeight = $defaultWeight;
+        return $this;
+    }
+
+    public function setFallbackOrderBy(string $property, bool $asc = true): self {
+        $this->orderProperty    = $property;
+        $this->orderPropertyAsc = $asc;
         return $this;
     }
 
@@ -296,22 +304,16 @@ class SmartSearch {
             $inBinaryF = $inBinary ? "" : "AND ss.id IS NULL";
             $query     .= "
                 search1 AS (
-                    SELECT *
-                    FROM
-                        resources r
-                        JOIN (
-                            SELECT
-                                coalesce(ss.id, m.id) AS id,
-                                -1::bigint AS ftsid,
-                                CASE
-                                    WHEN m.property IS NOT NULL THEN m.property
-                                    ELSE 'BINARY'
-                                END AS property,
-                                1.0 AS weight_m,
-                                null::text AS link_property
-                            FROM $qp->query $inBinaryF $propsFilter
-                        ) USING (id)
-                    WHERE r.state = 'active'
+                    SELECT
+                        coalesce(ss.id, m.id) AS id,
+                        -1::bigint AS ftsid,
+                        CASE
+                            WHEN m.property IS NOT NULL THEN m.property
+                            ELSE 'BINARY'
+                        END AS property,
+                        1.0 AS weight_m,
+                        null::text AS link_property
+                    FROM $qp->query $inBinaryF $propsFilter
                 )
             ";
             $param     = array_merge($param, $qp->param, $propsParam);
@@ -325,10 +327,7 @@ class SmartSearch {
                         null::text AS property,
                         1.0 AS weight_m,
                         null::text AS link_property
-                    FROM
-                        resources
-                        JOIN filters USING (id)
-                    WHERE state = 'active'
+                    FROM filters
                 )
             ";
             $curTab  = 'search1';
@@ -358,12 +357,10 @@ class SmartSearch {
                         CASE WHEN raw = ? THEN ? ELSE 1.0 END * CASE WHEN $langMatch THEN ? ELSE 1.0 END AS weight_m,
                         null::text AS link_property
                     FROM
-                        resources r
-                        JOIN full_text_search f USING (id)
+                        full_text_search f
                         LEFT JOIN metadata sm using (mid)
                     WHERE
-                        r.state = 'active'
-                        AND websearch_to_tsquery('simple', ?) @@ segments
+                        websearch_to_tsquery('simple', ?) @@ segments
                         $inBinaryF
                         $propsFilter
                 )
@@ -510,20 +507,44 @@ class SmartSearch {
      * @param SearchConfig $config
      * @return Generator<object>
      */
-    public function getSearchPage(int $page, int $pageSize, SearchConfig $config): Generator {
+    public function getSearchPage(int $page, int $pageSize,
+                                  SearchConfig $config, string $prefLang): Generator {
         $config->skipArtificialProperties = true;
 
-        $offset = $page * $pageSize;
-        $query  = "
+        $param    = [];
+        $oGroupBy = $oOrderBy = '';
+        if (!empty($this->orderProperty ?? '')) {
+            $oQuery   = "
+                LEFT JOIN (
+                    SELECT
+                        id, 
+                        min(value) FILTER (WHERE lang = ?) AS o1,
+                        min(value) AS o2
+                    FROM metadata m 
+                    WHERE
+                        m.property = ?
+                        AND EXISTS (SELECT 1 FROM " . self::TEMPTABNAME . " WHERE id = m.id)
+                    GROUP BY 1
+                ) o USING (id)
+            ";
+            $oGroupBy = ', o1, o2';
+            $oAsc     = $this->orderPropertyAsc ? 'ASC' : 'DESC';
+            $oOrderBy = ", COALESCE(o1, o2) $oAsc NULLS LAST";
+            $param    = [$prefLang, $this->orderProperty];
+        }
+        $offset  = $page * $pageSize;
+        $query   = "
             CREATE TEMPORARY TABLE _page AS 
             SELECT id, sum(weight) AS weight
-            FROM " . self::TEMPTABNAME . "
-            GROUP BY 1
-            ORDER BY $this->orderExp
+            FROM
+                " . self::TEMPTABNAME . " $oQuery
+            GROUP BY 1 $oGroupBy
+            ORDER BY $this->orderExp $oOrderBy
             OFFSET ? 
             LIMIT ?
         ";
-        $param  = [$offset, $pageSize];
+        $param[] = $offset;
+        $param[] = $pageSize;
         if (isset($this->queryLog)) {
             $this->queryLog->debug(new QueryPart($query, $param));
         }
