@@ -84,8 +84,6 @@ class SmartSearch {
     private string $phrase;
     private string $orderProperty;
     private bool $orderPropertyAsc         = true;
-    private string $orderExp                 = '';
-    private string $dateFacetsFormat         = 'YYYY-MM-DD';
     private ?AbstractLogger $queryLog;
 
     public function __construct(PDO $pdo, Schema $schema, string $baseUrl) {
@@ -119,6 +117,9 @@ class SmartSearch {
             if (is_object($i->weights)) {
                 $i->weights = (array) $i->weights;
             }
+            if (is_array($i->weights) && count($i->weights) === 0) {
+                $i->weights = null;
+            }
         }
         unset($i);
         $this->facets              = $facets;
@@ -133,11 +134,6 @@ class SmartSearch {
      */
     public function setRangeFacets(array $facets): self {
         $this->rangeFacets = $facets;
-        return $this;
-    }
-
-    public function setDateFacetsFormat(string $format): self {
-        $this->dateFacetsFormat = $format;
         return $this;
     }
 
@@ -205,93 +201,99 @@ class SmartSearch {
                            array $searchTerms = [],
                            ?SearchTerm $spatialTerm = null,
                            array $parentIds = []): void {
+        if ($this->pdo->inTransaction()) {
+            $this->pdo->rollBack();
+        }
         $baseUrl           = $this->repo->getBaseUrl();
         $idProp            = $this->repo->getSchema()->id;
         $linkNamedEntities = count($this->namedEntitiesValues) > 0;
         $this->phrase      = $phrase;
-        $query             = "WITH\n";
-        $param             = [];
+        // search conditions based on FTS index or spatial index
+        $indexSearch       = !(empty($phrase) && $spatialTerm === null);
+        // search conditions base on search terms
+        $filteredSearch    = count($searchTerms) + count($parentIds) > 0;
 
         // FILTERS
-        $filters = '';
-        if (count($searchTerms) + count($parentIds) > 0) {
-            $filters = "AND EXISTS (SELECT 1 FROM filters WHERE id = s.id)";
-            $query   .= "filters AS (\nSELECT id FROM\n";
-            $n       = 0;
+        // filters are applied both
+        $filterExp   = '';
+        if ($filteredSearch) {
+            $filterExp  = "WHERE EXISTS (SELECT 1 FROM filters WHERE id = s.id)";
+            $filterQuery = "CREATE TEMPORARY TABLE filters AS (\nSELECT id FROM\n";
+            $filterParam = [];
+            $n           = 0;
             foreach ($searchTerms as $st) {
                 /* @var $st SearchTerm */
-                $qp    = $st->getSqlQuery($baseUrl, $idProp, []);
-                $query .= $n > 0 ? "JOIN (" : "(";
-                $query .= $qp->query;
-                $query .= $n > 0 ? ") f$n USING (id)\n" : ") f$n\n";
-                $param = array_merge($param, $qp->param);
+                $tmpQuery    = $st->getSqlQuery($baseUrl, $idProp, []);
+                $filterQuery .= $n > 0 ? "JOIN (" : "(";
+                $filterQuery .= $tmpQuery->query;
+                $filterQuery .= $n > 0 ? ") f$n USING (id)\n" : ") f$n\n";
+                $filterParam = array_merge($filterParam, $tmpQuery->param);
                 $n++;
             }
             if (count($parentIds) > 0) {
-                $query .= $n > 0 ? "JOIN (" : "(";
+                $filterQuery .= $n > 0 ? "JOIN (" : "(";
                 foreach ($parentIds as $m => $id) {
-                    $query .= $m > 0 ? "UNION\n" : "";
-                    $query .= "SELECT id FROM get_relatives(?, ?, 999999, 0, false, false)\n";
-                    $param = array_merge($param, [$id, $this->schema->parent]);
+                    $filterQuery .= $m > 0 ? "UNION\n" : "";
+                    $filterQuery .= "SELECT id FROM get_relatives(?, ?, 999999, 0, false, false)\n";
+                    $filterParam = array_merge($filterParam, [$id, $this->schema->parent]);
                 }
-                $query .= $n > 0 ? ") f$n USING (id)\n" : ") f$n\n";
+                $filterQuery .= $n > 0 ? ") f$n USING (id)\n" : ") f$n\n";
             }
-            $query .= "),\n";
+            $filterQuery .= ")\n";
+            $this->queryLog?->debug((string) (new QueryPart($filterQuery, $filterParam)));
+            $t = microtime(true);
+            $filterQuery = $this->pdo->prepare($filterQuery);
+            $filterQuery->execute($filterParam);
+            $this->queryLog?->debug('Execution time ' . microtime(true) - $t);
+            unset($filterQuery, $filterParam, $tmpQuery);
         }
 
-        // WEIGHTS
-        $facetsFrom      = "";
-        $facetsFromParam = [];
-        $facetsSelect    = "";
-        $orderExp        = "sum(weight) DESC";
-        $weightExp       = "weight_m";
-        $weightExpParam  = [];
+        $searchQuery = "CREATE TEMPORARY TABLE search9 AS\nWITH\n";
+        $searchParam = [];
+        $matchQuery  = "CREATE TEMPORARY TABLE " . self::TEMPTABNAME . " AS WITH\n";
+        $matchParam  = [];
+        $tmpQuery    = null;
+
+        // WEIGHTS - watch out - some go to search query, some to match query and some to both
         if (count($this->propWeights) > 0) {
-            $facetsFrom       .= "LEFT JOIN weights_p ON s.property = weights_p.value\n";
-            $weightExp        .= " * coalesce(weight_p, ?)";
-            $weightExpParam[] = $this->propDefaultWeight;
-
-            $queryTmp = $this->getWeightsWith($this->propWeights, 'weight_p');
-            $query    .= "weights_p $queryTmp->query,\n";
-            $param    = array_merge($param, $queryTmp->param);
+            $tmpQuery    = $this->getWeightsWith($this->propWeights, 'weight_p');
+            $searchQuery .= "weights_p $tmpQuery->query,\n";
+            $searchParam = array_merge($searchParam, $tmpQuery->param);
+            $matchQuery  .= "weights_p $tmpQuery->query,\n";
+            $matchParam  = array_merge($matchParam, $tmpQuery->param);
         }
-        $mn = '0';
-        foreach ($this->facets as $facet) {
-            $srcTab  = 'metadata';
-            $valCol  = 'value';
-            $valType = 'text';
-            if ($facet->type === 'object') {
-                $srcTab  = 'relations';
-                $valCol  = 'target_id';
-                $valType = 'bigint';
+        foreach ($this->facets as $mn => $facet) {
+            if (is_array($facet->weights)) {
+                $tmpQuery   = $this->getWeightsWith($facet->weights, "weight_$mn", $facet->type === 'object' ? 'bigint' : 'text');
+                $matchQuery .= "weights_$mn $tmpQuery->query,\n";
+                $matchParam = array_merge($matchParam, $tmpQuery->param);
             }
-            $facetsFrom        .= "LEFT JOIN $srcTab meta_$mn ON s.id = meta_$mn.id AND meta_$mn.property = ?\n";
-            $facetsFromParam[] = $facet->property;
-            if (is_array($facet->weights) && count($facet->weights) > 0) {
-                $facetsFrom       .= "LEFT JOIN weights_$mn ON meta_$mn.$valCol = weights_$mn.value\n";
-                $facetsSelect     .= ", meta_$mn.$valCol AS meta_$mn, weight_$mn";
-                $orderExp         .= ", min(weight_$mn) NULLS LAST";
-                $weightExp        .= " * coalesce(weight_$mn, ?)";
-                $weightExpParam[] = $this->facetsDefaultWeight;
-
-                $queryTmp = $this->getWeightsWith($facet->weights, "weight_$mn", $valType);
-                $query    .= "weights_$mn $queryTmp->query,\n";
-                $param    = array_merge($param, $queryTmp->param);
-            } elseif (!is_array($facet->weights) && !empty($facet->weights)) {
-                $facetsSelect .= ", CASE WHEN meta_$mn.value_t IS NOT NULL THEN to_char(meta_$mn.value_t, '" . $this->dateFacetsFormat . "') ELSE meta_$mn.value END AS meta_$mn";
-                $desc         = strtolower($facet->weights) === 'desc';
-                $orderExp     .= ", " . ($desc ? "max" : "min") . "(meta_$mn)" . ($desc ? " DESC" : "") . " NULLS LAST";
-            } else {
-                $facetsSelect .= ", meta_$mn.$valCol AS meta_$mn";
-            }
-            $mn = (string) (((int) $mn) + 1);
         }
+        if ($linkNamedEntities) {
+            $tmpQuery    = $this->getWeightsWith($this->namedEntityWeights, 'weight_ne');
+            $searchQuery .= "weights_ne $tmpQuery->query,\n";
+            $searchParam = array_merge($searchParam, $tmpQuery->param);
+        }
+        $matchQuery = substr($matchQuery, 0, -2) . "\n"; // get rid of final coma
 
         // INITIAL SEARCH
-        $propsFilter = '';
-        $propsParam  = [];
-        if (empty($phrase) && $spatialTerm !== null) {
+        if (!$indexSearch && $filteredSearch) {
+            $searchQuery .= "
+                search1 AS (
+                    SELECT 
+                        id, 
+                        -1::bigint AS ftsid,
+                        null::text AS property,
+                        1.0 AS weight_m
+                    FROM filters
+                )
+            ";
+            $curTab      = 'search1';
+            $filterExp   = '';
+        } elseif (empty($phrase) && $spatialTerm !== null) {
             // SPATIAL-ONLY SEARCH
+            $propsFilter = '';
+            $propsParam  = [];
             if (count($allowedProperties) > 0) {
                 $propsFilter = "AND CASE 
                     WHEN m.property IS NOT NULL THEN m.property 
@@ -299,10 +301,10 @@ class SmartSearch {
                     END IN (" . substr(str_repeat(', ?', count($allowedProperties)), 2) . ")";
                 $propsParam  = $allowedProperties;
             }
-            $qp        = $spatialTerm->getSqlQuery($baseUrl, $idProp, []);
-            $qp->query = (string) preg_replace('/^.*FROM/sm', '', $qp->query);
-            $inBinaryF = $inBinary ? "" : "AND ss.id IS NULL";
-            $query     .= "
+            $tmpQuery        = $spatialTerm->getSqlQuery($baseUrl, $idProp, []);
+            $tmpQuery->query = (string) preg_replace('/^.*FROM/sm', '', $tmpQuery->query);
+            $inBinaryF       = $inBinary ? "" : "AND ss.id IS NULL";
+            $searchQuery     .= "
                 search1 AS (
                     SELECT
                         coalesce(ss.id, m.id) AS id,
@@ -311,28 +313,15 @@ class SmartSearch {
                             WHEN m.property IS NOT NULL THEN m.property
                             ELSE 'BINARY'
                         END AS property,
-                        1.0 AS weight_m,
-                        null::text AS link_property
-                    FROM $qp->query $inBinaryF $propsFilter
+                        1.0 AS weight_m
+                    FROM $tmpQuery->query $inBinaryF $propsFilter
                 )
             ";
-            $param     = array_merge($param, $qp->param, $propsParam);
+            $searchParam    = array_merge($searchParam, $tmpQuery->param, $propsParam);
             $curTab    = 'search1';
-        } elseif (empty($phrase) && $spatialTerm === null && count($searchTerms) > 0) {
-            $query   .= "
-                search1 AS (
-                    SELECT 
-                        id, 
-                        -1::bigint AS ftsid,
-                        null::text AS property,
-                        1.0 AS weight_m,
-                        null::text AS link_property
-                    FROM filters
-                )
-            ";
-            $curTab  = 'search1';
-            $filters = "";
         } else {
+            $propsFilter = '';
+            $propsParam  = [];
             if (count($allowedProperties) > 0) {
                 $propsFilter = "AND CASE 
                     WHEN sm.property IS NOT NULL THEN sm.property 
@@ -341,10 +330,10 @@ class SmartSearch {
                     END IN (" . substr(str_repeat(', ?', count($allowedProperties)), 2) . ")";
                 $propsParam  = array_merge([$this->schema->id], $allowedProperties);
             }
-            $inBinaryF = $inBinary ? "" : "AND f.id IS NULL";
-            $langMatch = !empty($language) ? "sm.lang = ?" : "?::bool";
-            $langParam = !empty($language) ? $language : 0.0;
-            $query     .= "
+            $inBinaryF   = $inBinary ? "" : "AND f.id IS NULL";
+            $langMatch   = !empty($language) ? "sm.lang = ?" : "?::bool";
+            $langParam   = !empty($language) ? $language : 0.0;
+            $searchQuery .= "
                 search1 AS (
                     SELECT
                         coalesce(f.id, f.iid, sm.id) AS id,
@@ -354,8 +343,7 @@ class SmartSearch {
                             WHEN f.iid IS NOT NULL THEN ?
                             ELSE 'BINARY'
                         END AS property,
-                        CASE WHEN raw = ? THEN ? ELSE 1.0 END * CASE WHEN $langMatch THEN ? ELSE 1.0 END AS weight_m,
-                        null::text AS link_property
+                        CASE WHEN raw = ? THEN ? ELSE 1.0 END * CASE WHEN $langMatch THEN ? ELSE 1.0 END AS weight_m
                     FROM
                         full_text_search f
                         LEFT JOIN metadata sm using (mid)
@@ -365,139 +353,173 @@ class SmartSearch {
                         $propsFilter
                 )
             ";
-            $param     = array_merge(
-                $param,
+            $searchParam = array_merge(
+                $searchParam,
                 [
                     $this->schema->id,
                     $phrase, $this->exactWeight, $langParam, $this->langWeight,
                     SearchTerm::escapeFts($phrase)
                 ],
-                                          $propsParam
+                $propsParam
             );
             $curTab    = 'search1';
 
             // SPATIAL SEARCH
             if ($spatialTerm !== null) {
-                $qp        = $spatialTerm->getSqlQuery($baseUrl, $idProp, []);
+                $tmpQuery  = $spatialTerm->getSqlQuery($baseUrl, $idProp, []);
                 $inBinaryF = $inBinary ? '' : 'AND ss.id IS NULL';
-                $query     .= ",
+                $searchQuery .= ",
                     search1s AS (
                         SELECT *
                         FROM
                             $curTab
-                            JOIN ($qp->query $inBinaryF) t USING (id)
+                            JOIN ($tmpQuery->query $inBinaryF) t USING (id)
                     )
                 ";
-                $param     = array_merge($param, $qp->param);
+                $searchParam = array_merge($searchParam, $tmpQuery->param);
                 $curTab    = 'search1s';
             }
         }
 
-        // LINK TO NAMED ENTITIES
-        if ($this->linkNamedEntities()) {
-            $curTab           = 'search2';
-            $neIn             = substr(str_repeat('?, ', count($this->namedEntitiesValues)), 0, -2);
-            $query            .= ",
-                search2 AS (
-                    SELECT id, ftsid, property, weight_m, NULL::text AS link_property
-                    FROM search1
-                  UNION
-                    SELECT r.id, s.ftsid, s.property, s.weight_m, r.property AS link_property
-                    FROM
-                        (
-                            SELECT DISTINCT ON (id) * 
-                            FROM 
-                                search1 s 
-                                LEFT JOIN weights_p w ON s.property = w.value 
-                            ORDER BY id, coalesce(weight_p, ?) * weight_m DESC
-                        ) s
-                        JOIN metadata mne ON s.id = mne.id AND mne.property = ? AND mne.value IN ($neIn)
-                        JOIN relations r ON s.id = r.target_id
-                )
+        if (!$linkNamedEntities) {
+            $searchQuery .= "SELECT * FROM $curTab s $filterExp\n";
+            $matchQuery  .= "
+                SELECT 
+                    s.id, s.ftsid, s.property, 
+                    null::text AS link_property, null::text AS facet, null::text AS value, 
+                    weight_m * coalesce(weight_p, ?) AS weight
+                FROM
+                    search9 s
+                    LEFT JOIN weights_p w ON s.property = w.value
             ";
-            $param            = array_merge(
-                $param,
-                [$this->propDefaultWeight, $this->namedEntitiesProperty],
-                $this->namedEntitiesValues
+            $matchParam[] = $this->propDefaultWeight;
+        } else {
+            // LINK TO NAMED ENTITIES
+            $neIn        = substr(str_repeat('?, ', count($this->namedEntitiesValues)), 0, -2);
+            $searchQuery .= "
+                SELECT 
+                    id, 
+                    ftsid, 
+                    property, 
+                    NULL::text AS link_property, 
+                    weight_m * coalesce(weight_p, ?) AS weight
+                FROM
+                    $curTab s
+                    LEFT JOIN weights_p w ON s.property = w.value
+                $filterExp
+              UNION
+                SELECT 
+                    s.id, 
+                    t.ftsid, 
+                    t.property, 
+                    s.property AS link_property, 
+                    t.weight_m * coalesce(t.weight_p, ?) * coalesce(wne.weight_ne, ?) AS weight
+                FROM
+                    (
+                        SELECT DISTINCT ON (id) * 
+                        FROM 
+                            $curTab s 
+                            LEFT JOIN weights_p w ON s.property = w.value 
+                        ORDER BY id, coalesce(weight_p, ?) * weight_m DESC
+                    ) t
+                    JOIN metadata mne ON t.id = mne.id AND mne.property = ? AND mne.value IN ($neIn)
+                    JOIN relations s ON t.id = s.target_id
+                    LEFT JOIN weights_ne wne ON s.property = wne.value
+                $filterExp    
+            ";
+            $searchParam = array_merge(
+                $searchParam,
+                [
+                    $this->propDefaultWeight, // first union part
+                    $this->propDefaultWeight, // select of second union part
+                    $this->namedEntityDefaultWeight, // select of second union part
+                    $this->propDefaultWeight, // subselect of second union part
+                    $this->namedEntitiesProperty // join with mne
+                ],
+                $this->namedEntitiesValues // join with mne
             );
-            $weightExp        .= " * coalesce(weight_ne, ?)";
-            $weightExpParam[] = $this->namedEntityDefaultWeight;
-            $facetsFrom       .= "LEFT JOIN weights_ne wne ON s.link_property = wne.value\n";
-
-            $queryTmp = $this->getWeightsWith($this->namedEntityWeights, 'weight_ne');
-            $query    .= ", weights_ne $queryTmp->query\n";
-            $param    = array_merge($param, $queryTmp->param);
+            $matchQuery .= "SELECT id, ftsid, property, link_property, null::text AS facet, null::text AS value, weight FROM search9\n";
         }
+        $this->queryLog?->debug((string)(new QueryPart($searchQuery, $searchParam)));
+        $t           = microtime(true);
+        $searchQuery = $this->pdo->prepare($searchQuery);
+        $searchQuery->execute($searchParam);
+        $this->queryLog?->debug('Execution time ' . microtime(true) - $t);
+        unset($searchQuery, $searchParam, $tmpQuery);
 
-        // RANGE FACETS
-        foreach ($this->rangeFacets as $i) {
-            $minPlch      = substr(str_repeat(', ?', count($i->start)), 2);
-            $maxPlch      = substr(str_repeat(', ?', count($i->end)), 2);
-            $query        .= ",
-                meta_$mn AS (
-                    SELECT 
-                        id, 
-                        numrange('[' || vmin::text || ', ' || vmax::text || ']') AS meta_$mn
-                    FROM
-                        (
-                            SELECT id, min(m.value_n) AS vmin
-                            FROM metadata m JOIN $curTab s USING (id)
-                            WHERE
-                                m.property IN ($minPlch)
-                                $filters
-                            GROUP BY 1
-                        ) t1
-                        JOIN (
-                            SELECT id, max(m.value_n) AS vmax
-                            FROM metadata m JOIN $curTab s USING (id)
-                            WHERE
-                                m.property IN ($maxPlch)
-                                $filters
-                            GROUP BY 1
-                        ) t2 USING (id)
-                )
+        // ORDINARY FACETS DATA
+        foreach ($this->facets as $mn => $facet) {
+            $srcTab  = 'metadata';
+            $valCol  = 'value';
+            if ($facet->type === 'object') {
+                $srcTab  = 'relations';
+                $valCol  = 'target_id';
+            }
+            $weightQuery = '';
+            $weightValue = 'null::float';
+            if (is_array($facet->weights)){
+                $weightQuery = "LEFT JOIN weights_$mn w ON m.$valCol = w.value";
+                $weightValue = "coalesce(w.weight_$mn, ?)";
+                $matchParam[] = $this->facetsDefaultWeight;
+            }
+            $matchQuery .= "UNION
+                SELECT
+                    s.id, 
+                    null::bigint as fstid, 
+                    null::text AS property, 
+                    null::text AS link_property, 
+                    m.property AS facet, 
+                    m.$valCol::text AS value,
+                    $weightValue AS weight
+                FROM 
+                    search9 s 
+                    JOIN $srcTab m ON s.id = m.id AND m.property = ?
+                    $weightQuery
             ";
-            $param        = array_merge($param, $i->start, $i->end);
-            $facetsSelect .= ", meta_$mn.meta_$mn AS meta_$mn";
-            $facetsFrom   .= "LEFT JOIN meta_$mn ON meta_$mn.id = s.id\n";
-            $mn           = (string) (((int) $mn) + 1);
+            $matchParam[] = $facet->property;
+        }
+        // RANGE FACETS DATA
+        $rangeFilterExp = 'AND' . substr($filterExp, 5);
+        foreach ($this->rangeFacets as $facetKey => $facet) {
+            $minPlch     = substr(str_repeat(', ?', count($facet->start)), 2);
+            $maxPlch     = substr(str_repeat(', ?', count($facet->end)), 2);
+            $matchQuery .= "UNION
+                SELECT
+                    s.id,
+                    null::bigint AS ftsid,
+                    null::text AS property,
+                    null::text AS link_property,
+                    ?::text AS facet, 
+                    '[' || vmin::text || ', ' || vmax::text || ']' AS value,
+                    null::float AS weight
+                FROM
+                    search9 s
+                    JOIN (
+                        SELECT id, min(m.value_n) AS vmin
+                        FROM metadata m JOIN search9 s USING (id)
+                        WHERE
+                            m.property IN ($minPlch)
+                            $rangeFilterExp
+                        GROUP BY 1
+                    ) t1 USING (id)
+                    JOIN (
+                        SELECT id, max(m.value_n) AS vmax
+                        FROM metadata m JOIN search9 s USING (id)
+                        WHERE
+                            m.property IN ($maxPlch)
+                            $rangeFilterExp
+                        GROUP BY 1
+                    ) t2 USING (id)
+            ";
+            $matchParam        = array_merge($matchParam, [$facetKey], $facet->start, $facet->end);
         }
 
-        // WEIGHTS
-        $query = "CREATE TEMPORARY TABLE " . self::TEMPTABNAME . " AS 
-            $query
-            SELECT 
-                s.id, s.ftsid, s.property, s.link_property, 
-                $weightExp AS weight
-                $facetsSelect
-            FROM
-                $curTab s
-                $facetsFrom
-            WHERE
-                $weightExp > 0
-                $filters
-        ";
-        $param = array_merge(
-            $param,
-            $weightExpParam,
-            $facetsFromParam,
-            $weightExpParam
-        );
-
-        if ($_POST['debug'] ?? false) {
-            exit(new QueryPart($query, $param));
-        }
-        if ($this->pdo->inTransaction()) {
-            $this->pdo->rollBack();
-        }
-        if (isset($this->queryLog)) {
-            $this->queryLog->debug((string) (new QueryPart($query, $param)));
-        }
+        $this->queryLog?->debug((string) (new QueryPart($matchQuery, $matchParam)));
         $this->pdo->beginTransaction();
-        $query = $this->pdo->prepare($query);
-        $query->execute($param);
-
-        $this->orderExp = $orderExp;
+        $t = microtime(true);
+        $matchQuery = $this->pdo->prepare($matchQuery);
+        $matchQuery->execute($matchParam);
+        $this->queryLog?->debug('Execution time ' . (microtime(true) - $t));
     }
 
     /**
@@ -535,21 +557,26 @@ class SmartSearch {
         $offset  = $page * $pageSize;
         $query   = "
             CREATE TEMPORARY TABLE _page AS 
-            SELECT id, sum(weight) AS weight
+            SELECT id, round(exp(sum(ln(weight)))) AS weight
             FROM
-                " . self::TEMPTABNAME . " $oQuery
+                (
+                    SELECT id, property, max(weight) AS weight
+                    FROM _matches
+                    GROUP BY 1, 2
+                ) w
+                $oQuery
             GROUP BY 1 $oGroupBy
-            ORDER BY $this->orderExp $oOrderBy
+            ORDER BY round(exp(sum(ln(weight)))) DESC NULLS LAST $oOrderBy
             OFFSET ? 
             LIMIT ?
         ";
         $param[] = $offset;
         $param[] = $pageSize;
-        if (isset($this->queryLog)) {
-            $this->queryLog->debug(new QueryPart($query, $param));
-        }
+        $this->queryLog?->debug(new QueryPart($query, $param));
+        $t = microtime(true);
         $query = $this->pdo->prepare($query);
         $query->execute($param);
+        $this->queryLog?->debug('Execution time ' . (microtime(true) - $t));
 
         // technical triples
         $phraseEsc = SearchTerm::escapeFts($this->phrase);
@@ -593,18 +620,20 @@ class SmartSearch {
             $this->schema->searchMatch, RDF::XSD_ANY_URI,
             $this->schema->searchWeight, RDF::XSD_FLOAT,
         ];
-        if (isset($this->queryLog)) {
-            $this->queryLog->debug(new QueryPart($query, $param));
-        }
+        $t = microtime(true);
+        $this->queryLog?->debug(new QueryPart($query, $param));
         $query = $this->pdo->prepare($query);
         $query->execute($param);
+        $this->queryLog?->debug('Execution time ' . (microtime(true) - $t));
         while ($row   = $query->fetchObject()) {
             yield $row;
         }
 
         // metadata of matched resources
         $query = "SELECT id FROM _page";
+        $t = microtime(true);
         $query = $this->repo->getPdoStatementBySqlQuery($query, [], $config);
+        $this->queryLog->debug('Execution time ' . (microtime(true) - $t));
         while ($row   = $query->fetchObject()) {
             yield $row;
         }
@@ -617,6 +646,7 @@ class SmartSearch {
      */
     public function getSearchFacets(string $prefLang = ''): array {
         $stats = [];
+        $t = microtime(true);
 
         // MATCH PROPERTY
         $query  = $this->pdo->query("
@@ -633,7 +663,7 @@ class SmartSearch {
         if (count($values) > 0) {
             $stats['property'] = [
                 'continues' => false,
-                'values'    => $query->fetchAll(PDO::FETCH_OBJ),
+                'values'    => $values,
             ];
         }
 
@@ -649,66 +679,91 @@ class SmartSearch {
                 GROUP BY 1
                 ORDER BY 2 DESC
             ");
-            $stats['linkProperty'] = [
-                'continues' => false,
-                'values'    => $query->fetchAll(PDO::FETCH_OBJ),
-            ];
+            $values = $query->fetchAll(PDO::FETCH_OBJ);
+            if (count($values) > 0) {
+                $stats['linkProperty'] = [
+                    'continues' => false,
+                    'values'    => $values,
+                ];
+            }
         }
 
         // FACETS
-        $mn = 0;
+        $objectFacets = [];
+        $valueFacets  = [];
         foreach ($this->facets as $facet) {
             if ($facet->type === 'object') {
-                $query = $this->pdo->prepare("
-                    SELECT * 
-                    FROM (
-                        SELECT DISTINCT ON (m.id)
-                            ? || m.id::text AS value,
-                            m.value AS label,
-                            count
-                        FROM
-                            (
-                                SELECT meta_$mn, count(DISTINCT id) AS count 
-                                FROM " . self::TEMPTABNAME . " 
-                                GROUP BY 1
-                            ) t
-                            JOIN metadata m ON meta_$mn = m.id
-                        WHERE
-                            m.property = ?
-                        ORDER BY m.id, m.lang = ? DESC
-                    ) t
-                    ORDER BY 2 DESC, 1
-                ");
-                $param = [$this->repo->getBaseUrl(), $this->schema->label, $prefLang];
-                $query->execute($param);
-            } else {
-                $query = $this->pdo->query("
-                    SELECT
-                        meta_$mn AS value,
-                        meta_$mn AS label,
-                        count(DISTINCT id) AS count 
-                    FROM " . self::TEMPTABNAME . "
-                    WHERE meta_$mn IS NOT NULL
-                    GROUP BY 1 
-                    ORDER BY 2 DESC
-                ");
+                $objectFacets[] = $facet->property;
+            }else{
+                $valueFacets[] = $facet->property;
             }
             $stats[$facet->property] = [
-                'values'    => [],
-                'continues' => is_string($facet->weights),
+                'values' => [], 
+                'continues' => false,
             ];
-            while ($row                     = $query->fetchObject()) {
-                $row->value                          = is_numeric($row->value) ? (float) $row->value : $row->value;
-                $stats[$facet->property]['values'][] = $row;
-            }
-            $mn++;
         }
-
+        // object facets
+        if (count($objectFacets) > 0) {
+            $query = $this->pdo->prepare("
+                SELECT facet, value, label, count
+                FROM (
+                    SELECT DISTINCT ON (facet, m.id)
+                        facet,
+                        ? || m.id::text AS value,
+                        m.value AS label,
+                        count
+                    FROM
+                       (
+                           SELECT facet, value::bigint AS value, count(DISTINCT id) AS count 
+                           FROM " . self::TEMPTABNAME . " s
+                           WHERE facet IN (" . substr(str_repeat(', ?', count($objectFacets)), 2) . ")
+                           GROUP BY 1, 2
+                       ) t
+                       JOIN metadata m ON t.value::bigint = m.id
+                    WHERE m.property = ?
+                    ORDER BY facet, m.id, m.lang = ? DESC
+                ) t
+                ORDER BY count DESC, label
+            ");
+            $param = array_merge(
+                [$this->repo->getBaseUrl()],
+                $objectFacets,
+                [$this->schema->label, $prefLang]
+            );
+            $query->execute($param);
+            while($row = $query->fetchObject()) {
+                $facet                     = $row->facet;
+                unset($row->facet);
+                $stats[$facet]['values'][] = $row;
+            }
+        }
+        // value facets
+        if (count($valueFacets) > 0) {
+            $query = $this->pdo->prepare("
+                SELECT
+                    facet,
+                    value,
+                    value AS label,
+                    count(DISTINCT id) AS count 
+                FROM " . self::TEMPTABNAME . "
+                    WHERE facet IN (" . substr(str_repeat(', ?', count($valueFacets)), 2) . ")
+                    GROUP BY 1, 2, 3
+                    ORDER BY 1, 4 DESC
+            ");
+            $query->execute($valueFacets);
+            while($row = $query->fetchObject()) {
+                $row->value                     = is_numeric($row->value) ? (float) $row->value : $row->value;
+                $facet                          = $row->facet;
+                unset($row->facet);
+                $stats[$facet]['values'][] = $row;
+            }
+        }
         // RANGE FACETS
         foreach ($this->rangeFacets as $fid => $facet) {
             $param = [
                 $facet->min ?? null, $facet->max ?? null,
-                $facet->max ?? null, $facet->min ?? null
+                $facet->max ?? null, $facet->min ?? null,
+                $fid,
             ];
 
             if ($facet->precision === 0) {
@@ -724,11 +779,12 @@ class SmartSearch {
                 WITH
                     limits AS (
                         SELECT 
-                            greatest(min(lower(meta_$mn)), ?::numeric) AS start,
-                            least(max(upper(meta_$mn)), ?::numeric) AS stop,
-                            least(max(upper(meta_$mn)), ?::numeric) - greatest(min(lower(meta_$mn)), ?::numeric) AS range,
-                            count(DISTINCT meta_$mn) AS nd
+                            greatest(min(lower(value::numrange)), ?::numeric) AS start,
+                            least(max(upper(value::numrange)), ?::numeric) AS stop,
+                            least(max(upper(value::numrange)), ?::numeric) - greatest(min(lower(value::numrange)), ?::numeric) AS range,
+                            count(DISTINCT value) AS nd
                         FROM " . self::TEMPTABNAME . "
+                        WHERE facet = ?
                     ),
                     steps AS (
                         SELECT 
@@ -761,11 +817,11 @@ class SmartSearch {
                     upper(bin) AS upper
                 FROM
                     bins b
-                    JOIN " . self::TEMPTABNAME . " m ON b.bin && m.meta_$mn
+                    JOIN " . self::TEMPTABNAME . " m ON facet = ? AND b.bin && value::numrange
                 GROUP BY b.bin
                 ORDER BY lower(bin)
             ";
-            $param       = array_merge($param, [$facet->precision]);
+            $param       = array_merge($param, [$facet->precision, $fid]);
             $query       = $this->pdo->prepare($query);
             $query->execute($param);
             $values      = $query->fetchAll(PDO::FETCH_OBJ);
@@ -775,10 +831,9 @@ class SmartSearch {
                 'min'       => (float) reset($values)?->lower,
                 'max'       => (float) end($values)?->upper,
             ];
-
-            $mn++;
         }
 
+        $this->queryLog?->debug('FACETS STATS time ' . (microtime(true) - $t));
         return $stats;
     }
 
@@ -796,6 +851,9 @@ class SmartSearch {
     private function getWeightsWith(array $weights, string $weightName,
                                     string $valueType = 'text'): QueryPart {
         $query = new QueryPart("(value, $weightName) AS (VALUES ");
+        if (count($weights) === 0) {
+            throw new RepoLibException('Empty weights list');
+        }
         foreach ($weights as $k => $v) {
             $query->query   .= "(?::$valueType, ?::float),";
             $query->param[] = $k;
