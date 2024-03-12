@@ -84,7 +84,7 @@ class SmartSearch {
     private string $phrase;
     private string $orderProperty;
     private bool $orderPropertyAsc         = true;
-    private ?AbstractLogger $queryLog;
+    private ?AbstractLogger $queryLog      = null;
 
     public function __construct(PDO $pdo, Schema $schema, string $baseUrl) {
         $this->pdo    = $pdo;
