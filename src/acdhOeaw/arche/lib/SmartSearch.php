@@ -633,7 +633,7 @@ class SmartSearch {
         $query = "SELECT id FROM _page";
         $t = microtime(true);
         $query = $this->repo->getPdoStatementBySqlQuery($query, [], $config);
-        $this->queryLog->debug('Execution time ' . (microtime(true) - $t));
+        $this->queryLog?->debug('Execution time ' . (microtime(true) - $t));
         while ($row   = $query->fetchObject()) {
             yield $row;
         }
