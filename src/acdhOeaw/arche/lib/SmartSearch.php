@@ -83,7 +83,7 @@ class SmartSearch {
     private string $phrase;
     private string $orderProperty;
     private bool $orderPropertyAsc         = true;
-    private ?AbstractLogger $queryLog      = null;
+    private ?AbstractLogger $queryLog                 = null;
 
     public function __construct(PDO $pdo, Schema $schema, string $baseUrl) {
         $this->pdo    = $pdo;
@@ -849,6 +849,115 @@ class SmartSearch {
 
     public function closeSearch(): void {
         $this->pdo->rollBack();
+    }
+
+    public function getInitialFacets(string $prefLang, string $cacheFile = '',
+                                     bool $force = false): array {
+        $lastMod = $this->pdo->prepare("SELECT max(value_t) FROM metadata WHERE property = ?");
+        $lastMod->execute([(string) $this->schema->modificationDate]);
+        $lastMod = $lastMod->fetchColumn();
+
+        $cache = (object) ['date' => '', 'facets' => []];
+        if (file_exists($cacheFile)) {
+            $cache = json_decode(file_get_contents($cacheFile));
+        }
+
+        if ($cache->date < $lastMod || $force) {
+            $cache->date   = $lastMod;
+            $cache->facets = [];
+
+            // ORDINARY FACETS
+            foreach ($this->facets as $facet) {
+                $out         = [
+                    'property'   => $facet->property,
+                    'label'      => $facet->label,
+                    'continuous' => false,
+                    'values'     => [],
+                ];
+                $param       = [];
+                $weightQuery = '';
+                $weightJoin  = '';
+                $weightOrder = '';
+                if (is_object($facet->weights ?? null)) {
+                    $tmpQuery    = $this->getWeightsWith($facet->weights, 'weight', 'bigint');
+                    $weightQuery = "WITH w " . $tmpQuery->query;
+                    $weightJoin  = ($facet->type === 'object' ? 'LEFT ' : '') . "JOIN w USING (value)";
+                    $weightOrder = "weight DESC NULLS LAST,";
+                    $param       = array_merge($param, $tmpQuery->param);
+                }
+                if ($facet->type === 'object') {
+                    $query   = "
+                        $weightQuery
+                        SELECT ? || value::text, label, count
+                        FROM 
+                            (
+                                SELECT DISTINCT ON (id)
+                                    id AS value,
+                                    value AS label,
+                                    count
+                                FROM
+                                    (
+                                        SELECT target_id AS id, count(*) AS count
+                                        FROM relations
+                                        WHERE property = ?
+                                        GROUP BY 1
+                                    ) r
+                                    JOIN metadata m USING (id)
+                                WHERE property = ?
+                                ORDER BY id, lang = ? DESC
+                            ) t
+                            $weightJoin
+                        ORDER BY $weightOrder count DESC, label
+                    ";
+                    $param[] = $this->repo->getBaseUrl();
+                    $param[] = $facet->property;
+                    $param[] = (string) $this->schema->label;
+                    $param[] = $prefLang;
+                } else {
+                    $query   = "
+                        $weightQuery
+                        SELECT value, value AS label, count
+                        FROM
+                            (
+                                SELECT value, count(*) AS count
+                                FROM (
+                                    SELECT DISTINCT ON (id) id, value
+                                    FROM metadata
+                                    WHERE property = ?
+                                    ORDER BY id, lang = ? DESC
+                                ) t
+                                GROUP BY 1
+                            ) c
+                            $weightJoin
+                        ORDER BY $weightOrder count DESC
+                    ";
+                    $param[] = $facet->property;
+                    $param[] = $prefLang;
+                }
+                $query = $pdo->prepare($query);
+                $query->execute($param);
+                while ($row   = $query->fetchObject()) {
+                    $out['values'][] = $row;
+                }
+                $cache->facets[] = $out;
+            }
+
+            // DATE FACETS
+            foreach ($this->rangeFacets as $fid => $facet) {
+                $out             = [
+                    'property'   => $fid,
+                    'label'      => $facet->label,
+                    'continuous' => true,
+                    'values'     => [],
+                ];
+                $cache->facets[] = $out;
+            }
+
+            if (!empty($cacheFile)) {
+                file_put_contents($cacheFile, json_encode($cache, JSON_UNESCAPED_SLASHES));
+            }
+        }
+        return $cache->facets;
     }
 
     /**
