@@ -934,7 +934,7 @@ class SmartSearch {
                     $param[] = $facet->property;
                     $param[] = $prefLang;
                 }
-                $query = $pdo->prepare($query);
+                $query = $this->pdo->prepare($query);
                 $query->execute($param);
                 while ($row   = $query->fetchObject()) {
                     $out['values'][] = $row;
