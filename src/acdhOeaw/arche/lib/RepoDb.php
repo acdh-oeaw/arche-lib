@@ -600,7 +600,7 @@ class RepoDb implements RepoInterface {
             $param[1] = -$param[1];
             array_unshift($param, $parent);
         }
-        return array_sum($param) === 0 ? [] : $param;
+        return array_sum($param) === 0 && $param[1] === 0 ? [] : $param;
     }
 
     /**
