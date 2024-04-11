@@ -878,8 +878,8 @@ class SmartSearch {
                 $weightQuery = '';
                 $weightJoin  = '';
                 $weightOrder = '';
-                if (is_object($facet->weights ?? null)) {
-                    $tmpQuery    = $this->getWeightsWith($facet->weights, 'weight', 'bigint');
+                if (is_array($facet->weights ?? null)) {
+                    $tmpQuery    = $this->getWeightsWith($facet->weights, 'weight', $facet->type === 'object' ? 'bigint' : 'text');
                     $weightQuery = "WITH w " . $tmpQuery->query;
                     $weightJoin  = ($facet->type === 'object' ? 'LEFT ' : '') . "JOIN w USING (value)";
                     $weightOrder = "weight DESC NULLS LAST,";
