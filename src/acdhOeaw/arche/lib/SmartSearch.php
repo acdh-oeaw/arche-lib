@@ -658,46 +658,6 @@ class SmartSearch {
         $stats = [];
         $t     = microtime(true);
 
-        // MATCH PROPERTY
-        $query  = $this->pdo->query("
-            SELECT 
-                property AS value, 
-                property AS label, 
-                count(DISTINCT id) AS count 
-            FROM " . self::TEMPTABNAME . "
-            WHERE property IS NOT NULL
-            GROUP BY 1 
-            ORDER BY 2 DESC
-        ");
-        $values = $query->fetchAll(PDO::FETCH_OBJ);
-        if (count($values) > 0) {
-            $stats['property'] = [
-                'continuous' => false,
-                'values'     => $values,
-            ];
-        }
-
-        // LINK PROPERTY
-        if ($this->linkNamedEntities()) {
-            $query  = $this->pdo->query("
-                SELECT
-                    link_property AS value,
-                    link_property AS label, 
-                    count(DISTINCT id) AS count
-                FROM " . self::TEMPTABNAME . "
-                WHERE link_property IS NOT NULL
-                GROUP BY 1
-                ORDER BY 2 DESC
-            ");
-            $values = $query->fetchAll(PDO::FETCH_OBJ);
-            if (count($values) > 0) {
-                $stats['linkProperty'] = [
-                    'continuous' => false,
-                    'values'     => $values,
-                ];
-            }
-        }
-
         // FACETS
         $objectFacets = [];
         $valueFacets  = [];
@@ -841,6 +801,46 @@ class SmartSearch {
                 'min'        => (float) reset($values)?->lower,
                 'max'        => (float) end($values)?->upper,
             ];
+        }
+
+        // MATCH PROPERTY
+        $query  = $this->pdo->query("
+            SELECT 
+                property AS value, 
+                property AS label, 
+                count(DISTINCT id) AS count 
+            FROM " . self::TEMPTABNAME . "
+            WHERE property IS NOT NULL
+            GROUP BY 1 
+            ORDER BY 2 DESC
+        ");
+        $values = $query->fetchAll(PDO::FETCH_OBJ);
+        if (count($values) > 0) {
+            $stats['property'] = [
+                'continuous' => false,
+                'values'     => $values,
+            ];
+        }
+
+        // LINK PROPERTY
+        if ($this->linkNamedEntities()) {
+            $query  = $this->pdo->query("
+                SELECT
+                    link_property AS value,
+                    link_property AS label, 
+                    count(DISTINCT id) AS count
+                FROM " . self::TEMPTABNAME . "
+                WHERE link_property IS NOT NULL
+                GROUP BY 1
+                ORDER BY 2 DESC
+            ");
+            $values = $query->fetchAll(PDO::FETCH_OBJ);
+            if (count($values) > 0) {
+                $stats['linkProperty'] = [
+                    'continuous' => false,
+                    'values'     => $values,
+                ];
+            }
         }
 
         $this->queryLog?->debug('FACETS STATS time ' . (microtime(true) - $t));
