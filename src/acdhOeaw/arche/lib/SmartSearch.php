@@ -28,7 +28,6 @@ namespace acdhOeaw\arche\lib;
 
 use Generator;
 use PDO;
-use PDOStatement;
 use Psr\Log\AbstractLogger;
 use zozlak\queryPart\QueryPart;
 use zozlak\RdfConstants as RDF;
@@ -40,7 +39,15 @@ use zozlak\RdfConstants as RDF;
  */
 class SmartSearch {
 
-    const TEMPTABNAME = "_matches";
+    const TEMPTABNAME      = "_matches";
+    const FACET_MATCH      = 'matchProperty';
+    const FACET_LINK       = 'linkProperty';
+    const FACET_LITERAL    = 'literal';
+    const FACET_OBJECT     = 'object';
+    const FACET_CONTINUOUS = 'continuous';
+    const FACET_DISCRETE   = [self::FACET_LITERAL, self::FACET_OBJECT];
+    const FACET_ANY        = [self::FACET_MATCH, self::FACET_LINK, self::FACET_LITERAL,
+        self::FACET_OBJECT, self::FACET_CONTINUOUS];
 
     private PDO $pdo;
     private RepoDb $repo;
@@ -48,91 +55,68 @@ class SmartSearch {
 
     /**
      * 
-     * @var array<string, float>
-     */
-    private array $propWeights       = [];
-    private float $propDefaultWeight = 1.0;
-
-    /**
-     * 
      * @var array<object>
      */
     private array $facets = [];
+    private object $matchFacet;
+    private object $linkFacet;
 
     /**
      * 
      * @var array<string, object>
      */
-    private array $rangeFacets           = [];
-    private float $exactWeight           = 10.0;
-    private float $langWeight            = 10.0;
-    private string $namedEntitiesProperty = RDF::RDF_TYPE;
-
-    /**
-     * 
-     * @var array<string>
-     */
-    private array $namedEntitiesValues = [];
-
-    /**
-     * 
-     * @var array<string, float>
-     */
-    private array $namedEntityWeights       = [];
-    private float $namedEntityDefaultWeight = 1.0;
+    private float $exactWeight = 10.0;
+    private float $langWeight  = 10.0;
     private string $phrase;
-    private string $orderProperty;
-    private bool $orderPropertyAsc         = true;
-    private ?AbstractLogger $queryLog                 = null;
+    private ?AbstractLogger $queryLog    = null;
 
     public function __construct(PDO $pdo, Schema $schema, string $baseUrl) {
-        $this->pdo    = $pdo;
-        $this->repo   = new RepoDb($baseUrl, $schema, new Schema(new \stdClass()), $this->pdo);
-        $this->schema = $schema;
+        $this->pdo        = $pdo;
+        $this->repo       = new RepoDb($baseUrl, $schema, new Schema(new \stdClass()), $this->pdo);
+        $this->schema     = $schema;
+        $this->matchFacet = (object) ['weights' => [], 'defaultWeight' => 0];
+        $this->linkFacet  = (object) ['weights' => [], 'classes' => []];
     }
 
     /**
-     * 
-     * @param array<string, float> $weights
-     * @param float $defaultWeight
-     * @return self
-     */
-    public function setPropertyWeights(array $weights,
-                                       float $defaultWeight = 1.0): self {
-        $this->propWeights       = $weights;
-        $this->propDefaultWeight = $defaultWeight;
-        return $this;
-    }
-
-    /**
-     * Results with a matching weight are 
      * @param array<object> $facets
      * @return self
      */
-    public function setWeightedFacets(array $facets, float $defaultWeight = 1.0): self {
+    public function setFacets(array $facets, float $defaultWeight = 1.0): self {
         foreach ($facets as $i) {
-            $i->weights       ??= null;
-            $i->type          ??= '';
+            if (!in_array($i->type, self::FACET_ANY)) {
+                throw new RepoLibException("Unsupported facet type: $i->type");
+            }
             $i->defaultWeight ??= $defaultWeight;
+            $i->label         ??= $i->property;
+            if (is_object($i->label)) {
+                $i->label = (array) $i->label;
+            } elseif (is_scalar($i->label)) {
+                $i->label = ['und' => (string) $i->label];
+            }
+            $i->weights ??= null;
             if (is_object($i->weights)) {
                 $i->weights = (array) $i->weights;
             }
             if (is_array($i->weights) && count($i->weights) === 0) {
                 $i->weights = null;
             }
+            if ($i->type === 'continuous') {
+                $i->distribution ??= false;
+                $i->precision    ??= 0;
+                $i->start        = is_array($i->start) ? $i->start : [$i->start];
+                $i->end          = is_array($i->end) ? $i->end : [$i->end];
+            }
+            if ($i->type === self::FACET_LINK) {
+                $i->classes      ??= [];
+                $i->weights      ??= [];
+                $this->linkFacet = $i;
+            } elseif ($i->type === self::FACET_MATCH) {
+                $i->weights       ??= [];
+                $this->matchFacet = $i;
+            }
         }
-        unset($i);
         $this->facets = $facets;
-        return $this;
-    }
-
-    /**
-     * 
-     * @param array<string, object> $facets
-     * @return self
-     */
-    public function setRangeFacets(array $facets): self {
-        $this->rangeFacets = $facets;
         return $this;
     }
 
@@ -143,38 +127,6 @@ class SmartSearch {
 
     public function setLangWeight(float $weight): self {
         $this->langWeight = $weight;
-        return $this;
-    }
-
-    /**
-     * 
-     * @param array<string> $values
-     * @param string $property
-     * @return self
-     */
-    public function setNamedEntityFilter(array $values,
-                                         string $property = RDF::RDF_TYPE): self {
-        $this->namedEntitiesValues   = $values;
-        $this->namedEntitiesProperty = $property;
-        return $this;
-    }
-
-    /**
-     * 
-     * @param array<string, float> $weights
-     * @param float $defaultWeight
-     * @return self
-     */
-    public function setNamedEntityWeights(array $weights,
-                                          float $defaultWeight = 1.0): self {
-        $this->namedEntityWeights       = $weights;
-        $this->namedEntityDefaultWeight = $defaultWeight;
-        return $this;
-    }
-
-    public function setFallbackOrderBy(string $property, bool $asc = true): self {
-        $this->orderProperty    = $property;
-        $this->orderPropertyAsc = $asc;
         return $this;
     }
 
@@ -205,7 +157,7 @@ class SmartSearch {
         }
         $baseUrl           = $this->repo->getBaseUrl();
         $idProp            = $this->repo->getSchema()->id;
-        $linkNamedEntities = count($this->namedEntitiesValues) > 0;
+        $linkNamedEntities = count($this->linkFacet->classes) > 0;
         $this->phrase      = $phrase;
         // search conditions based on FTS index or spatial index
         $indexSearch       = !(empty($phrase) && $spatialTerm === null);
@@ -254,22 +206,22 @@ class SmartSearch {
         $tmpQuery    = null;
 
         // WEIGHTS - watch out - some go to search query, some to match query and some to both
-        if (count($this->propWeights) > 0) {
-            $tmpQuery    = $this->getWeightsWith($this->propWeights, 'weight_p');
+        if (count($this->matchFacet->weights) > 0) {
+            $tmpQuery    = $this->getWeightsWith($this->matchFacet->weights, 'weight_p');
             $searchQuery .= "weights_p $tmpQuery->query,\n";
             $searchParam = array_merge($searchParam, $tmpQuery->param);
             $matchQuery  .= "weights_p $tmpQuery->query,\n";
             $matchParam  = array_merge($matchParam, $tmpQuery->param);
         }
         foreach ($this->facets as $mn => $facet) {
-            if (is_array($facet->weights)) {
+            if (is_array($facet->weights) && !($facet === $this->matchFacet || $facet === $this->linkFacet)) {
                 $tmpQuery   = $this->getWeightsWith($facet->weights, "weight_$mn", $facet->type === 'object' ? 'bigint' : 'text');
                 $matchQuery .= "weights_$mn $tmpQuery->query,\n";
                 $matchParam = array_merge($matchParam, $tmpQuery->param);
             }
         }
         if ($linkNamedEntities) {
-            $tmpQuery    = $this->getWeightsWith($this->namedEntityWeights, 'weight_ne');
+            $tmpQuery    = $this->getWeightsWith($this->linkFacet->weights, 'weight_ne');
             $searchQuery .= "weights_ne $tmpQuery->query,\n";
             $searchParam = array_merge($searchParam, $tmpQuery->param);
         }
@@ -380,8 +332,9 @@ class SmartSearch {
         }
 
         if (!$linkNamedEntities) {
-            $searchQuery   .= "SELECT * FROM $curTab s $filterExp ORDER BY weight_m DESC LIMIT ?\n";
-            $searchParam[] = $matchesLimit;
+            //$searchQuery   .= "SELECT * FROM $curTab s $filterExp ORDER BY weight_m DESC LIMIT ?\n";
+            //$searchParam[] = $matchesLimit;
+            $searchQuery   .= "SELECT * FROM $curTab s $filterExp ORDER BY weight_m DESC\n";
             $matchQuery    .= "
                 SELECT 
                     s.id, s.ftsid, s.property, 
@@ -391,10 +344,10 @@ class SmartSearch {
                     search9 s
                     LEFT JOIN weights_p w ON s.property = w.value
             ";
-            $matchParam[]  = $this->propDefaultWeight;
+            $matchParam[]  = $this->matchFacet->defaultWeight;
         } else {
             // LINK TO NAMED ENTITIES
-            $neIn        = substr(str_repeat('?, ', count($this->namedEntitiesValues)), 0, -2);
+            $neIn        = substr(str_repeat('?, ', count($this->linkFacet->classes)), 0, -2);
             $searchQuery .= "
                 SELECT * FROM (
                     SELECT 
@@ -428,19 +381,19 @@ class SmartSearch {
                     $filterExp
                 ) t 
                 ORDER BY weight DESC
-                LIMIT ?
             ";
+            //    LIMIT ?
             $searchParam = array_merge(
                 $searchParam,
                 [
-                    $this->propDefaultWeight, // first union part
-                    $this->propDefaultWeight, // select of second union part
-                    $this->namedEntityDefaultWeight, // select of second union part
-                    $this->propDefaultWeight, // subselect of second union part
-                    $this->namedEntitiesProperty // join with mne
+                    $this->matchFacet->defaultWeight, // first union part
+                    $this->matchFacet->defaultWeight, // select of second union part
+                    $this->linkFacet->defaultWeight, // select of second union part
+                    $this->matchFacet->defaultWeight, // subselect of second union part
+                    $this->linkFacet->property // join with mne
                 ],
-                $this->namedEntitiesValues, // join with mne
-                [$matchesLimit],
+                $this->linkFacet->classes, // join with mne
+                //[$matchesLimit],
             );
             $matchQuery  .= "SELECT id, ftsid, property, link_property, null::text AS facet, null::text AS value, weight FROM search9\n";
         }
@@ -453,6 +406,9 @@ class SmartSearch {
 
         // ORDINARY FACETS DATA
         foreach ($this->facets as $mn => $facet) {
+            if (!in_array($facet->type, self::FACET_DISCRETE)) {
+                continue;
+            }
             $srcTab = 'metadata';
             $valCol = 'value';
             if ($facet->type === 'object') {
@@ -482,9 +438,12 @@ class SmartSearch {
             ";
             $matchParam[] = $facet->property;
         }
-        // RANGE FACETS DATA
-        $rangeFilterExp = 'AND' . substr($filterExp, 5);
-        foreach ($this->rangeFacets as $facetKey => $facet) {
+        // CONTINUOUS FACETS DATA
+        $rangeFilterExp = $filterExp !== '' ? 'AND' . substr($filterExp, 5) : '';
+        foreach ($this->facets as $facet) {
+            if ($facet->type !== self::FACET_CONTINUOUS) {
+                continue;
+            }
             $minPlch    = substr(str_repeat(', ?', count($facet->start)), 2);
             $maxPlch    = substr(str_repeat(', ?', count($facet->end)), 2);
             $matchQuery .= "UNION
@@ -515,7 +474,7 @@ class SmartSearch {
                         GROUP BY 1
                     ) t2 USING (id)
             ";
-            $matchParam = array_merge($matchParam, [$facetKey], $facet->start, $facet->end);
+            $matchParam = array_merge($matchParam, [$facet->property], $facet->start, $facet->end);
         }
 
         $this->queryLog?->debug((string) (new QueryPart($matchQuery, $matchParam)));
@@ -545,7 +504,13 @@ class SmartSearch {
 
         $param    = [];
         $oGroupBy = $oOrderBy = '';
-        if (!empty($this->orderProperty ?? '')) {
+        if (count($config->orderBy) > 0) {
+            $orderBy = reset($config->orderBy);
+            $oAsc    = 'ASC';
+            if (substr($orderBy, 0, 1) === '^') {
+                $orderBy = substr($orderBy, 1);
+                $oAsc    = 'DESC';
+            }
             $oQuery   = "
                 LEFT JOIN (
                     SELECT
@@ -560,9 +525,8 @@ class SmartSearch {
                 ) o USING (id)
             ";
             $oGroupBy = ', o1, o2';
-            $oAsc     = $this->orderPropertyAsc ? 'ASC' : 'DESC';
             $oOrderBy = ", COALESCE(o1, o2) $oAsc NULLS LAST";
-            $param    = [$prefLang, $this->orderProperty];
+            $param    = [$prefLang, $orderBy];
         }
         $offset  = $page * $pageSize;
         $query   = "
@@ -659,18 +623,19 @@ class SmartSearch {
         $t     = microtime(true);
 
         // FACETS
-        $objectFacets = [];
-        $valueFacets  = [];
+        $objectFacets  = $literalFacets = [];
         foreach ($this->facets as $facet) {
-            if ($facet->type === 'object') {
+            if ($facet->type === self::FACET_OBJECT) {
                 $objectFacets[] = $facet->property;
-            } else {
-                $valueFacets[] = $facet->property;
+            } elseif ($facet->type === self::FACET_LITERAL) {
+                $literalFacets[] = $facet->property;
             }
-            $stats[$facet->property] = [
-                'values'     => [],
-                'continuous' => false,
-            ];
+            $tmp         = clone($facet);
+            $tmp->values = [];
+            if ($facet === $this->linkFacet || $facet === $this->matchFacet) {
+                $tmp->property = $tmp->type;
+            }
+            $stats[$tmp->property] = $tmp;
         }
         // object facets
         if (count($objectFacets) > 0) {
@@ -702,13 +667,13 @@ class SmartSearch {
             );
             $query->execute($param);
             while ($row   = $query->fetchObject()) {
-                $facet                     = $row->facet;
+                $facet                   = $row->facet;
                 unset($row->facet);
-                $stats[$facet]['values'][] = $row;
+                $stats[$facet]->values[] = $row;
             }
         }
         // value facets
-        if (count($valueFacets) > 0) {
+        if (count($literalFacets) > 0) {
             $query = $this->pdo->prepare("
                 SELECT
                     facet,
@@ -716,24 +681,27 @@ class SmartSearch {
                     value AS label,
                     count(DISTINCT id) AS count 
                 FROM " . self::TEMPTABNAME . "
-                    WHERE facet IN (" . substr(str_repeat(', ?', count($valueFacets)), 2) . ")
+                    WHERE facet IN (" . substr(str_repeat(', ?', count($literalFacets)), 2) . ")
                     GROUP BY 1, 2, 3
                     ORDER BY 1, 4 DESC
             ");
-            $query->execute($valueFacets);
+            $query->execute($literalFacets);
             while ($row   = $query->fetchObject()) {
-                $row->value                = is_numeric($row->value) ? (float) $row->value : $row->value;
-                $facet                     = $row->facet;
+                $row->value              = is_numeric($row->value) ? (float) $row->value : $row->value;
+                $facet                   = $row->facet;
                 unset($row->facet);
-                $stats[$facet]['values'][] = $row;
+                $stats[$facet]->values[] = $row;
             }
         }
         // RANGE FACETS
-        foreach ($this->rangeFacets as $fid => $facet) {
+        foreach ($this->facets as $facet) {
+            if ($facet->type !== self::FACET_CONTINUOUS) {
+                continue;
+            }
             $param = [
                 $facet->min ?? null, $facet->max ?? null,
                 $facet->max ?? null, $facet->min ?? null,
-                $fid,
+                $facet->property,
             ];
 
             if ($facet->precision === 0) {
@@ -745,14 +713,14 @@ class SmartSearch {
                 $param    = array_merge($param, array_fill(0, 2, $facet->bins));
                 $filter   = "";
             }
-            $query       = "
+            $query  = "
                 WITH
                     limits AS (
                         SELECT 
                             greatest(min(lower(value::numrange)), ?::numeric) AS start,
                             least(max(upper(value::numrange)), ?::numeric) AS stop,
                             least(max(upper(value::numrange)), ?::numeric) - greatest(min(lower(value::numrange)), ?::numeric) AS range,
-                            count(DISTINCT value) AS nd
+                            greatest(count(DISTINCT value), 1) AS nd
                         FROM " . self::TEMPTABNAME . "
                         WHERE facet = ?
                     ),
@@ -791,40 +759,35 @@ class SmartSearch {
                 GROUP BY b.bin
                 ORDER BY lower(bin)
             ";
-            $param       = array_merge($param, [$facet->precision, $fid]);
-            $query       = $this->pdo->prepare($query);
+            $param  = array_merge($param, [$facet->precision, $facet->property]);
+            $query  = $this->pdo->prepare($query);
             $query->execute($param);
-            $values      = $query->fetchAll(PDO::FETCH_OBJ);
-            $stats[$fid] = [
-                'continuous' => true,
-                'values'     => $values,
-                'min'        => (float) reset($values)?->lower,
-                'max'        => (float) end($values)?->upper,
-            ];
+            $values = $query->fetchAll(PDO::FETCH_OBJ);
+            if (count($values) > 0) {
+                $stats[$facet->property]->values = $values;
+                $stats[$facet->property]->min    = (float) reset($values)?->lower;
+                $stats[$facet->property]->max    = (float) reset($values)?->upper;
+            }
         }
 
         // MATCH PROPERTY
-        $query  = $this->pdo->query("
-            SELECT 
-                property AS value, 
-                property AS label, 
-                count(DISTINCT id) AS count 
-            FROM " . self::TEMPTABNAME . "
-            WHERE property IS NOT NULL
-            GROUP BY 1 
-            ORDER BY 2 DESC
-        ");
-        $values = $query->fetchAll(PDO::FETCH_OBJ);
-        if (count($values) > 0) {
-            $stats['property'] = [
-                'continuous' => false,
-                'values'     => $values,
-            ];
+        if (isset($stats[self::FACET_MATCH])) {
+            $query                            = $this->pdo->query("
+                SELECT 
+                    property AS value, 
+                    property AS label, 
+                    count(DISTINCT id) AS count 
+                FROM " . self::TEMPTABNAME . "
+                WHERE property IS NOT NULL
+                GROUP BY 1 
+                ORDER BY 2 DESC
+            ");
+            $stats[self::FACET_MATCH]->values = $query->fetchAll(PDO::FETCH_OBJ);
         }
 
         // LINK PROPERTY
         if ($this->linkNamedEntities()) {
-            $query  = $this->pdo->query("
+            $query                           = $this->pdo->query("
                 SELECT
                     link_property AS value,
                     link_property AS label, 
@@ -834,17 +797,11 @@ class SmartSearch {
                 GROUP BY 1
                 ORDER BY 2 DESC
             ");
-            $values = $query->fetchAll(PDO::FETCH_OBJ);
-            if (count($values) > 0) {
-                $stats['linkProperty'] = [
-                    'continuous' => false,
-                    'values'     => $values,
-                ];
-            }
+            $stats[self::FACET_LINK]->values = $query->fetchAll(PDO::FETCH_OBJ);
         }
 
         $this->queryLog?->debug('FACETS STATS time ' . (microtime(true) - $t));
-        return $stats;
+        return $this->postprocessFacets($stats, $prefLang);
     }
 
     public function closeSearch(): void {
@@ -866,90 +823,14 @@ class SmartSearch {
             $cache->date   = $lastMod;
             $cache->facets = [];
 
-            // ORDINARY FACETS
+            $acceptedTypes = [self::FACET_OBJECT, self::FACET_LITERAL, self::FACET_CONTINUOUS];
             foreach ($this->facets as $facet) {
-                $out         = [
-                    'property'   => $facet->property,
-                    'label'      => $facet->label,
-                    'continuous' => false,
-                    'values'     => [],
-                ];
-                $param       = [];
-                $weightQuery = '';
-                $weightJoin  = '';
-                $weightOrder = '';
-                if (is_array($facet->weights ?? null)) {
-                    $tmpQuery    = $this->getWeightsWith($facet->weights, 'weight', $facet->type === 'object' ? 'bigint' : 'text');
-                    $weightQuery = "WITH w " . $tmpQuery->query;
-                    $weightJoin  = ($facet->type === 'object' ? 'LEFT ' : '') . "JOIN w USING (value)";
-                    $weightOrder = "weight DESC NULLS LAST,";
-                    $param       = array_merge($param, $tmpQuery->param);
+                if (!in_array($facet->type, $acceptedTypes)) {
+                    continue;
                 }
-                if ($facet->type === 'object') {
-                    $query   = "
-                        $weightQuery
-                        SELECT ? || value::text, label, count
-                        FROM 
-                            (
-                                SELECT DISTINCT ON (id)
-                                    id AS value,
-                                    value AS label,
-                                    count
-                                FROM
-                                    (
-                                        SELECT target_id AS id, count(*) AS count
-                                        FROM relations
-                                        WHERE property = ?
-                                        GROUP BY 1
-                                    ) r
-                                    JOIN metadata m USING (id)
-                                WHERE property = ?
-                                ORDER BY id, lang = ? DESC
-                            ) t
-                            $weightJoin
-                        ORDER BY $weightOrder count DESC, label
-                    ";
-                    $param[] = $this->repo->getBaseUrl();
-                    $param[] = $facet->property;
-                    $param[] = (string) $this->schema->label;
-                    $param[] = $prefLang;
-                } else {
-                    $query   = "
-                        $weightQuery
-                        SELECT value, value AS label, count
-                        FROM
-                            (
-                                SELECT value, count(*) AS count
-                                FROM (
-                                    SELECT DISTINCT ON (id) id, value
-                                    FROM metadata
-                                    WHERE property = ?
-                                    ORDER BY id, lang = ? DESC
-                                ) t
-                                GROUP BY 1
-                            ) c
-                            $weightJoin
-                        ORDER BY $weightOrder count DESC
-                    ";
-                    $param[] = $facet->property;
-                    $param[] = $prefLang;
-                }
-                $query = $this->pdo->prepare($query);
-                $query->execute($param);
-                while ($row   = $query->fetchObject()) {
-                    $out['values'][] = $row;
-                }
-                $cache->facets[] = $out;
-            }
-
-            // DATE FACETS
-            foreach ($this->rangeFacets as $fid => $facet) {
-                $out             = [
-                    'property'   => $fid,
-                    'label'      => $facet->label,
-                    'continuous' => true,
-                    'values'     => [],
-                ];
+                $out             = clone($facet);
+                $out->values     = $facet->type === 'continuous' ? [] : $this->getInitialFacetDiscrete($facet, $prefLang);
+                ;
                 $cache->facets[] = $out;
             }
 
@@ -957,7 +838,73 @@ class SmartSearch {
                 file_put_contents($cacheFile, json_encode($cache, JSON_UNESCAPED_SLASHES));
             }
         }
-        return $cache->facets;
+        return $this->postprocessFacets($cache->facets, $prefLang);
+    }
+
+    private function getInitialFacetDiscrete(object $facet, string $prefLang): array {
+        $param       = [];
+        $weightQuery = '';
+        $weightJoin  = '';
+        $weightOrder = '';
+        if (is_array($facet->weights)) {
+            $tmpQuery    = $this->getWeightsWith($facet->weights, 'weight', $facet->type === 'object' ? 'bigint' : 'text');
+            $weightQuery = "WITH w " . $tmpQuery->query;
+            $weightJoin  = ($facet->type === 'object' ? 'LEFT ' : '') . "JOIN w USING (value)";
+            $weightOrder = "weight DESC NULLS LAST,";
+            $param       = array_merge($param, $tmpQuery->param);
+        }
+        if ($facet->type === 'object') {
+            $query   = "
+                $weightQuery
+                SELECT ? || value::text AS value, label, count
+                FROM 
+                    (
+                        SELECT DISTINCT ON (id)
+                            id AS value,
+                            value AS label,
+                            count
+                        FROM
+                            (
+                                SELECT target_id AS id, count(*) AS count
+                                FROM relations
+                                WHERE property = ?
+                                GROUP BY 1
+                            ) r
+                            JOIN metadata m USING (id)
+                        WHERE property = ?
+                        ORDER BY id, lang = ? DESC
+                    ) t
+                    $weightJoin
+                ORDER BY $weightOrder count DESC, label
+            ";
+            $param[] = $this->repo->getBaseUrl();
+            $param[] = $facet->property;
+            $param[] = (string) $this->schema->label;
+            $param[] = $prefLang;
+        } else {
+            $query   = "
+                $weightQuery
+                SELECT value, value AS label, count
+                FROM
+                    (
+                        SELECT value, count(*) AS count
+                        FROM (
+                            SELECT DISTINCT ON (id) id, value
+                            FROM metadata
+                            WHERE property = ?
+                            ORDER BY id, lang = ? DESC
+                        ) t
+                        GROUP BY 1
+                    ) c
+                    $weightJoin
+                ORDER BY $weightOrder count DESC
+            ";
+            $param[] = $facet->property;
+            $param[] = $prefLang;
+        }
+        $query = $this->pdo->prepare($query);
+        $query->execute($param);
+        return $query->fetchAll(PDO::FETCH_OBJ);
     }
 
     /**
@@ -983,6 +930,16 @@ class SmartSearch {
     }
 
     private function linkNamedEntities(): bool {
-        return count($this->namedEntitiesValues) > 0;
+        return count($this->linkFacet->classes) > 0;
+    }
+
+    private function postprocessFacets(array $facets, string $prefLang): array {
+        foreach ($facets as $i) {
+            $i->label = (array) $i->label;
+            $i->label = $i->label[$prefLang] ?? reset($i->label);
+            unset($i->defaultWeight);
+            unset($i->weights);
+        }
+        return $facets;
     }
 }
