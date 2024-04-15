@@ -332,8 +332,9 @@ class SmartSearch {
         }
 
         if (!$linkNamedEntities) {
-            $searchQuery   .= "SELECT * FROM $curTab s $filterExp ORDER BY weight_m DESC LIMIT ?\n";
-            $searchParam[] = $matchesLimit;
+            //$searchQuery   .= "SELECT * FROM $curTab s $filterExp ORDER BY weight_m DESC LIMIT ?\n";
+            //$searchParam[] = $matchesLimit;
+            $searchQuery   .= "SELECT * FROM $curTab s $filterExp ORDER BY weight_m DESC\n";
             $matchQuery    .= "
                 SELECT 
                     s.id, s.ftsid, s.property, 
@@ -380,8 +381,8 @@ class SmartSearch {
                     $filterExp
                 ) t 
                 ORDER BY weight DESC
-                LIMIT ?
             ";
+            //    LIMIT ?
             $searchParam = array_merge(
                 $searchParam,
                 [
@@ -392,7 +393,7 @@ class SmartSearch {
                     $this->linkFacet->property // join with mne
                 ],
                 $this->linkFacet->classes, // join with mne
-                [$matchesLimit],
+                //[$matchesLimit],
             );
             $matchQuery  .= "SELECT id, ftsid, property, link_property, null::text AS facet, null::text AS value, weight FROM search9\n";
         }
