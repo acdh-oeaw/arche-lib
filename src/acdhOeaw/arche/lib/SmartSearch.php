@@ -65,8 +65,8 @@ class SmartSearch {
      * 
      * @var array<string, object>
      */
-    private float $exactWeight = 10.0;
-    private float $langWeight  = 10.0;
+    private float $exactWeight = 2.0;
+    private float $langWeight  = 1.5;
     private string $phrase;
     private ?AbstractLogger $queryLog    = null;
 
@@ -334,7 +334,7 @@ class SmartSearch {
         if (!$linkNamedEntities) {
             //$searchQuery   .= "SELECT * FROM $curTab s $filterExp ORDER BY weight_m DESC LIMIT ?\n";
             //$searchParam[] = $matchesLimit;
-            $searchQuery   .= "SELECT * FROM $curTab s $filterExp ORDER BY weight_m DESC\n";
+            $searchQuery   .= "SELECT * FROM $curTab s $filterExp\n";
             $matchQuery    .= "
                 SELECT 
                     s.id, s.ftsid, s.property, 
@@ -380,8 +380,8 @@ class SmartSearch {
                         LEFT JOIN weights_ne wne ON s.property = wne.value
                     $filterExp
                 ) t 
-                ORDER BY weight DESC
             ";
+            //    ORDER BY weight DESC
             //    LIMIT ?
             $searchParam = array_merge(
                 $searchParam,
@@ -766,7 +766,7 @@ class SmartSearch {
             if (count($values) > 0) {
                 $stats[$facet->property]->values = $values;
                 $stats[$facet->property]->min    = (float) reset($values)?->lower;
-                $stats[$facet->property]->max    = (float) reset($values)?->upper;
+                $stats[$facet->property]->max    = (float) end($values)?->upper;
             }
         }
 
