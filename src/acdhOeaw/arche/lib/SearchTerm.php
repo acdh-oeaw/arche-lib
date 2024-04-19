@@ -284,7 +284,7 @@ class SearchTerm {
             }
         }
         $query = "
-            SELECT DISTINCT COALESCE(m.id, fts.iid, fts.id) AS id
+            SELECT COALESCE(m.id, fts.iid, fts.id) AS id
             FROM full_text_search fts LEFT JOIN metadata m USING (mid)
             WHERE websearch_to_tsquery('simple', ?) @@ segments $where
         ";
@@ -316,7 +316,7 @@ class SearchTerm {
         }
         $where = implode(' AND ', $where);
         $query = "
-            SELECT DISTINCT $select
+            SELECT $select
             FROM relations r JOIN identifiers i ON $on
             WHERE $where
         ";
@@ -348,7 +348,7 @@ class SearchTerm {
                 break;
         }
         $query = "
-            SELECT DISTINCT COALESCE(m.id, ss.id) AS id
+            SELECT COALESCE(m.id, ss.id) AS id
             FROM spatial_search ss LEFT JOIN metadata m USING (mid)
             WHERE $func
         ";
@@ -404,7 +404,7 @@ class SearchTerm {
         }
         $where = implode(' AND ', $where);
         $query = "
-            SELECT DISTINCT id
+            SELECT id
             FROM metadata
             WHERE $where
         ";
@@ -412,11 +412,11 @@ class SearchTerm {
             $where = str_replace($column ?? '', $columnRaw ?? '', $where);
             $query .= "
               UNION
-                SELECT DISTINCT id
+                SELECT id
                 FROM (SELECT id, ? AS property, '' AS lang, ids AS value FROM identifiers) t
                 WHERE $where
               UNION
-                SELECT DISTINCT id
+                SELECT id
                 FROM (SELECT r.id, property, '' AS lang, ids AS value FROM relations r JOIN identifiers i ON r.target_id = i.id) t
                 WHERE $where
             ";
