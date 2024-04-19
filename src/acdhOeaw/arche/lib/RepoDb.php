@@ -330,7 +330,7 @@ class RepoDb implements RepoInterface {
         $query = "
             WITH
                 allids AS (
-                    SELECT id FROM ($query) t $authQP->query
+                    SELECT DISTINCT id FROM ($query) t $authQP->query
                 ),
                 ids AS (
                     SELECT id $orderByCols FROM allids
