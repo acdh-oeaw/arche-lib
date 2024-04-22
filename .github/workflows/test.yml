@@ -4,9 +4,20 @@ on: push
 
 jobs:
   phpunit:
+    strategy:
+      matrix:
+        php: [8.1, 8.2, 8.3]
+        imageTag: ['latest']
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - uses: shivammathur/setup-php@v2
+      with:
+        php-version:
+        extensions: ${{ matrix.php }}
+        coverage: xdebug
+      env:
+        fail-fast: true
     - name: clone repo config
       run: |
         git clone --depth 1 --branch master https://github.com/acdh-oeaw/arche-docker-config.git config
@@ -16,7 +27,7 @@ jobs:
     - name: run repo docker
       run: |
         mkdir log
-        docker run --name arche -p 80:80 -v `pwd`/log:/home/www-data/log -v `pwd`/config:/home/www-data/config -e USER_UID=`id -u` -e USER_GID=`id -g` -d acdhch/arche
+        docker run --name arche -p 80:80 -v `pwd`/log:/home/www-data/log -v `pwd`/config:/home/www-data/config -e USER_UID=`id -u` -e USER_GID=`id -g` -d acdhch/arche:${{ matrix.imageTag }}
     - name: composer update
       run: |
         composer update
