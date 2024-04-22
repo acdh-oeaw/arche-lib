@@ -10,11 +10,11 @@ jobs:
         imageTag: ['latest']
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: shivammathur/setup-php@v2
       with:
-        php-version:
-        extensions: ${{ matrix.php }}
+        php-version: ${{ matrix.php }}
+        extensions: json,mbstring,pcre,xmlreader,yaml
         coverage: xdebug
       env:
         fail-fast: true
