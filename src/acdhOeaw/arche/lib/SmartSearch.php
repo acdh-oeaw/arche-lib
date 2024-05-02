@@ -45,9 +45,10 @@ class SmartSearch {
     const FACET_LITERAL    = 'literal';
     const FACET_OBJECT     = 'object';
     const FACET_CONTINUOUS = 'continuous';
+    const FACET_MAP        = 'map';
     const FACET_DISCRETE   = [self::FACET_LITERAL, self::FACET_OBJECT];
     const FACET_ANY        = [self::FACET_MATCH, self::FACET_LINK, self::FACET_LITERAL,
-        self::FACET_OBJECT, self::FACET_CONTINUOUS];
+        self::FACET_OBJECT, self::FACET_CONTINUOUS, self::FACET_MAP];
 
     private PDO $pdo;
     private RepoDb $repo;
@@ -101,7 +102,7 @@ class SmartSearch {
             if (is_array($i->weights) && count($i->weights) === 0) {
                 $i->weights = null;
             }
-            if ($i->type === 'continuous') {
+            if ($i->type === self::FACET_CONTINUOUS) {
                 $i->distribution ??= false;
                 $i->precision    ??= 0;
                 $i->start        = is_array($i->start) ? $i->start : [$i->start];
@@ -114,6 +115,8 @@ class SmartSearch {
             } elseif ($i->type === self::FACET_MATCH) {
                 $i->weights       ??= [];
                 $this->matchFacet = $i;
+            } elseif ($i->type === self::FACET_MAP) {
+                $i->property = self::FACET_MAP;
             }
         }
         $this->facets = $facets;
@@ -165,7 +168,6 @@ class SmartSearch {
         $filteredSearch    = count($searchTerms) + count($parentIds) > 0;
 
         // FILTERS
-        // filters are applied both
         $filterExp = '';
         if ($filteredSearch) {
             $filterExp   = "WHERE EXISTS (SELECT 1 FROM filters WHERE id = s.id)";
@@ -185,7 +187,7 @@ class SmartSearch {
                 $filterQuery .= $n > 0 ? "JOIN (" : "(";
                 foreach ($parentIds as $m => $id) {
                     $filterQuery .= $m > 0 ? "UNION\n" : "";
-                    $filterQuery .= "SELECT id FROM get_relatives(?, ?, 999999, 0, false, false)\n";
+                    $filterQuery .= "SELECT id FROM get_relatives(?, ?, 999999, 0, false, false) WHERE n <> 0\n";
                     $filterParam = array_merge($filterParam, [$id, $this->schema->parent]);
                 }
                 $filterQuery .= $n > 0 ? ") f$n USING (id)\n" : ") f$n\n";
@@ -310,7 +312,7 @@ class SmartSearch {
                     $phrase, $this->exactWeight, $langParam, $this->langWeight,
                     SearchTerm::escapeFts($phrase)
                 ],
-                                          $propsParam
+                $propsParam
             );
             $curTab      = 'search1';
 
@@ -334,8 +336,8 @@ class SmartSearch {
         if (!$linkNamedEntities) {
             //$searchQuery   .= "SELECT * FROM $curTab s $filterExp ORDER BY weight_m DESC LIMIT ?\n";
             //$searchParam[] = $matchesLimit;
-            $searchQuery   .= "SELECT * FROM $curTab s $filterExp\n";
-            $matchQuery    .= "
+            $searchQuery  .= "SELECT * FROM $curTab s $filterExp\n";
+            $matchQuery   .= "
                 SELECT 
                     s.id, s.ftsid, s.property, 
                     null::text AS link_property, null::text AS facet, null::text AS value, 
@@ -344,7 +346,7 @@ class SmartSearch {
                     search9 s
                     LEFT JOIN weights_p w ON s.property = w.value
             ";
-            $matchParam[]  = $this->matchFacet->defaultWeight;
+            $matchParam[] = $this->matchFacet->defaultWeight;
         } else {
             // LINK TO NAMED ENTITIES
             $neIn        = substr(str_repeat('?, ', count($this->linkFacet->classes)), 0, -2);
@@ -621,6 +623,7 @@ class SmartSearch {
     public function getSearchFacets(string $prefLang = ''): array {
         $stats = [];
         $t     = microtime(true);
+        $t1 = $t;
 
         // FACETS
         $objectFacets  = $literalFacets = [];
@@ -662,8 +665,8 @@ class SmartSearch {
             ");
             $param = array_merge(
                 [$this->repo->getBaseUrl()],
-                $objectFacets,
-                [$this->schema->label, $prefLang]
+                                         $objectFacets,
+                                         [$this->schema->label, $prefLang]
             );
             $query->execute($param);
             while ($row   = $query->fetchObject()) {
@@ -671,6 +674,8 @@ class SmartSearch {
                 unset($row->facet);
                 $stats[$facet]->values[] = $row;
             }
+            $this->queryLog?->debug('FACETS STATS (object facets) time ' . (microtime(true) - $t1));
+            $t1 = microtime(true);
         }
         // value facets
         if (count($literalFacets) > 0) {
@@ -692,6 +697,8 @@ class SmartSearch {
                 unset($row->facet);
                 $stats[$facet]->values[] = $row;
             }
+            $this->queryLog?->debug('FACETS STATS (literal facets) time ' . (microtime(true) - $t1));
+            $t1 = microtime(true);
         }
         // RANGE FACETS
         foreach ($this->facets as $facet) {
@@ -768,6 +775,8 @@ class SmartSearch {
                 $stats[$facet->property]->min    = (float) reset($values)?->lower;
                 $stats[$facet->property]->max    = (float) end($values)?->upper;
             }
+            $this->queryLog?->debug('FACETS STATS (' . $facet->property . ') time ' . (microtime(true) - $t1));
+            $t1 = microtime(true);
         }
 
         // MATCH PROPERTY
@@ -784,6 +793,8 @@ class SmartSearch {
             ");
             $stats[self::FACET_MATCH]->values = $query->fetchAll(PDO::FETCH_OBJ);
         }
+        $this->queryLog?->debug('FACETS STATS (match property) time ' . (microtime(true) - $t1));
+        $t1 = microtime(true);
 
         // LINK PROPERTY
         if ($this->linkNamedEntities()) {
@@ -799,6 +810,26 @@ class SmartSearch {
             ");
             $stats[self::FACET_LINK]->values = $query->fetchAll(PDO::FETCH_OBJ);
         }
+        $this->queryLog?->debug('FACETS STATS (link property) time ' . (microtime(true) - $t1));
+        $t1 = microtime(true);
+
+        // MAP
+        if (isset($stats[self::FACET_MAP])) {
+            $query                          = $this->pdo->query("
+                SELECT st_asgeojson(st_union(st_centroid(geom::geometry)))
+                FROM (
+                    SELECT *
+                    FROM spatial_search s JOIN metadata m USING (mid)
+                    WHERE EXISTS (SELECT 1 FROM " . self::TEMPTABNAME . " WHERE id = m.id)
+                  UNION
+                    SELECT *
+                    FROM spatial_search s JOIN metadata m USING (mid)
+                    WHERE EXISTS (SELECT 1 FROM " . self::TEMPTABNAME . " JOIN relations r USING (id) WHERE r.target_id = m.id)
+                ) t
+            ");
+            $stats[self::FACET_MAP]->values = $query->fetchColumn() ?: '';
+        }
+        $this->queryLog?->debug('FACETS STATS (map) time ' . (microtime(true) - $t1));
 
         $this->queryLog?->debug('FACETS STATS time ' . (microtime(true) - $t));
         return $this->postprocessFacets($stats, $prefLang);
@@ -823,14 +854,23 @@ class SmartSearch {
             $cache->date   = $lastMod;
             $cache->facets = [];
 
-            $acceptedTypes = [self::FACET_OBJECT, self::FACET_LITERAL, self::FACET_CONTINUOUS];
+            $acceptedTypes = [
+                self::FACET_OBJECT, self::FACET_LITERAL, self::FACET_CONTINUOUS,
+                self::FACET_MAP
+            ];
             foreach ($this->facets as $facet) {
                 if (!in_array($facet->type, $acceptedTypes)) {
                     continue;
                 }
-                $out             = clone($facet);
-                $out->values     = $facet->type === 'continuous' ? [] : $this->getInitialFacetDiscrete($facet, $prefLang);
-                ;
+                $out         = clone($facet);
+                $out->values = match ($facet->type) {
+                    self::FACET_OBJECT, self::FACET_LITERAL => $this->getInitialFacetDiscrete($facet, $prefLang),
+                    self::FACET_MAP => $this->getInitialFacetMap(),
+                    default => [],
+                };
+                if ($facet->type === self::FACET_CONTINUOUS) {
+                    list($out->min, $out->max) = $this->getInitialFacetContinues($facet);
+                }
                 $cache->facets[] = $out;
             }
 
@@ -905,6 +945,29 @@ class SmartSearch {
         $query = $this->pdo->prepare($query);
         $query->execute($param);
         return $query->fetchAll(PDO::FETCH_OBJ);
+    }
+
+    private function getInitialFacetMap(): string {
+        $query = $this->pdo->query("
+            SELECT st_asgeojson(st_union(st_centroid(geom::geometry)))
+            FROM spatial_search 
+            WHERE id IS NULL
+        ");
+        return $query->fetchColumn();
+    }
+
+    private function getInitialFacetContinues(object $facet): array {
+        $plch  = substr(str_repeat(', ?', count($facet->start)), 2);
+        $query = $this->pdo->prepare("SELECT min(value_n) FROM metadata WHERE property IN ($plch)");
+        $query->execute($facet->start);
+        $min   = $query->fetchColumn();
+
+        $plch  = substr(str_repeat(', ?', count($facet->end)), 2);
+        $query = $this->pdo->prepare("SELECT max(value_n) FROM metadata WHERE property IN ($plch)");
+        $query->execute($facet->end);
+        $max   = $query->fetchColumn();
+
+        return [(int) $min, (int) $max];
     }
 
     /**
