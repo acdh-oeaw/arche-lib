@@ -16,7 +16,7 @@
         "ext-yaml": "*",
         "guzzlehttp/guzzle": "^7",
         "zozlak/rdf-constants": "^1",
-        "zozlak/query-part": "^2",
+        "zozlak/query-part": "^2.2",
         "psr/log": "^2 | ^3",
         "sweetrdf/quick-rdf": "^2",
         "sweetrdf/quick-rdf-io": "^1.0.6"
