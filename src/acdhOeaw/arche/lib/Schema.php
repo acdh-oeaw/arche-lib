@@ -55,6 +55,8 @@ use quickRdf\NamedNode;
  * @property NamedNode $hash
  * @property NamedNode $hasService
  * @property NamedNode $id
+ * @property NamedNode $imagePxHeight
+ * @property NamedNode $imagePxWidth
  * @property NamedNode $info
  * @property Schema    $ingest
  * @property NamedNode $isNewVersionOf

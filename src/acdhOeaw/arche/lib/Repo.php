@@ -635,15 +635,16 @@ class Repo implements RepoInterface {
      * 
      * All data modifications must be performed within a transaction.
      * 
-     * @return void
+     * @return string transaction identifier
      * @see rollback()
      * @see commit()
      */
-    public function begin(): void {
+    public function begin(): string {
         $this->txId = null;
         $req        = new Request('post', $this->baseUrl . 'transaction');
         $resp       = $this->sendRequest($req);
         $this->txId = $resp->getHeader($this->getHeaderName('transactionId'))[0];
+        return $this->txId;
     }
 
     /**
