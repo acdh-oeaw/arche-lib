@@ -109,7 +109,7 @@ class RepoTest extends TestBase {
     public function testCreateResource(): void {
         $labelProp = self::$schema->label;
         $labelTmpl = new PT($labelProp);
-        $metadata  = $this->getMetadata(['label'=> 'sampleTitle']);
+        $metadata  = $this->getMetadata(['label' => 'sampleTitle']);
 
         self::$repo->begin();
         $res1 = self::$repo->createResource($metadata);
@@ -209,17 +209,17 @@ class RepoTest extends TestBase {
         $res2   = self::$repo->createResource($meta2);
         $res2->delete(false);
         self::$repo->commit();
-        
+
         $client = new Client(['http_errors' => false]);
-        $resp = $client->sendRequest(new Request('get', $res2->getUri()));
+        $resp   = $client->sendRequest(new Request('get', (string) $res2->getUri()));
         $this->assertEquals(410, $resp->getStatusCode());
-        
-        $query = "SELECT id FROM identifiers WHERE ids IN (?, ?)";
+
+        $query     = "SELECT id FROM identifiers WHERE ids IN (?, ?)";
         $resources = self::$repo->getResourcesBySqlQuery($query, [$id1, $id2], new SearchConfig());
         $this->assertCount(1, $resources);
-        $this->assertEquals($res1->getUri(), $resources[0]->getUri());
+        $this->assertEquals((string) $res1->getUri(), (string) $resources[0]->getUri());
     }
-    
+
     public function testFactoryFromUrl(): void {
         self::$repo->begin();
         $resUrl  = self::$repo->createResource($this->getMetadata([]))->getUri();
