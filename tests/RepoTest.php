@@ -207,9 +207,18 @@ class RepoTest extends TestBase {
         self::$repo->begin();
         $res1   = self::$repo->createResource($meta1);
         $res2   = self::$repo->createResource($meta2);
-        $res2->delete(false);
         self::$repo->commit();
 
+        $query     = "SELECT id FROM identifiers WHERE ids IN (?, ?)";
+        $resources = self::$repo->getResourcesBySqlQuery($query, [$id1, $id2], new SearchConfig());
+        $resources = array_map(fn($x) => (string) $x->getUri(), iterator_to_array($resources));
+        $this->assertCount(2, $resources);
+        $this->assertContains((string) $res1->getUri(), $resources);
+        $this->assertContains((string) $res2->getUri(), $resources);
+
+        self::$repo->begin();
+        $res2->delete(false);
+        self::$repo->commit();
         $client = new Client(['http_errors' => false]);
         $resp   = $client->sendRequest(new Request('get', (string) $res2->getUri()));
         $this->assertEquals(410, $resp->getStatusCode());
