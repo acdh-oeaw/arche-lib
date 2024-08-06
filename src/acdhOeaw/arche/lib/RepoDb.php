@@ -47,6 +47,7 @@ use acdhOeaw\arche\lib\exception\RepoLibException;
  */
 class RepoDb implements RepoInterface {
 
+    const RES_STATE_ACTIVE = 'active';
     use RepoTrait;
 
     /**
@@ -333,7 +334,9 @@ class RepoDb implements RepoInterface {
                     SELECT DISTINCT id FROM ($query) t $authQP->query
                 ),
                 ids AS (
-                    SELECT id $orderByCols FROM allids
+                    SELECT id $orderByCols
+                    FROM allids JOIN resources USING (id)
+                    WHERE state = ?
                     $orderByQP1->query
                     $pagingQP->query
                 )
@@ -341,7 +344,16 @@ class RepoDb implements RepoInterface {
             $metaQuery
             $searchMetaQuery
         ";
-        $param = array_merge($parameters, $authQP->param, $orderByQP1->param, $pagingQP->param, $ftsWithQp->param, $metaParam, $searchMetaParam);
+        $param = array_merge(
+            $parameters,
+            $authQP->param,
+            [self::RES_STATE_ACTIVE],
+            $orderByQP1->param,
+            $pagingQP->param,
+            $ftsWithQp->param,
+            $metaParam,
+            $searchMetaParam
+        );
         $this->logQuery($query, $param);
 
         $query = $this->pdo->prepare($query);

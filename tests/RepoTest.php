@@ -26,6 +26,8 @@
 
 namespace acdhOeaw\arche\lib\tests;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Exception\ClientException;
 use zozlak\RdfConstants as RDF;
 use quickRdf\DataFactory as DF;
@@ -33,6 +35,7 @@ use termTemplates\PredicateTemplate as PT;
 use acdhOeaw\arche\lib\BinaryPayload;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\RepoResource;
+use acdhOeaw\arche\lib\SearchConfig;
 use acdhOeaw\arche\lib\exception\AmbiguousMatch;
 use acdhOeaw\arche\lib\exception\NotFound;
 use acdhOeaw\arche\lib\exception\ExceptionUtil;
@@ -195,6 +198,28 @@ class RepoTest extends TestBase {
         self::$repo->rollback();
     }
 
+    public function testSkipTombstone(): void {
+        $idProp = self::$schema->id;
+        $id1    = 'https://a.b/' . rand();
+        $id2    = 'https://a.b/' . rand();
+        $meta1  = $this->getMetadata(['id' => $id1]);
+        $meta2  = $this->getMetadata(['id' => $id2]);
+        self::$repo->begin();
+        $res1   = self::$repo->createResource($meta1);
+        $res2   = self::$repo->createResource($meta2);
+        $res2->delete(false);
+        self::$repo->commit();
+        
+        $client = new Client(['http_errors' => false]);
+        $resp = $client->sendRequest(new Request('get', $res2->getUri()));
+        $this->assertEquals(410, $resp->getStatusCode());
+        
+        $query = "SELECT id FROM identifiers WHERE ids IN (?, ?)";
+        $resources = self::$repo->getResourcesBySqlQuery($query, [$id1, $id2], new SearchConfig());
+        $this->assertCount(1, $resources);
+        $this->assertEquals($res1->getUri(), $resources[0]->getUri());
+    }
+    
     public function testFactoryFromUrl(): void {
         self::$repo->begin();
         $resUrl  = self::$repo->createResource($this->getMetadata([]))->getUri();
