@@ -333,10 +333,11 @@ class RepoDb implements RepoInterface {
                 allids AS (
                     SELECT DISTINCT id FROM ($query) t $authQP->query
                 ),
+                activeids AS (
+                    SELECT id FROM allids JOIN resources USING (id) WHERE state = ?
+                ),
                 ids AS (
-                    SELECT id $orderByCols
-                    FROM allids JOIN resources USING (id)
-                    WHERE state = ?
+                    SELECT id $orderByCols FROM activeids
                     $orderByQP1->query
                     $pagingQP->query
                 )
