@@ -216,6 +216,7 @@ class RepoTest extends TestBase {
 
         $query     = "SELECT id FROM identifiers WHERE ids IN (?, ?)";
         $resources = self::$repo->getResourcesBySqlQuery($query, [$id1, $id2], new SearchConfig());
+        $resources = iterator_to_array($resources);
         $this->assertCount(1, $resources);
         $this->assertEquals((string) $res1->getUri(), (string) $resources[0]->getUri());
     }
