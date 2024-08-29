@@ -71,9 +71,12 @@ class SearchConfig {
     /**
      * Controls amount of metadata included in the search results.
      * 
-     * Value should be one of `RepoResourceInterface::META_*` constants.
+     * Value should be one of `RepoResourceInterface::META_*` constants
+     * or in a form of four numbers
+     * `{children depth}_{parents depth}_{pointed to}_{pointed from}`.
      * 
      * @see \acdhOeaw\arche\lib\RepoResourceInterface::META_RESOURCE
+     * @see https://acdh-oeaw.github.io/arche-docs/aux/metadata_api_for_programmers.html#readmode-in-details
      */
     public ?string $metadataMode = null;
 
