@@ -29,6 +29,7 @@ namespace acdhOeaw\arche\lib\tests;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Exception\ClientException;
+use GuzzleHttp\TransferStats;
 use zozlak\RdfConstants as RDF;
 use quickRdf\DataFactory as DF;
 use termTemplates\PredicateTemplate as PT;
@@ -288,5 +289,27 @@ class RepoTest extends TestBase {
             exec("echo -e " . escapeshellarg($stdIn[$i]) . " | $baseCmd $param[$i] 2>&1", $output, $result);
             $this->assertGreaterThan(0, $result, "Repo initialization fail test $i succeeded");
         }
+    }
+
+    /**
+     * Tests a scenario where the base URL used to make HTTP requests differs
+     * from the repository base URL (e.g. when we want to ingest directly against
+     * the repository instance which is normally reachable trough a proxy).
+     */
+    public function testDifferentBaseUrlUri(): void {
+        $guzzleOpts = [
+            'headers'  => ['eppn' => 'admin'],
+            'on_stats' => fn(TransferStats $s) => $this->assertStringStartsWith('http://localhost/api/', (string) $s->getEffectiveUri()),
+        ];
+        $repo       = Repo::factoryFromUrl('http://localhost/api/', $guzzleOpts);
+        $this->assertEquals('http://127.0.0.1/api/', $repo->getBaseUrl());
+
+        $repo->begin();
+        $res = $repo->createResource($this->getMetadata([]));
+        $this->assertStringStartsWith('http://127.0.0.1/api/', (string) $res->getUri());
+        $res->setMetadata($res->getMetadata()); // just to invalidate local copy
+        $res->updateMetadata();
+        $res->updateContent(new BinaryPayload(null, __FILE__));
+        $repo->rollback();
     }
 }

@@ -83,6 +83,10 @@ class RepoDb implements RepoInterface {
         return new RepoDb($baseUrl, $schema, $headers, $pdo, (array) $nonRelProp);
     }
 
+    /**
+     * Repository REST API base URL
+     */
+    private string $baseUrl;
     private PDO $pdo;
     private ?AuthInterface $auth;
 
@@ -111,6 +115,15 @@ class RepoDb implements RepoInterface {
         $this->pdo                   = $pdo;
         $this->nonRelationProperties = $nonRelationProperties;
         $this->auth                  = $auth;
+    }
+
+    /**
+     * Returns the repository REST API base URL.
+     * 
+     * @return string
+     */
+    public function getBaseUrl(): string {
+        return $this->baseUrl;
     }
 
     public function getSmartSearch(): SmartSearch {

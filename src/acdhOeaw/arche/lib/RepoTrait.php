@@ -44,11 +44,6 @@ use acdhOeaw\arche\lib\exception\RepoLibException;
 trait RepoTrait {
 
     /**
-     * Repository REST API base URL
-     */
-    private string $baseUrl;
-
-    /**
      * An object providing mappings of repository REST API parameters to HTTP headers used by a given repository instance.
      */
     private object $headers;
@@ -58,15 +53,6 @@ trait RepoTrait {
      */
     private Schema $schema;
     private ?AbstractLogger $queryLog;
-
-    /**
-     * Returns the repository REST API base URL.
-     * 
-     * @return string
-     */
-    public function getBaseUrl(): string {
-        return $this->baseUrl;
-    }
 
     /**
      * Returns the `Schema` object defining repository entities to RDF property mappings.

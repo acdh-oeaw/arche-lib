@@ -31,6 +31,7 @@ use RuntimeException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Promise\RejectedPromise;
@@ -225,6 +226,8 @@ class Repo implements RepoInterface {
      * @var ?string
      */
     private $txId;
+    private string $baseUrl;
+    private string $baseUri;
 
     /**
      * Creates an repository connection object.
@@ -253,7 +256,16 @@ class Repo implements RepoInterface {
         }
         $this->schema  = new Schema($config->schema);
         $this->headers = $config->rest->headers;
-        $this->baseUrl = $config->rest->urlBase . $config->rest->pathBase;
+        $this->baseUri = $config->rest->urlBase . $config->rest->pathBase;
+    }
+
+    /**
+     * Returns the repository REST API base URL.
+     * 
+     * @return string
+     */
+    public function getBaseUrl(): string {
+        return $this->baseUri;
     }
 
     /**
@@ -293,7 +305,7 @@ class Repo implements RepoInterface {
                                         string $class = null,
                                         string $readMode = RepoResourceInterface::META_RESOURCE,
                                         ?string $parentProperty = null): RepoResourcePromise {
-        $sbj         = DF::namedNode($this->baseUrl);
+        $sbj         = DF::namedNode($this->baseUri);
         $metadata    = $metadata->map(fn(QuadInterface $x) => $x->withSubject($sbj))->withNode($sbj);
         $serializer  = new NQuadsSerializer();
         $body        = $serializer->serialize($metadata);
@@ -344,6 +356,7 @@ class Repo implements RepoInterface {
      * @see sendRequest()
      */
     public function sendRequestAsync(Request $request): ResponsePromise {
+        $request = $request->withUri(new Uri(str_replace($this->baseUri, $this->baseUrl, (string) $request->getUri())));
         if (!empty($this->txId)) {
             $request = $request->withHeader($this->getHeaderName('transactionId'), $this->txId);
         }
