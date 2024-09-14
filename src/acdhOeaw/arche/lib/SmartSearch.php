@@ -42,6 +42,7 @@ class SmartSearch {
     const TAB_MATCHES      = "_matches";
     const TAB_FILTERS      = "_filters";
     const TAB_SEARCH       = "_search";
+    const TAB_PARENTS      = '_parents';
     const FACET_MATCH      = 'matchProperty';
     const FACET_LINK       = 'linkProperty';
     const FACET_LITERAL    = 'literal';
@@ -745,28 +746,39 @@ class SmartSearch {
         $baseUrl     = $this->repo->getBaseUrl();
         $filterQuery = "CREATE TEMPORARY TABLE " . self::TAB_FILTERS . " AS (\nSELECT id FROM\n";
         $filterParam = [];
-        $n           = 0;
-        foreach ($searchTerms as $st) {
-            /* @var $st SearchTerm */
-            $tmpQuery    = $st->getSqlQuery($baseUrl, $this->schema->id, []);
-            $filterQuery .= $n > 0 ? "JOIN (" : "(";
-            $filterQuery .= $tmpQuery->query;
-            $filterQuery .= $n > 0 ? ") f$n USING (id)\n" : ") f$n\n";
-            $filterParam = array_merge($filterParam, $tmpQuery->param);
-            $n++;
-        }
+
+        $n = 0;
         if (count($parentIds) > 0) {
-            $filterQuery .= $n > 0 ? "JOIN (" : "(";
+            $tab          = count($searchTerms) > 0 ? self::TAB_PARENTS : self::TAB_FILTERS;
+            $parentsQuery = "CREATE TEMPORARY TABLE $tab AS (\n";
+            $parentsParam = [];
             foreach ($parentIds as $m => $id) {
-                $filterQuery .= $m > 0 ? "UNION\n" : "";
-                $filterQuery .= "SELECT id FROM get_relatives(?, ?, 999999, 0, false, false) WHERE n <> 0\n";
-                $filterParam = array_merge($filterParam, [$id, $this->schema->parent]);
+                $parentsQuery .= $m > 0 ? "UNION\n" : "";
+                $parentsQuery .= "SELECT id FROM get_relatives(?, ?, 999999, 0, false, false) WHERE n <> 0\n";
+                $parentsParam = array_merge($parentsParam, [$id, $this->schema->parent]);
             }
-            $filterQuery .= $n > 0 ? ") f$n USING (id)\n" : ") f$n\n";
+            $parentsQuery .= ")";
+            $query        = new QueryPart($parentsQuery, $parentsParam, log: $this->queryLog);
+            $query->execute($this->pdo);
+
+            $filterQuery .= self::TAB_PARENTS . "\n";
+            $n           = 1;
         }
-        $filterQuery .= ")\n";
-        $query       = new QueryPart($filterQuery, $filterParam, log: $this->queryLog);
-        $query->execute($this->pdo);
+
+        if (count($searchTerms) > 0) {
+            foreach ($searchTerms as $st) {
+                /* @var $st SearchTerm */
+                $tmpQuery    = $st->getSqlQuery($baseUrl, $this->schema->id, []);
+                $filterQuery .= $n > 0 ? "JOIN (" : "(";
+                $filterQuery .= $tmpQuery->query;
+                $filterQuery .= $n > 0 ? ") f$n USING (id)\n" : ") f$n\n";
+                $filterParam = array_merge($filterParam, $tmpQuery->param);
+                $n++;
+            }
+            $filterQuery .= ")\n";
+            $query       = new QueryPart($filterQuery, $filterParam, log: $this->queryLog);
+            $query->execute($this->pdo);
+        }
         return true;
     }
 
