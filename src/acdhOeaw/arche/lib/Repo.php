@@ -489,7 +489,9 @@ class Repo implements RepoInterface {
                     return new RejectedPromise(new NotFound());
                 case 1;
                     $class = $class ?? self::$resourceClass;
-                    return new $class($matches[0], $this);
+                    $res = new $class($matches[0], $this);
+                    $res->setGraph($graph);
+                    return $res;
                 default:
                     return new RejectedPromise(new AmbiguousMatch("Many resources match the search: " . implode(', ', $matches)));
             }
