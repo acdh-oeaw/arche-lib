@@ -53,8 +53,8 @@ trait PromiseTrait {
         return $this->promise->otherwise($onRejected);
     }
 
-    public function then(callable $onFulfilled = null,
-                         callable $onRejected = null): PromiseInterface {
+    public function then(?callable $onFulfilled = null,
+                         ?callable $onRejected = null): PromiseInterface {
         return $this->promise->then($onFulfilled, $onRejected);
     }
 }

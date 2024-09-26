@@ -35,7 +35,7 @@ use Throwable;
  */
 class NotFound extends RepoLibException {
     public function __construct(string $message = "", int $code = 404,
-                                Throwable $previous = NULL) {
+                                ?Throwable $previous = null) {
         parent::__construct($message, $code, $previous);
     }
 

@@ -36,7 +36,7 @@ use Throwable;
 class AmbiguousMatch extends RepoLibException {
 
     public function __construct(string $message = "", int $code = 500,
-                                Throwable $previous = NULL) {
+                                ?hrowable $previous = null) {
         parent::__construct($message, $code, $previous);
     }
 

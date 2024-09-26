@@ -36,8 +36,7 @@ use Throwable;
 class Deleted extends RepoLibException {
 
     public function __construct(string $message = "", int $code = 410,
-                                Throwable $previous = NULL) {
+                                ?Throwable $previous = null) {
         parent::__construct($message, $code, $previous);
     }
-
 }
