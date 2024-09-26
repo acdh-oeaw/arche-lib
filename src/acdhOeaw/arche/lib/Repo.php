@@ -182,17 +182,17 @@ class Repo implements RepoInterface {
      * 
      * @param string $url
      * @param array<mixed> $guzzleOptions
-     * @param string $realUrl if provided, the final resource URL will be stored
+     * @param string|null $realUrl if provided, the final resource URL will be stored
      *   in this variable.
-     * @param string $metaReadModeHeader header used by the repository to denote
+     * @param string|null $metaReadModeHeader header used by the repository to denote
      *   the metadata read mode. Providing this parameter will speed up the
      *   initialization if the $url points to a repository resource.
      * @return self
      */
     static public function factoryFromUrl(string $url,
                                           array $guzzleOptions = [],
-                                          string &$realUrl = null,
-                                          string $metaReadModeHeader = null): self {
+                                          ?string &$realUrl = null,
+                                          ?string $metaReadModeHeader = null): self {
         $resolveOptions                    = $guzzleOptions;
         $resolveOptions['http_errors']     = false;
         $resolveOptions['allow_redirects'] = ['max' => 10, 'strict' => true, 'track_redirects' => true];
@@ -272,18 +272,18 @@ class Repo implements RepoInterface {
      * Creates a repository resource.
      * 
      * @param DatasetNodeInterface $metadata resource metadata
-     * @param BinaryPayload $payload resource binary payload (can be null)
-     * @param string $class an optional class of the resulting object representing the resource
+     * @param BinaryPayload|null $payload resource binary payload (can be null)
+     * @param string|null $class an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
      * @param string $readMode scope of the metadata returned by the repository
      *   - see the META_* constants defined by the RepoResourceInterface 
-     * @param string $parentProperty RDF property to be used by the metadata
+     * @param string|null $parentProperty RDF property to be used by the metadata
      *   read mode denoted by the $readMode parameter
      * @return RepoResource
      */
     public function createResource(DatasetNodeInterface $metadata,
-                                   BinaryPayload $payload = null,
-                                   string $class = null,
+                                   ?BinaryPayload $payload = null,
+                                   ?string $class = null,
                                    string $readMode = RepoResourceInterface::META_RESOURCE,
                                    ?string $parentProperty = null): RepoResource {
         return $this->createResourceAsync($metadata, $payload, $class, $readMode, $parentProperty)->wait(true) ?? throw new RuntimeException('Promise returned null');
@@ -293,16 +293,16 @@ class Repo implements RepoInterface {
      * Asynchronous version of createResource()
      * 
      * @param DatasetNodeInterface $metadata
-     * @param BinaryPayload $payload
-     * @param string $class
+     * @param BinaryPayload|null $payload
+     * @param string|null $class
      * @param string $readMode
      * @param string|null $parentProperty
      * @return RepoResourcePromise
      * @see createResource()
      */
     public function createResourceAsync(DatasetNodeInterface $metadata,
-                                        BinaryPayload $payload = null,
-                                        string $class = null,
+                                        ?BinaryPayload $payload = null,
+                                        ?string $class = null,
                                         string $readMode = RepoResourceInterface::META_RESOURCE,
                                         ?string $parentProperty = null): RepoResourcePromise {
         $sbj         = DF::namedNode($this->baseUri);
@@ -437,13 +437,13 @@ class Repo implements RepoInterface {
      * matching the search, an error is thrown.
      * 
      * @param array<string> $ids an array of identifiers (being strings)
-     * @param string $class an optional class of the resulting object representing the resource
+     * @param string $class|null an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
      * @return RepoResource
      * @throws NotFound
      * @throws AmbiguousMatch
      */
-    public function getResourceByIds(array $ids, string $class = null): RepoResource {
+    public function getResourceByIds(array $ids, ?string $class = null): RepoResource {
         return $this->getResourceByIdsAsync($ids, $class)->wait(true) ?? throw new RuntimeException('Promise returned null');
     }
 
@@ -451,11 +451,11 @@ class Repo implements RepoInterface {
      * Asynchronous version of getResourceByIds()
      * 
      * @param string $id
-     * @param string $class
+     * @param string|null $class
      * @return RepoResourcePromise
      * @see getResourceByIds()
      */
-    public function getResourceByIdAsync(string $id, string $class = null): RepoResourcePromise {
+    public function getResourceByIdAsync(string $id, ?string $class = null): RepoResourcePromise {
         return $this->getResourceByIdsAsync([$id], $class);
     }
 
@@ -463,11 +463,11 @@ class Repo implements RepoInterface {
      * Asynchronous version of getResourceByIds()
      * 
      * @param array<string> $ids
-     * @param string $class
+     * @param string|null $class
      * @return RepoResourcePromise
      * @see getResourceByIds()
      */
-    public function getResourceByIdsAsync(array $ids, string $class = null): RepoResourcePromise {
+    public function getResourceByIdsAsync(array $ids, ?string $class = null): RepoResourcePromise {
         $url          = $this->baseUrl . 'search';
         $headers      = [
             'Content-Type' => 'application/x-www-form-urlencoded',

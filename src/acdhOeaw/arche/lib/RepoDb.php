@@ -140,13 +140,13 @@ class RepoDb implements RepoInterface {
      * matching the search, an error is thrown.
      * 
      * @param array<string> $ids an array of identifiers (being strings)
-     * @param string $class an optional class of the resulting object representing the resource
+     * @param string|null $class an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
      * @return RepoResourceDb
      * @throws NotFound
      * @throws AmbiguousMatch
      */
-    public function getResourceByIds(array $ids, string $class = null): RepoResourceDb {
+    public function getResourceByIds(array $ids, ?string $class = null): RepoResourceDb {
         $placeholders = substr(str_repeat('?, ', count($ids)), 0, -2);
         $query        = "SELECT DISTINCT id FROM identifiers WHERE ids IN ($placeholders)";
         $query        = $this->pdo->prepare($query);

@@ -70,7 +70,7 @@ class RepoResourceDb implements RepoResourceInterface {
      *   or e.g. reset them back to their current state in the repository)
      * @param string $mode scope of the metadata returned by the repository - see the 
      *   `RepoDb()::getPdoStatementBySqlQuery()` method
-     * @param string $parentProperty RDF property name used to find related resources 
+     * @param string|null $parentProperty RDF property name used to find related resources 
      *   - see the getMetadataQuery() method
      * @param array<string> $resourceProperties list of RDF properties to be includes
      *   for a resource (if the list is empty, all exsiting RDF properties are included)
@@ -83,7 +83,7 @@ class RepoResourceDb implements RepoResourceInterface {
      */
     public function loadMetadata(bool $force = false,
                                  string $mode = self::META_RESOURCE,
-                                 string $parentProperty = null,
+                                 ?string $parentProperty = null,
                                  array $resourceProperties = [],
                                  array $relativesProperties = []): void {
         if ($force || count($this->metadata) === 0) {
@@ -99,7 +99,7 @@ class RepoResourceDb implements RepoResourceInterface {
      * 
      * @param string $mode scope of the metadata returned by the repository - see the 
      *   `RepoDb()::getPdoStatementBySqlQuery()` method
-     * @param string $parentProperty RDF property name used to find related resources
+     * @param string|null $parentProperty RDF property name used to find related resources
      * @param array<string> $resourceProperties list of RDF properties to be includes
      *   for a resource (if the list is empty, all exsiting RDF properties are included)
      * @param array<string> $relativesProperties list of RDF properties to be includes
@@ -108,7 +108,7 @@ class RepoResourceDb implements RepoResourceInterface {
      * @return PDOStatement
      */
     public function getMetadataStatement(string $mode = self::META_RESOURCE,
-                                         string $parentProperty = null,
+                                         ?string $parentProperty = null,
                                          array $resourceProperties = [],
                                          array $relativesProperties = []): PDOStatement {
         $config                           = new SearchConfig();

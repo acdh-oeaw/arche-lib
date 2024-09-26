@@ -56,11 +56,11 @@ interface RepoInterface {
      * Throws an error on failure.
      * 
      * @param string $id
-     * @param string $class an optional class of the resulting object representing the resource
+     * @param string|null $class an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
      * @return RepoResourceInterface
      */
-    public function getResourceById(string $id, string $class = null): RepoResourceInterface;
+    public function getResourceById(string $id, ?string $class = null): RepoResourceInterface;
 
     /**
      * Tries to find a single repository resource matching provided identifiers.
@@ -72,11 +72,11 @@ interface RepoInterface {
      * matching the search, an error is thrown.
      * 
      * @param array<string> $ids an array of identifiers (being strings)
-     * @param string $class an optional class of the resulting object representing the resource
+     * @param string|null $class an optional class of the resulting object representing the resource
      *   (to be used by extension libraries)
      * @return RepoResourceInterface
      */
-    public function getResourceByIds(array $ids, string $class = null): RepoResourceInterface;
+    public function getResourceByIds(array $ids, ?string $class = null): RepoResourceInterface;
 
     /**
      * Returns repository resources matching a given SQL search query.
