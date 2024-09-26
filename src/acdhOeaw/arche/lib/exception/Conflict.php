@@ -36,7 +36,7 @@ use Throwable;
 class Conflict extends RepoLibException {
 
     public function __construct(string $message = "", int $code = 409,
-                                Throwable $previous = NULL) {
+                                ?Throwable $previous = NULL) {
         parent::__construct($message, $code, $previous);
     }
 

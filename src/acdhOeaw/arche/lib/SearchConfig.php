@@ -48,11 +48,11 @@ class SearchConfig {
      * Creates an instance of the SearchConfig class from the POST data or 
      * given array.
      * 
-     * @param array<string, string> $src source array. If not provided, $_POST
+     * @param array<string, string>|null $src source array. If not provided, $_POST
      *   is used instead.
      * @return SearchConfig
      */
-    static public function factory(array $src = null): SearchConfig {
+    static public function factory(?array $src = null): SearchConfig {
         if ($src === null) {
             $src = $_POST;
         }
