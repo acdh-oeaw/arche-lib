@@ -140,29 +140,25 @@ class RepoDb implements RepoInterface {
      * matching the search, an error is thrown.
      * 
      * @param array<string> $ids an array of identifiers (being strings)
-     * @param string|null $class an optional class of the resulting object representing the resource
-     *   (to be used by extension libraries)
+     * @param ?SearchConfig $config
      * @return RepoResourceDb
      * @throws NotFound
      * @throws AmbiguousMatch
      */
-    public function getResourceByIds(array $ids, ?string $class = null): RepoResourceDb {
+    public function getResourceByIds(array $ids, ?SearchConfig $config = null): RepoResourceDb {
         $placeholders = substr(str_repeat('?, ', count($ids)), 0, -2);
         $query        = "SELECT DISTINCT id FROM identifiers WHERE ids IN ($placeholders)";
-        $query        = $this->pdo->prepare($query);
-        $query->execute($ids);
-        $id           = $query->fetchColumn();
-        if ($id === false) {
+        $config       ??= new SearchConfig();
+        $generator    = $this->getResourcesBySqlQuery($query, $ids, $config);
+        if (!$generator->valid()) {
             throw new NotFound();
         }
-        if (($id2 = $query->fetchColumn()) !== false) {
+        $res = $generator->current();
+        $generator->next();
+        if ($generator->valid()) {
             throw new AmbiguousMatch("Both resource $id and $id2 match the search");
         }
-        $url   = $this->getBaseUrl() . $id;
-        $class = $class ?? self::$resourceClass;
-        $obj   = new $class($url, $this);
-        /** @var RepoResourceDb $obj */
-        return $obj;
+        return $res;
     }
 
     /**

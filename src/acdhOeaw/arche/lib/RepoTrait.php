@@ -79,12 +79,11 @@ trait RepoTrait {
      * Throws an error on failure.
      * 
      * @param string $id
-     * @param string|null $class an optional class of the resulting object representing the resource
-     *   (to be used by extension libraries)
+     * @param ?SearchConfig $config
      * @return RepoResourceInterface
      */
-    public function getResourceById(string $id, ?string $class = null): RepoResourceInterface {
-        return $this->getResourceByIds([$id], $class);
+    public function getResourceById(string $id, ?SearchConfig $config = null): RepoResourceInterface {
+        return $this->getResourceByIds([$id], $config);
     }
 
     /**

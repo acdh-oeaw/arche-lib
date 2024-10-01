@@ -438,64 +438,50 @@ class Repo implements RepoInterface {
      * matching the search, an error is thrown.
      * 
      * @param array<string> $ids an array of identifiers (being strings)
-     * @param string $class|null an optional class of the resulting object representing the resource
-     *   (to be used by extension libraries)
+     * @param ?SearchConfig $config
      * @return RepoResource
      * @throws NotFound
      * @throws AmbiguousMatch
      */
-    public function getResourceByIds(array $ids, ?string $class = null): RepoResource {
-        return $this->getResourceByIdsAsync($ids, $class)->wait(true) ?? throw new RuntimeException('Promise returned null');
+    public function getResourceByIds(array $ids, ?SearchConfig $config = null): RepoResource {
+        return $this->getResourceByIdsAsync($ids, $config)->wait(true) ?? throw new RuntimeException('Promise returned null');
     }
 
     /**
      * Asynchronous version of getResourceByIds()
      * 
      * @param string $id
-     * @param string|null $class
+     * @param ?SearchConfig $config
      * @return RepoResourcePromise
      * @see getResourceByIds()
      */
-    public function getResourceByIdAsync(string $id, ?string $class = null): RepoResourcePromise {
-        return $this->getResourceByIdsAsync([$id], $class);
+    public function getResourceByIdAsync(string $id,
+                                         ?SearchConfig $config = null): RepoResourcePromise {
+        return $this->getResourceByIdsAsync([$id], $config);
     }
 
     /**
      * Asynchronous version of getResourceByIds()
      * 
      * @param array<string> $ids
-     * @param string|null $class
+     * @param ?SearchConfig $config
      * @return RepoResourcePromise
      * @see getResourceByIds()
      */
-    public function getResourceByIdsAsync(array $ids, ?string $class = null): RepoResourcePromise {
-        $url          = $this->baseUrl . 'search';
-        $headers      = [
-            'Content-Type' => 'application/x-www-form-urlencoded',
-        ];
+    public function getResourceByIdsAsync(array $ids,
+                                          ?SearchConfig $config = null): RepoResourcePromise {
         $placeholders = substr(str_repeat('?, ', count($ids)), 0, -2);
         $query        = "SELECT DISTINCT id FROM identifiers WHERE ids IN ($placeholders)";
-        $body         = http_build_query([
-            'sql'      => $query,
-            'sqlParam' => $ids,
-        ]);
-        $req          = new Request('post', $url, $headers, $body);
-        $promise      = $this->sendRequestAsync($req);
-        $promise      = $promise->then(function (ResponseInterface $resp) use ($class) {
-            $graph   = new Dataset();
-            $graph->add(RdfIoUtil::parse($resp, new DF()));
+        $config       ??= new SearchConfig();
+        $promise      = $this->getGraphBySqlQueryAsync($query, $ids, $config);
+        $promise      = $promise->then(function (Dataset $graph)use ($config) {
             $matches = $graph->listSubjects(new QT(predicate: $this->schema->searchMatch))->getValues();
             switch (count($matches)) {
                 case 0:
                     return new RejectedPromise(new NotFound());
                 case 1;
-                    $class = $class ?? self::$resourceClass;
-                    $res   = new $class($matches[0], $this);
-                    $graph->delete(new PT($this->schema->searchMatch));
-                    $graph->delete(new PT($this->schema->searchOrder));
-                    $graph->delete(new PT($this->schema->searchOrderValue));
-                    $res->setGraph($graph);
-                    return $res;
+                    $res = $this->extractResourcesFromGraph($graph, $config);
+                    return $res->current();
                 default:
                     return new RejectedPromise(new AmbiguousMatch("Many resources match the search: " . implode(', ', $matches)));
             }
