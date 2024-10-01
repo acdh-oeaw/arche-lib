@@ -46,6 +46,7 @@ use quickRdf\DataFactory as DF;
 use quickRdfIo\NQuadsSerializer;
 use quickRdfIo\Util as RdfIoUtil;
 use termTemplates\QuadTemplate as QT;
+use termTemplates\PredicateTemplate as PT;
 use acdhOeaw\arche\lib\exception\Conflict;
 use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
@@ -489,7 +490,10 @@ class Repo implements RepoInterface {
                     return new RejectedPromise(new NotFound());
                 case 1;
                     $class = $class ?? self::$resourceClass;
-                    $res = new $class($matches[0], $this);
+                    $res   = new $class($matches[0], $this);
+                    $graph->delete(new PT($this->schema->searchMatch));
+                    $graph->delete(new PT($this->schema->searchOrder));
+                    $graph->delete(new PT($this->schema->searchOrderValue));
                     $res->setGraph($graph);
                     return $res;
                 default:

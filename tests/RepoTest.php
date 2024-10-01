@@ -131,6 +131,24 @@ class RepoTest extends TestBase {
 
         $res2 = self::$repo->getResourceById($id);
         $this->assertEquals($res1->getUri(), $res2->getUri());
+        $meta = [
+            'getGraph()'    => $res2->getGraph(),
+            'getMetadata()' => $res2->getMetadata(),
+        ];
+        foreach ($meta as $k => $v) {
+            $this->assertTrue($v->none(new PT(self::$schema->searchMatch)), $k);
+            $this->assertTrue($v->none(new PT(self::$schema->searchOrder)), $k);
+            $this->assertTrue($v->none(new PT(self::$schema->searchOrderValue)), $k);
+            $this->assertTrue($v->none(new PT(self::$schema->searchFts)), $k);
+            $this->assertTrue($v->none(new PT(self::$schema->searchFtsProperty)), $k);
+            $this->assertTrue($v->none(new PT(self::$schema->searchFtsQuery)), $k);
+            $this->assertTrue($v->none(new PT(self::$schema->searchMatch)), $k);
+            $this->assertTrue($v->none(new PT(self::$schema->searchOrder)), $k);
+            $this->assertTrue($v->none(new PT(self::$schema->searchOrderValue)), $k);
+            $this->assertTrue($v->none(new PT(self::$schema->searchFts)), $k);
+            $this->assertTrue($v->none(new PT(self::$schema->searchFtsProperty)), $k);
+            $this->assertTrue($v->none(new PT(self::$schema->searchFtsQuery)), $k);
+        }
     }
 
     public function testSearchByIdNotFound(): void {
