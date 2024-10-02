@@ -283,7 +283,7 @@ class RepoDb implements RepoInterface {
             }
         }
 
-        $mode = $config->metadataMode ?? '';
+        $mode = $config->metadataMode ?? RepoResourceInterface::META_NONE;
         switch ($mode) {
             case RRI::META_NONE:
                 $metaQuery   = "SELECT * FROM metadata WHERE false";
