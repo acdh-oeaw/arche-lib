@@ -416,8 +416,9 @@ class RepoDb implements RepoInterface {
         if (!empty($cfg->ftsQuery)) {
             $withQuery = ", fts AS (SELECT *, row_number() OVER (PARTITION BY id) AS no FROM (";
             for ($n = 0; $n < count($cfg->ftsQuery); $n++) {
-                $ftsQuery    = $cfg->ftsQuery[$n];
-                $ftsProperty = $cfg->ftsProperty[$n] ?? [];
+                $ftsQuery        = $cfg->ftsQuery[$n];
+                $ftsQueryEscaped = SearchTerm::escapeFts($ftsQuery);
+                $ftsProperty     = $cfg->ftsProperty[$n] ?? [];
 
                 $withQuery .= ($n > 0 ? "UNION" : "") . "
                     SELECT 
@@ -432,7 +433,11 @@ class RepoDb implements RepoInterface {
                             WHEN fts.id IS NOT NULL THEN ?::text
                             ELSE 'URI'
                         END AS type,
-                        ts_headline('simple', raw, websearch_to_tsquery('simple', ?), ?) AS value,
+                        CASE
+                            WHEN iid IS NOT NULL AND raw ~* ? THEN 
+                                replace(ts_headline('simple', replace(raw, '/', '`'), websearch_to_tsquery('simple', ?), ?), '`', '/')
+                            ELSE ts_headline('simple', raw, websearch_to_tsquery('simple', ?), ?) 
+                        END AS value,
                         ?::text AS query
                     FROM 
                         full_text_search fts 
@@ -447,10 +452,13 @@ class RepoDb implements RepoInterface {
                         $this->schema->id,
                         SearchTerm::PROPERTY_BINARY,
                         RDF::XSD_STRING,
-                        $ftsQuery,
+                        SearchTerm::URI_REGEX,
+                        $ftsQueryEscaped,
+                        $cfg->getTsHeadlineOptions($n),
+                        $ftsQueryEscaped,
                         $cfg->getTsHeadlineOptions($n),
                         $ftsQuery,
-                        $ftsQuery,
+                        $ftsQueryEscaped,
                     ]
                 );
 

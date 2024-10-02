@@ -42,7 +42,7 @@ class SearchTerm {
     const PROPERTY_BINARY   = 'BINARY';
     const PROPERTY_NEGATE   = '^';
     const DATETIME_REGEX    = '/^-?[0-9]{4,}-[0-9][0-9]-[0-9][0-9](T[0-9][0-9](:[0-9][0-9])?(:[0-9][0-9])?([.][0-9]+)?Z?)?$/';
-    const URI_REGEX         = '\w+:(\/?\/?)[^\s]+';
+    const URI_REGEX         = '^\w+:(\/?\/?)[^\s]+';
     const TYPE_NUMBER       = 'number';
     const TYPE_DATE         = 'date';
     const TYPE_DATETIME     = 'datetime';
@@ -228,7 +228,7 @@ class SearchTerm {
             case self::TYPE_ID:
                 return $this->getSqlQueryId();
             case self::TYPE_FTS:
-                return $this->getSqlQueryFts();
+                return $this->getSqlQueryFts($idProp);
             case self::TYPE_SPATIAL:
                 return $this->getSqlQuerySpatial();
             case self::TYPE_RELATION:
@@ -266,7 +266,7 @@ class SearchTerm {
         return $query;
     }
 
-    private function getSqlQueryFts(): QueryPart {
+    private function getSqlQueryFts(string $idProp): QueryPart {
         $value = is_array($this->value) ? reset($this->value) : $this->value;
         $value = self::escapeFts((string) $value);
         $param = [$value];
@@ -277,7 +277,9 @@ class SearchTerm {
         }
         if (!empty($this->property)) {
             if ($this->property === self::PROPERTY_BINARY) {
-                $where .= " AND mid IS NULL";
+                $where .= " AND mid IS NULL AND iid IS NULL";
+            } elseif ($this->property === $idProp) {
+                $where .= " AND iid IS NOT NULL";
             } else {
                 $where   .= " AND property = ?";
                 $param[] = $this->property;
