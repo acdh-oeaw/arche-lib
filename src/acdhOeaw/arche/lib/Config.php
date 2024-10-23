@@ -110,6 +110,8 @@ use function GuzzleHttp\json_encode;
  * @property Config $httpBasic
  * @property object $httpHeader
  * @property string $id
+ * @property string $imagePxHeight
+ * @property string $imagePxWidth
  * @property string $indexing
  * @property string $isNewVersionOf
  * @property string $label
@@ -120,6 +122,7 @@ use function GuzzleHttp\json_encode;
  * @property int    $levels
  * @property string $license
  * @property string $licenseAgg
+ * @property string $loggedInRole
  * @property Config $logging
  * @property quickRdf\DatasetNode $meta
  * @property string $metadata
@@ -200,6 +203,7 @@ use function GuzzleHttp\json_encode;
  * @property string $vid
  * @property string $withReferences
  * @property string $wkt
+ * @property string $write
  */
 class Config {
 
