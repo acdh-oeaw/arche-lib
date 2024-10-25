@@ -73,6 +73,7 @@ use quickRdf\NamedNode;
  * @property NamedNode $modificationDate
  * @property NamedNode $modificationUser
  * @property Schema    $namespaces
+ * @property NamedNode $nextItem
  * @property NamedNode $ontology
  * @property NamedNode $parent
  * @property NamedNode $parameterClass
