@@ -877,7 +877,7 @@ class SmartSearch {
 
     private function combineSearchQueries(array $queries, bool $filteredSearch,
                                           string $outName): QueryPart {
-        $filterExp = $filteredSearch ? "WHERE EXISTS (SELECT 1 FROM " . self::TAB_FILTERS . " WHERE id = search.id)" : "";
+        $filterExp = $filteredSearch ? " WHERE EXISTS (SELECT 1 FROM " . self::TAB_FILTERS . " WHERE id = search.id)" : "";
 
         $query = new QueryPart("CREATE TEMPORARY TABLE $outName AS\nWITH\n", log: $this->queryLog);
         if (count($this->matchFacet->weights) > 0) {
