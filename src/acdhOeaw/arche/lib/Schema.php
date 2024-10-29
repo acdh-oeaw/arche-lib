@@ -36,6 +36,7 @@ use quickRdf\NamedNode;
  * @property NamedNode $accessRestriction
  * @property NamedNode $accessRestrictionAgg
  * @property NamedNode $accessRole
+ * @property NamedNode $aclRead
  * @property NamedNode $binaryModificationDate
  * @property NamedNode $binaryModificationUser
  * @property NamedNode $binarySize

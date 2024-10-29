@@ -67,6 +67,7 @@ class SearchTerm {
         '<='               => null,
         '>='               => null,
         '~'                => self::TYPE_STRING,
+        '~*'               => self::TYPE_STRING,
         self::OPERATOR_FTS => self::TYPE_FTS,
         '&&'               => self::TYPE_SPATIAL,
         '&&&'              => self::TYPE_SPATIAL,
