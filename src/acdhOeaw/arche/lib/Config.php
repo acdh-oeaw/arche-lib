@@ -65,6 +65,8 @@ use function GuzzleHttp\json_encode;
  * @property string $cmdi
  * @property string $cmdiPid
  * @property string $collection
+ * @property int    $compressionLevel
+ * @property string $compressionMethod
  * @property int    $configDate
  * @property string $connStr
  * @property string $cors
@@ -90,6 +92,7 @@ use function GuzzleHttp\json_encode;
  * @property array<string> $denyNamespaces
  * @property string $dir
  * @property Config $doorkeeper
+ * @property Config $download
  * @property bool   $enforceCompleteness
  * @property bool   $enforceOnMetadata
  * @property Config $epicPid
@@ -179,6 +182,7 @@ use function GuzzleHttp\json_encode;
  * @property Config $socket
  * @property Config $spatialSearch
  * @property Config $storage
+ * @property bool   $strict
  * @property string $table
  * @property string $tikaLocation
  * @property int    $timeout
