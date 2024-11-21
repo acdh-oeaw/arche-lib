@@ -69,11 +69,11 @@ class SmartSearch {
      * 
      * @var array<string, object>
      */
-    private float $exactWeight = 2.0;
-    private float $langWeight  = 1.5;
+    private float $exactWeight        = 2.0;
+    private float $langWeight         = 1.5;
     private string $phrase;
     private SearchTerm $spatialTerm;
-    private ?AbstractLogger $queryLog    = null;
+    private ?AbstractLogger $queryLog = null;
 
     public function __construct(PDO $pdo, Schema $schema, string $baseUrl) {
         $this->pdo        = $pdo;
@@ -877,7 +877,8 @@ class SmartSearch {
 
     private function combineSearchQueries(array $queries, bool $filteredSearch,
                                           string $outName): QueryPart {
-        $filterExp = $filteredSearch ? " WHERE EXISTS (SELECT 1 FROM " . self::TAB_FILTERS . " WHERE id = search.id)" : "";
+        $filterExpExists = $filteredSearch ? " WHERE EXISTS (SELECT 1 FROM " . self::TAB_FILTERS . " WHERE id = search.id)" : "";
+        $filterExpJoin   = $filteredSearch ? " JOIN " . self::TAB_FILTERS . " USING (id)" : "";
 
         $query = new QueryPart("CREATE TEMPORARY TABLE $outName AS\nWITH\n", log: $this->queryLog);
         if (count($this->matchFacet->weights) > 0) {
@@ -892,8 +893,8 @@ class SmartSearch {
         }
 
         foreach ($queries as $n => $i) {
-            $i        = $this->linkNamedEntities($i, 'search');
-            $i->query .= $filterExp;
+            $i = $this->linkNamedEntities($i, 'search', $filterExpJoin);
+            //$i->query .= $filterExpExists;
         }
 
         if (count($queries) === 1) {
@@ -916,9 +917,10 @@ class SmartSearch {
         return $query;
     }
 
-    private function linkNamedEntities(QueryPart $query, string $outName): QueryPart {
+    private function linkNamedEntities(QueryPart $query, string $outName,
+                                       string $joinQuery = ''): QueryPart {
         if (count($this->linkFacet->classes) === 0) {
-            $query->query = "SELECT * FROM ($query->query) $outName";
+            $query->query = "SELECT * FROM ($query->query) $outName $joinQuery";
             return $query;
         }
 
@@ -931,6 +933,7 @@ class SmartSearch {
                     weight * coalesce(weight_p, ?) AS weight
                 FROM
                     s
+                    $joinQuery
                     LEFT JOIN weights_p w ON s.property = w.value
               UNION
                 SELECT 
@@ -945,7 +948,8 @@ class SmartSearch {
                     (
                         SELECT DISTINCT ON (id) s.*, w.weight_p 
                         FROM 
-                            s 
+                            s
+                            $joinQuery
                             LEFT JOIN weights_p w ON s.property = w.value 
                         ORDER BY id, coalesce(weight_p, ?) * weight DESC
                     ) t
@@ -969,7 +973,8 @@ class SmartSearch {
     }
 
     private function addFacetMatches(QueryPart $query): void {
-        $filterQuery = "AND EXISTS (SELECT 1 FROM " . self::TAB_SEARCH . " WHERE id = m.id)\n";
+        $filterQueryExists = "AND EXISTS (SELECT 1 FROM " . self::TAB_SEARCH . " WHERE id = m.id)";
+        $filterQueryJoin   = "JOIN " . self::TAB_SEARCH . " USING (id)";
 
         // ORDINARY FACETS DATA
         foreach ($this->facets as $mn => $facet) {
@@ -1000,11 +1005,11 @@ class SmartSearch {
                     $weightValue AS weight
                 FROM 
                     $srcTab m
+                    $filterQueryJoin
                     $weightQuery
                 WHERE
                     m.property = ?
-                    $filterQuery
-            ";
+            "; // . $filterQueryExists;
             $query->param[] = $facet->property;
         }
         // CONTINUOUS FACETS DATA
