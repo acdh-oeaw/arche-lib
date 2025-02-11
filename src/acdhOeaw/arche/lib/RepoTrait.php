@@ -97,7 +97,7 @@ trait RepoTrait {
     }
 
     /**
-     * Extracts collection of RepoResource objects from the EasyRdf graph being
+     * Extracts collection of RepoResource objects from the metadata graph being
      * parsed from a search response.
      * 
      * @param Dataset $graph graph returned by the parseSearchResponse() method
@@ -115,7 +115,8 @@ trait RepoTrait {
         $this->sortMatchingResources($resources, $this->schema->searchOrder);
         $graph->delete(new QT(predicate: $this->schema->searchMatch));
         $graph->delete(new QT(predicate: $this->schema->searchOrder));
-
+        $graph->delete(new QT(predicate: $this->schema->searchCount));
+        
         foreach ($resources as $i) {
             $obj = new $class($i->getNode()->getValue(), $this);
             /** @var RepoResource $obj */
