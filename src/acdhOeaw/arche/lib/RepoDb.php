@@ -286,8 +286,9 @@ class RepoDb implements RepoInterface {
         $mode = $config->metadataMode ?? RepoResourceInterface::META_NONE;
         switch ($mode) {
             case RRI::META_NONE:
-                $metaQuery   = "SELECT * FROM metadata WHERE false";
+                $metaQuery   = "SELECT id, property, type, lang, value FROM metadata WHERE false";
                 $metaParam   = [];
+                break;
             case RRI::META_IDS:
                 $metaQuery   = "SELECT id, property, type, lang, value FROM metadata JOIN ids USING (id) WHERE property = ?";
                 $metaParam   = [$this->schema->label];
