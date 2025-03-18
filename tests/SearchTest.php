@@ -27,6 +27,7 @@
 namespace acdhOeaw\arche\lib\tests;
 
 use quickRdf\DataFactory as DF;
+use termTemplates\PredicateTemplate as PT;
 use termTemplates\QuadTemplate as QT;
 use acdhOeaw\arche\lib\RepoResource;
 use acdhOeaw\arche\lib\SearchConfig;
@@ -226,6 +227,28 @@ class SearchTest extends TestBase {
     /**
      * @group search
      */
+    public function testSearchReverseOnly(): void {
+        $dateTmpl = new QT(predicate: 'https://date.prop');
+
+        $query                          = "SELECT id FROM identifiers WHERE ids = ?";
+        $param                          = ['https://an.unique.id'];
+        $config                         = new SearchConfig();
+        $config->metadataMode           = '0_0_0_-1';
+        $config->metadataParentProperty = self::$schema->parent;
+
+        $result = iterator_to_array(self::$repo->getResourcesBySqlQuery($query, $param, $config));
+        $this->assertEquals(1, count($result));
+        $meta   = $result[0]->getGraph();
+        $parent = iterator_to_array($meta->getDataset()->listSubjects(new PT(predicate: self::$schema->parent, object: $meta->getNode())));
+        $this->assertCount(1, $parent);
+        $rev    = $meta->getDataset()->copy(new QT($parent[0]));
+        $this->assertCount(1, $rev);
+        $this->assertTrue($rev->every(new QT($parent[0], self::$schema->parent, $meta->getNode())));
+    }
+
+    /**
+     * @group search
+     */
     public function testSearchPaging(): void {
         $dateTmpl = new QT(predicate: 'https://date.prop');
 
@@ -303,7 +326,7 @@ class SearchTest extends TestBase {
         $terms  = [new SearchTerm(
                 SearchTerm::PROPERTY_NEGATE . self::$schema->parent,
                 'https://res2.id'
-        )];
+            )];
         $result = iterator_to_array(self::$repo->getResourcesBySearchTerms($terms, new SearchConfig()));
         $this->assertEquals(1, count($result));
         $this->assertEquals('sample label for the first resource', $result[0]->getMetadata()->getObjectValue(new QT(predicate: self::$schema->label)));

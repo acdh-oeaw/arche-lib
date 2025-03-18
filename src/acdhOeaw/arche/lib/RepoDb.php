@@ -295,25 +295,34 @@ class RepoDb implements RepoInterface {
                 break;
             default:
                 $getRelParam = $this->parseMetadataReadMode($mode, $config->metadataParentProperty);
-                $relQuery    = count($getRelParam) > 0 ? '(get_relatives(id::bigint, ?::text, ?::int, ?::int, ?::bool, ?::bool)).id' : 'id';
-                $metaQuery   = "
+                $relQuery    = count($getRelParam) > 0 ? '(get_relatives(id::bigint, ?::text, ?::int, ?::int, ?::bool, ?::int > 0)).id' : 'id';
+                $revQuery    = '';
+                if (($getRelParam[4] ?? 0) < 0) {
+                    $revQuery = "
+                      UNION
+                        SELECT r.id, property, 'REL'::text AS type, null::text AS lang, target_id::text AS value, true AS revrel
+                        FROM relatives JOIN relations r ON relatives.id = r.target_id
+                    ";
+                }
+                $metaQuery = "
                     , relatives AS (SELECT DISTINCT $relQuery FROM ids),
                     meta AS (
                         SELECT id, ?::text AS property, 'ID'::text AS type, null::text AS lang, ids AS value, false AS revrel
                         FROM relatives JOIN identifiers USING (id)
-                        UNION
-                        SELECT r.id, property, 'REL'::text AS type, null::text AS lang, target_id::text AS value, i.id IS NOT NULL as revrel
+                      UNION
+                        SELECT r.id, property, 'REL'::text AS type, null::text AS lang, target_id::text AS value, i.id IS NOT NULL AS revrel
                         FROM relatives JOIN relations r USING (id) LEFT JOIN ids i ON r.target_id = i.id 
-                        UNION
+                      UNION
                         SELECT id, property, type, lang, value, false AS revrel
                         FROM relatives JOIN metadata USING (id)
+                        $revQuery
                     )
                 ";
-                $metaParam   = array_merge(
+                $metaParam = array_merge(
                     $getRelParam,
                     [$this->schema->id]
                 );
-                $metaWhere   = '';
+                $metaWhere = '';
                 // filter output properties
                 if (count($config->resourceProperties) > 0) {
                     $metaWhere .= " OR ids.id IS NOT NULL AND property IN (" . substr(str_repeat(', ?', count($config->resourceProperties)), 2) . ")";
@@ -626,7 +635,7 @@ class RepoDb implements RepoInterface {
             $checkFn = fn($x) => is_numeric($x) ? (int) $x : throw new RepoLibException('Bad metadata mode ' . $mode, 400);
             $param   = array_map($checkFn, explode('_', $mode));
             $param   = array_merge($param, array_fill(0, 4 - count($param), 0));
-            if ($param[2] < 0 || $param[2] > 1 || $param[3] < 0 || $param[3] > 1 || count($param) !== 4) {
+            if ($param[2] < 0 || $param[2] > 1 || $param[3] < -1 || $param[3] > 1 || count($param) !== 4) {
                 throw new RepoLibException('Bad metadata mode ' . $mode, 400);
             }
             $param[1] = -$param[1];
