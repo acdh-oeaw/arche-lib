@@ -803,12 +803,12 @@ class SmartSearch {
                 full_text_search f
                 LEFT JOIN metadata sm using (mid)
             WHERE
-                websearch_to_tsquery('simple', ?) @@ segments
+                (websearch_to_tsquery('simple', ?) @@ segments OR raw ILIKE ?)
         ";
         $param     = [
             $this->schema->id,
             $phrase, $this->exactWeight, $langParam, $this->langWeight,
-            SearchTerm::escapeFts($phrase)
+            SearchTerm::escapeFts($phrase), "%$phrase%",
         ];
         if (!$inBinary) {
             $query .= "AND f.id IS NULL\n";
