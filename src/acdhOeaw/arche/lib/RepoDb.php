@@ -610,7 +610,8 @@ class RepoDb implements RepoInterface {
      * @return array<int>
      */
     private function parseMetadataReadMode(string $mode, ?string $parent): array {
-        $param = match ($mode) {
+        $parent ??= $this->schema->parent;
+        $param  = match ($mode) {
             RRI::META_RESOURCE => [$parent, 0, 0, 0, 0],
             RRI::META_NEIGHBORS => [$parent, 0, 0, 1, 1],
             RRI::META_RELATIVES => [$parent, 999999, -999999, 1, 0],
