@@ -1034,7 +1034,7 @@ class SmartSearch {
                         FROM metadata m
                         WHERE
                             m.property IN ($minPlch)
-                            $filterQuery
+                            $filterQueryExists
                         GROUP BY 1
                     ) t1 
                     JOIN (
@@ -1042,7 +1042,7 @@ class SmartSearch {
                         FROM metadata m
                         WHERE
                             m.property IN ($maxPlch)
-                            $filterQuery
+                            $filterQueryExists
                         GROUP BY 1
                     ) t2 USING (id)
             ";
