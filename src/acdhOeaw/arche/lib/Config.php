@@ -127,7 +127,7 @@ use function GuzzleHttp\json_encode;
  * @property string $licenseAgg
  * @property string $loggedInRole
  * @property Config $logging
- * @property quickRdf\DatasetNode $meta
+ * @property \quickRdf\DatasetNode $meta
  * @property string $metadata
  * @property array<string> $metadataFormats
  * @property Config $metadataManager

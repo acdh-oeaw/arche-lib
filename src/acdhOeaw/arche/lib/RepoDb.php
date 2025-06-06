@@ -156,7 +156,7 @@ class RepoDb implements RepoInterface {
         $res = $generator->current();
         $generator->next();
         if ($generator->valid()) {
-            throw new AmbiguousMatch("Both resource $id and $id2 match the search");
+            throw new AmbiguousMatch("Many resources match the search " . $res->getUri() . ", ".$generator->current()->getUri());
         }
         return $res;
     }

@@ -28,9 +28,8 @@ namespace acdhOeaw\arche\lib;
 
 use Generator;
 use RuntimeException;
-use GuzzleHttp\Client;
+use zozlak\ProxyClient;
 use GuzzleHttp\Psr7\Request;
-use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\Exception\RequestException;
@@ -204,7 +203,7 @@ class Repo implements RepoInterface {
             );
         }
 
-        $client    = new Client($resolveOptions);
+        $client    = ProxyClient::factory($resolveOptions);
         $resp      = $client->send(new Request('HEAD', $url));
         $redirects = array_merge([$url], $resp->getHeader('X-Guzzle-Redirect-History'));
         $realUrl   = (string) array_pop($redirects);
@@ -238,7 +237,7 @@ class Repo implements RepoInterface {
      *   by all requests to the repository REST API (e.g. credentials)
      */
     public function __construct(string $baseUrl, array $guzzleOptions = []) {
-        $this->client = new Client($guzzleOptions);
+        $this->client = ProxyClient::factory($guzzleOptions);
 
         $this->baseUrl = $baseUrl;
         if (substr($this->baseUrl, -1) !== '/') {

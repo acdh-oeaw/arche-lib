@@ -19,7 +19,8 @@
         "zozlak/query-part": "^2.2",
         "psr/log": "^2 | ^3",
         "sweetrdf/quick-rdf": "^2",
-        "sweetrdf/quick-rdf-io": "^1.0.6"
+        "sweetrdf/quick-rdf-io": "^1.0.6",
+        "zozlak/guzzle-proxy-client": "^1.1"
     },
     "autoload": {
         "psr-4": {

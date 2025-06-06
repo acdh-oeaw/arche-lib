@@ -31,6 +31,7 @@ use PDO;
 use Psr\Log\AbstractLogger;
 use zozlak\queryPart\QueryPart;
 use zozlak\RdfConstants as RDF;
+use acdhOeaw\arche\lib\exception\RepoLibException;
 
 /**
  * Provides an API for advanced weighted 
@@ -64,11 +65,6 @@ class SmartSearch {
     private array $facets = [];
     private object $matchFacet;
     private object $linkFacet;
-
-    /**
-     * 
-     * @var array<string, object>
-     */
     private float $exactWeight        = 2.0;
     private float $langWeight         = 1.5;
     private string $phrase;
@@ -152,7 +148,6 @@ class SmartSearch {
      * @param array<SearchTerm> $searchTerms
      * @param null|SearchTerm $spatialTerm
      * @param array<int> $parentIds
-     * @return void
      */
     public function search(string $phrase, string $language = '',
                            bool $inBinary = true, array $allowedProperties = [],
@@ -228,7 +223,7 @@ class SmartSearch {
         $config->skipArtificialProperties = true;
 
         $param    = [];
-        $oGroupBy = $oOrderBy = '';
+        $oGroupBy = $oOrderBy = $oQuery = '';
         if (count($config->orderBy) > 0) {
             $orderBy = reset($config->orderBy);
             $oAsc    = 'ASC';
