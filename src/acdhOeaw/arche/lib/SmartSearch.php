@@ -749,7 +749,7 @@ class SmartSearch {
             $parentsParam = [];
             foreach ($parentIds as $m => $id) {
                 $parentsQuery .= $m > 0 ? "UNION\n" : "";
-                $parentsQuery .= "SELECT id FROM get_relatives(?, ?, 999999, 0, false, false) WHERE n <> 0\n";
+                $parentsQuery .= "SELECT id FROM get_relatives(?::bigint, ?, 999999, 0, false, false) WHERE n <> 0\n";
                 $parentsParam = array_merge($parentsParam, [$id, $this->schema->parent]);
             }
             $parentsQuery .= ")";
