@@ -295,7 +295,7 @@ class RepoDb implements RepoInterface {
                 break;
             default:
                 $getRelParam = $this->parseMetadataReadMode($mode, $config->metadataParentProperty);
-                $relQuery    = count($getRelParam) > 0 ? '(get_relatives(id::bigint, ?::text, ?::int, ?::int, ?::bool, ?::int > 0)).id' : 'id';
+                $relQuery    = count($getRelParam) > 0 ? '(get_relatives(array_agg(id), ?::text, ?::int, ?::int, ?::bool, ?::int > 0)).id' : 'id';
                 $revQuery    = '';
                 if (($getRelParam[4] ?? 0) < 0) {
                     $revQuery = "
