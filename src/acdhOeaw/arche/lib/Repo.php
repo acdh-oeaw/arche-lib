@@ -51,6 +51,7 @@ use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
 use acdhOeaw\arche\lib\exception\AmbiguousMatch;
 use acdhOeaw\arche\lib\exception\RepoLibException;
+use acdhOeaw\arche\lib\exception\TooManyRequests;
 use acdhOeaw\arche\lib\promise\RepoResourceGeneratorPromise;
 use acdhOeaw\arche\lib\promise\GraphPromise;
 use acdhOeaw\arche\lib\promise\ResponsePromise;
@@ -363,11 +364,16 @@ class Repo implements RepoInterface {
         $promise = $this->client->sendAsync($request)->otherwise(
             function (TransferException $e) {
                 switch ($e->getCode()) {
+                    case 429:
+                        return new RejectedPromise(new TooManyRequests());
                     case 410:
                         return new RejectedPromise(new Deleted());
                     case 409:
                         if ($e instanceof RequestException) {
-                            return new RejectedPromise(new Conflict((string) $e->getResponse()?->getBody()));
+                            $existingUri = $e->getResponse()?->getHeader($this->headers->existingResourceLocation);
+                            $existingUri = reset($existingUri);
+                            $msg         = (string) $e->getResponse()?->getBody();
+                            return new RejectedPromise(new Conflict($msg, $e->getCode(), $e, $existingUri));
                         } else {
                             return new RejectedPromise($e);
                         }

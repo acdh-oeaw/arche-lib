@@ -40,6 +40,8 @@ use acdhOeaw\arche\lib\SearchConfig;
 use acdhOeaw\arche\lib\exception\AmbiguousMatch;
 use acdhOeaw\arche\lib\exception\NotFound;
 use acdhOeaw\arche\lib\exception\ExceptionUtil;
+use acdhOeaw\arche\lib\exception\Conflict;
+use acdhOeaw\arche\lib\exception\TooManyRequests;
 
 /**
  * Description of RepoTest
@@ -50,7 +52,7 @@ class RepoTest extends TestBase {
 
     public function testCreateFromConfig(): void {
         $repo = Repo::factory(__DIR__ . '/config.yaml');
-        $this->assertTrue(is_a($repo, 'acdhOeaw\arche\lib\Repo'));
+        $this->assertInstanceOf(Repo::class, $repo);
     }
 
     public function testTransactionCommit(): void {
@@ -119,6 +121,24 @@ class RepoTest extends TestBase {
 
         $res2 = new RepoResource($res1->getUri(), self::$repo);
         $this->assertEquals('sampleTitle', (string) $res2->getMetadata()->GetObjectValue($labelTmpl));
+    }
+
+    public function testCreateDuplicate(): void {
+        $id       = 'http://my.id';
+        $metadata = $this->getMetadata(['id' => $id]);
+
+        self::$repo->begin();
+        $res = self::$repo->createResource($metadata);
+        try {
+            self::$repo->createResource($metadata);
+            /** @phpstan-ignore method.impossibleType */
+            $this->assertTrue(false);
+        } catch (Conflict $e) {
+            $this->assertEquals(409, $e->getCode());
+            $this->assertEquals("Duplicated resource identifier: $id", $e->getMessage());
+            $this->assertEquals((string) $res->getUri(), $e->getExistingUri());
+        }
+        self::$repo->rollback();
     }
 
     public function testSearchById(): void {
@@ -205,6 +225,7 @@ class RepoTest extends TestBase {
         // REJECT_FAIL
         try {
             $results = self::$repo->map([$metaOk, $metaBad], fn($meta) => self::$repo->createResourceAsync($meta), 1, Repo::REJECT_FAIL);
+            /** @phpstan-ignore method.impossibleType */
             $this->assertTrue(false);
         } catch (ClientException $e) {
             $this->assertEquals(400, $e->getResponse()->getStatusCode());
@@ -329,5 +350,17 @@ class RepoTest extends TestBase {
         $res->updateMetadata();
         $res->updateContent(new BinaryPayload(null, __FILE__));
         $repo->rollback();
+    }
+
+    public function testTooManyRequests(): void {
+        $conn = $this->saturateDbConnections();
+        try {
+            self::$repo->getResourceById('http://foo/bar');
+            /** @phpstan-ignore method.impossibleType */
+            $this->assertTrue(false);
+        } catch (TooManyRequests $e) {
+            /** @phpstan-ignore method.alreadyNarrowedType */
+            $this->assertTrue(true);
+        }
     }
 }

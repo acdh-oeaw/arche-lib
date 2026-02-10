@@ -111,4 +111,21 @@ class TestBase extends \PHPUnit\Framework\TestCase {
         }
         return $graph;
     }
+
+    /**
+     * 
+     * @return array<\PDO>
+     */
+    protected function saturateDbConnections(): array {
+        $conn = [];
+        try {
+            /** @phpstan-ignore while.alwaysTrue */
+            while (true) {
+                $conn[] = new \PDO('pgsql: host=127.0.0.1 port=5432 user=www-data');
+            }
+        } catch (\PDOException $e) {
+            
+        }
+        return $conn;
+    }
 }

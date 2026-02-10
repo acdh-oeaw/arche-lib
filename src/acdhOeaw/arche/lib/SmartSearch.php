@@ -62,7 +62,7 @@ class SmartSearch {
      * 
      * @var array<object>
      */
-    private array $facets = [];
+    private array $facets             = [];
     private object $matchFacet;
     private object $linkFacet;
     private float $exactWeight        = 2.0;
@@ -223,7 +223,7 @@ class SmartSearch {
         $config->skipArtificialProperties = true;
 
         $param    = [];
-        $oGroupBy = $oOrderBy = $oQuery = '';
+        $oGroupBy = $oOrderBy = $oQuery   = '';
         if (count($config->orderBy) > 0) {
             $orderBy = reset($config->orderBy);
             $oAsc    = 'ASC';
@@ -336,7 +336,7 @@ class SmartSearch {
     /**
      * 
      * @param string $prefLang
-     * @return array<string, array<string, mixed>>
+     * @return array<string, object>
      */
     public function getSearchFacets(string $prefLang = ''): array {
         $stats = [];
@@ -566,6 +566,10 @@ class SmartSearch {
         $this->pdo->rollBack();
     }
 
+    /**
+     * 
+     * @return array<object>
+     */
     public function getInitialFacets(string $prefLang, string $cacheFile = '',
                                      bool $force = false): array {
         $lastMod = $this->pdo->prepare("SELECT max(value_t) FROM metadata WHERE property = ?");
@@ -608,6 +612,10 @@ class SmartSearch {
         return $this->postprocessFacets($cache->facets, $prefLang);
     }
 
+    /**
+     * 
+     * @return array<object>
+     */
     private function getInitialFacetDiscrete(object $facet, string $prefLang): array {
         $param       = [];
         $weightQuery = '';
@@ -682,6 +690,10 @@ class SmartSearch {
         return $query->fetchColumn();
     }
 
+    /**
+     * 
+     * @return array{0: int, 1: int}
+     */
     private function getInitialFacetContinues(object $facet): array {
         $plch  = substr(str_repeat(', ?', count($facet->start)), 2);
         $query = $this->pdo->prepare("SELECT min(value_n) FROM metadata WHERE property IN ($plch)");
@@ -718,6 +730,10 @@ class SmartSearch {
         return $query;
     }
 
+    /**
+     * @param array<string, object> $facets
+     * @return array<string, object>
+     */
     private function postprocessFacets(array $facets, string $prefLang): array {
         foreach ($facets as $i) {
             $i->label = (array) $i->label;
@@ -777,6 +793,10 @@ class SmartSearch {
         return true;
     }
 
+    /**
+     * 
+     * @param array<string> $allowedProperties
+     */
     private function getFtsQuery(string $phrase, array $allowedProperties,
                                  bool $inBinary, string $lang): QueryPart {
         $langMatch = !empty($lang) ? "sm.lang = ?" : "?::bool";
@@ -823,6 +843,10 @@ class SmartSearch {
         return new QueryPart($query, $param);
     }
 
+    /**
+     * 
+     * @param array<string> $allowedProperties
+     */
     private function getSpatialQuery(SearchTerm $term, array $allowedProperties): QueryPart {
         $baseUrl      = $this->repo->getBaseUrl();
         $query        = $term->getSqlQuery($baseUrl, $this->schema->id, []);
@@ -870,6 +894,13 @@ class SmartSearch {
         ");
     }
 
+    /**
+     * 
+     * @param array<QueryPart> $queries
+     * @param bool $filteredSearch
+     * @param string $outName
+     * @return QueryPart
+     */
     private function combineSearchQueries(array $queries, bool $filteredSearch,
                                           string $outName): QueryPart {
         $filterExpExists = $filteredSearch ? " WHERE EXISTS (SELECT 1 FROM " . self::TAB_FILTERS . " WHERE id = search.id)" : "";

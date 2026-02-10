@@ -96,9 +96,14 @@ use quickRdf\NamedNode;
  * @property NamedNode $version
  * @property NamedNode $vid
  * @property NamedNode $wkt
+ * @implements \Iterator<Schema|NamedNode|null>
  */
 class Schema implements \Iterator {
 
+    /**
+     * 
+     * @var array<string, Schema|namedNode>
+     */
     private array $schema;
 
     /**

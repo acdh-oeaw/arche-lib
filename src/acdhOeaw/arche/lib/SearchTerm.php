@@ -412,7 +412,7 @@ class SearchTerm {
             WHERE $where
         ";
         if ($otherTables) {
-            $where = str_replace($column ?? '', $columnRaw ?? '', $where);
+            $where = str_replace($column, $columnRaw, $where);
             $query .= "
               UNION
                 SELECT id

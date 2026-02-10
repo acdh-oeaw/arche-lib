@@ -32,6 +32,7 @@ use termTemplates\QuadTemplate as QT;
 use acdhOeaw\arche\lib\RepoResource;
 use acdhOeaw\arche\lib\SearchConfig;
 use acdhOeaw\arche\lib\SearchTerm;
+use acdhOeaw\arche\lib\exception\TooManyRequests;
 use zozlak\RdfConstants as RDF;
 
 /**
@@ -330,5 +331,22 @@ class SearchTest extends TestBase {
         $result = iterator_to_array(self::$repo->getResourcesBySearchTerms($terms, new SearchConfig()));
         $this->assertEquals(1, count($result));
         $this->assertEquals('sample label for the first resource', $result[0]->getMetadata()->getObjectValue(new QT(predicate: self::$schema->label)));
+    }
+
+    /**
+     * 
+     * @group search
+     */
+    public function testTooManyRequests(): void {
+        $conn = $this->saturateDbConnections();
+        try {
+            $terms = [new SearchTerm('https://foo/bar')];
+            self::$repo->getResourcesBySearchTerms($terms, new SearchConfig());
+            /** @phpstan-ignore method.impossibleType */
+            $this->assertTrue(false);
+        } catch (TooManyRequests $e) {
+            /** @phpstan-ignore method.alreadyNarrowedType */
+            $this->assertTrue(true);
+        }
     }
 }

@@ -343,9 +343,7 @@ class SearchConfig {
         if (!is_array($this->ftsQuery)) {
             $this->ftsQuery = [$this->ftsQuery];
         }
-        if (!is_array($this->ftsProperty)) {
-            $this->ftsProperty = [$this->ftsProperty];
-        }
+
         foreach ($terms as $term) {
             /* @var $term SearchTerm */
             if ($term->operator === SearchTerm::OPERATOR_FTS && !empty($term->value)) {

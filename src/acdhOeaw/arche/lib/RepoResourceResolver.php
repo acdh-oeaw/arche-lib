@@ -49,8 +49,8 @@ use acdhOeaw\arche\lib\exception\AmbiguousMatch;
  */
 class RepoResourceResolver {
 
-    private ?Config $config;
-    private ?RepoInterface $repo;
+    private Config $config;
+    private RepoInterface $repo;
     private ?AbstractLogger $log;
 
     /**
@@ -113,7 +113,7 @@ class RepoResourceResolver {
      * @throws RuntimeException
      */
     public function resolve(string $resId, bool $fallback = true): RepoResourceInterface {
-        if ($this->repo !== null) {
+        if (isset($this->repo)) {
             try {
                 return $this->repo->getResourceById($resId);
             } catch (NotFound $e) {
@@ -141,7 +141,7 @@ class RepoResourceResolver {
         if ($this->log) {
             $this->log->debug("Resolving $url using a zero-config method");
         }
-        $metaHeader = $this->config?->rest->headers->metadataReadMode;
+        $metaHeader = $this->config->rest->headers->metadataReadMode;
         $realUrl    = null;
         $repo       = Repo::factoryFromUrl($url, [], $realUrl, $metaHeader);
         if ($this->log) {

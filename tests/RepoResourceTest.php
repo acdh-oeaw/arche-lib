@@ -32,6 +32,7 @@ use acdhOeaw\arche\lib\BinaryPayload;
 use acdhOeaw\arche\lib\RepoResource;
 use acdhOeaw\arche\lib\exception\Deleted;
 use acdhOeaw\arche\lib\exception\NotFound;
+use acdhOeaw\arche\lib\exception\TooManyRequests;
 
 /**
  * Description of RepoResourceTest
@@ -213,12 +214,14 @@ class RepoResourceTest extends TestBase {
 
         try {
             $res1->loadMetadata(true);
+            /** @phpstan-ignore method.impossibleType */
             $this->assertTrue(false, 'No exception');
         } catch (Deleted $e) {
             $this->assertEquals(410, $e->getCode());
         }
         try {
             $res2->loadMetadata(true);
+            /** @phpstan-ignore method.impossibleType */
             $this->assertTrue(false, 'No exception');
         } catch (Deleted $e) {
             $this->assertEquals(410, $e->getCode());
@@ -247,12 +250,14 @@ class RepoResourceTest extends TestBase {
 
         try {
             $res1->loadMetadata(true);
+            /** @phpstan-ignore method.impossibleType */
             $this->assertTrue(false, 'No exception');
         } catch (NotFound $e) {
             $this->assertEquals(404, $e->getCode());
         }
         try {
             $res2->loadMetadata(true);
+            /** @phpstan-ignore method.impossibleType */
             $this->assertTrue(false, 'No exception');
         } catch (NotFound $e) {
             $this->assertEquals(404, $e->getCode());
@@ -296,5 +301,29 @@ class RepoResourceTest extends TestBase {
         self::$repo->commit();
         $this->expectExceptionCode(404);
         (new RepoResource($res2url, self::$repo))->loadMetadata();
+    }
+
+    public function testTooManyRequests(): void {
+        /** @var \acdhOeaw\arche\lib\RepoResource $res */
+        $res  = self::$repo->getResourceById('https://an.unique.id/1');
+        $conn = $this->saturateDbConnections();
+        try {
+            $res->setGraph($res->getGraph());
+            $res->updateMetadata();
+            /** @phpstan-ignore method.impossibleType */
+            $this->assertTrue(false);
+        } catch (TooManyRequests $e) {
+            /** @phpstan-ignore method.alreadyNarrowedType */
+            $this->assertTrue(true);
+        }
+        try {
+            $res->setGraph($res->getGraph());
+            $res->updateContent(new BinaryPayload('foobar'));
+            /** @phpstan-ignore method.impossibleType */
+            $this->assertTrue(false);
+        } catch (TooManyRequests $e) {
+            /** @phpstan-ignore method.alreadyNarrowedType */
+            $this->assertTrue(true);
+        }
     }
 }

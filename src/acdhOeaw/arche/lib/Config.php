@@ -97,6 +97,7 @@ use function GuzzleHttp\json_encode;
  * @property bool   $enforceOnMetadata
  * @property Config $epicPid
  * @property bool   $exceptionOnTimeout
+ * @property string $existingResourceLocation
  * @property string $file
  * @property string $fileName
  * @property array<string, array<Config>> $fixed
@@ -148,7 +149,7 @@ use function GuzzleHttp\json_encode;
  * @property string $ontology
  * @property array<string> $options
  * @property int    $outputTriplesCache
- * @property array  $parameters
+ * @property array<mixed>  $parameters
  * @property string $parent
  * @property string $path
  * @property string $pathBase

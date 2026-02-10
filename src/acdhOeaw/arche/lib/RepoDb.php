@@ -153,10 +153,11 @@ class RepoDb implements RepoInterface {
         if (!$generator->valid()) {
             throw new NotFound();
         }
+        /** @var \acdhOeaw\arche\lib\RepoResourceDb $res */
         $res = $generator->current();
         $generator->next();
         if ($generator->valid()) {
-            throw new AmbiguousMatch("Many resources match the search " . $res->getUri() . ", ".$generator->current()->getUri());
+            throw new AmbiguousMatch("Many resources match the search " . $res->getUri() . ", " . $generator->current()->getUri());
         }
         return $res;
     }
@@ -513,7 +514,7 @@ class RepoDb implements RepoInterface {
      */
     private function getOrderByQuery(SearchConfig $config): array {
         $qp = new QueryPart();
-        if (!is_array($config->orderBy) || count($config->orderBy) === 0) {
+        if (count($config->orderBy) === 0) {
             return [$qp, $qp];
         }
         $lang      = !empty($config->orderByLang) ? ", lang = ? DESC NULLS LAST" : '';

@@ -3,7 +3,7 @@
 /*
  * The MIT License
  *
- * Copyright 2019 Austrian Centre for Digital Humanities.
+ * Copyright 2026 zozlak.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,31 +24,17 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\arche\lib\tests;
-
-use acdhOeaw\arche\lib\Schema;
+namespace acdhOeaw\arche\lib\exception;
 
 /**
- * Description of SchemaTest
+ * Description of TooManyRequests
  *
  * @author zozlak
  */
-class SchemaTest extends \PHPUnit\Framework\TestCase {
+class TooManyRequests extends RepoLibException {
 
-    public function testComplexStructure(): void {
-        $schema = new Schema(json_decode('{"test": {"mime": "c"}}'));
-        $x      = $schema->test;
-        $this->assertTrue(\quickRdf\DataFactory::namedNode('c')->equals($x->mime));
-        /** @phpstan-ignore method.impossibleType */
-        $this->assertNull($x->hash);
-        try {
-            /** @phpstan-ignore assign.propertyType */
-            $x->mime = 'foo';
-            /** @phpstan-ignore method.impossibleType */
-            $this->assertTrue(false);
-            /** @phpstan-ignore catch.neverThrown */
-        } catch (\BadMethodCallException $ex) {
-            $this->assertTrue(true);
-        }
+    public function __construct(string $message = "Too many requests",
+                                int $code = 429, ?\Throwable $previous = null) {
+        parent::__construct($message, $code, $previous);
     }
 }

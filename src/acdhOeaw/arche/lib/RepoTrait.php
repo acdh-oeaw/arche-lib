@@ -45,6 +45,7 @@ trait RepoTrait {
 
     /**
      * An object providing mappings of repository REST API parameters to HTTP headers used by a given repository instance.
+     * @var object{'metadataReadMode': string, 'metadataParentProperty': string, 'metadataWriteMode': string, 'transactionId': string, 'withReferences': string, 'resourceProperties': string, 'relativesProperties': string, 'existingResourceLocation': string}
      */
     private object $headers;
 
@@ -116,7 +117,7 @@ trait RepoTrait {
         $graph->delete(new QT(predicate: $this->schema->searchMatch));
         $graph->delete(new QT(predicate: $this->schema->searchOrder));
         $graph->delete(new QT(predicate: $this->schema->searchCount));
-        
+
         foreach ($resources as $i) {
             $obj = new $class($i->getNode()->getValue(), $this);
             /** @var RepoResource $obj */

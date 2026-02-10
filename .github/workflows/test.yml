@@ -22,15 +22,19 @@ jobs:
       run: |
         git clone --depth 1 --branch master https://github.com/acdh-oeaw/arche-docker-config.git config
         chmod +x config/run.d/98-xdebug.sh
+        cp .github/workflows/test-postgresql_config.sh config/run.d/99-postgresql.sh
         cp tests/config.yaml config/yaml/local.yaml
         cp .github/workflows/30-fixVocabularies.sh config/initScripts/
     - name: run repo docker
       run: |
         mkdir log
-        docker run --name arche -p 80:80 -v `pwd`/log:/home/www-data/log -v `pwd`/config:/home/www-data/config -e USER_UID=`id -u` -e USER_GID=`id -g` -d acdhch/arche:${{ matrix.imageTag }}
+        docker run --name arche -p 80:80 -p 5432:5432 -v `pwd`/log:/home/www-data/log -v `pwd`/config:/home/www-data/config -e USER_UID=`id -u` -e USER_GID=`id -g` -d acdhch/arche:${{ matrix.imageTag }}
     - name: composer update
       run: |
         composer update
+    - name: phpstan
+      run: |
+        phpstan analyze -l 6 src tests
     - name: wait
       run: |
         while [ "`grep '# INIT SCRIPTS ENDED' log/initScripts.log | wc -l`" != "1" ]; do

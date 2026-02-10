@@ -35,9 +35,16 @@ use Throwable;
  */
 class Conflict extends RepoLibException {
 
+    private string | null $existingUri;
+
     public function __construct(string $message = "", int $code = 409,
-                                ?Throwable $previous = null) {
+                                ?Throwable $previous = null,
+                                string | null $existingUri = null) {
         parent::__construct($message, $code, $previous);
+        $this->existingUri = $existingUri;
     }
 
+    public function getExistingUri(): string | null {
+        return $this->existingUri;
+    }
 }
