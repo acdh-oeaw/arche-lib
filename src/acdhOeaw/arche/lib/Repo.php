@@ -255,7 +255,7 @@ class Repo implements RepoInterface {
         $config        = new Config((object) json_decode((string) $response->getBody()));
         $this->version = $config->version ?? '0.1';
 
-        if (Comparator::lessThan($this->version < self::ARCHE_CORE_MIN_VERSION)) {
+        if (Comparator::lessThan($this->version, self::ARCHE_CORE_MIN_VERSION)) {
             throw new RepoLibException("This version of arche-lib requires ARCHE version " . self::ARCHE_CORE_MIN_VERSION . " while the repository version is " . $this->version);
         }
         $this->schema  = new Schema($config->schema);
@@ -275,7 +275,7 @@ class Repo implements RepoInterface {
     /**
      * Returns repository's arche-core major.minor version.
      * 
-     * @return float
+     * @return string
      */
     public function getVersion(): string {
         return $this->version;
