@@ -229,6 +229,7 @@ class Repo implements RepoInterface {
     private $txId;
     private string $baseUrl;
     private string $baseUri;
+    private float $version;
 
     /**
      * Creates an repository connection object.
@@ -255,6 +256,7 @@ class Repo implements RepoInterface {
         if ($version > 0 && $version < self::ARCHE_CORE_MIN_VERSION) {
             throw new RepoLibException("This version of arche-lib requires ARCHE version " . self::ARCHE_CORE_MIN_VERSION . " while the repository version is $version");
         }
+        $this->version = $version;
         $this->schema  = new Schema($config->schema);
         $this->headers = $config->rest->headers;
         $this->baseUri = $config->rest->urlBase . $config->rest->pathBase;
@@ -269,6 +271,15 @@ class Repo implements RepoInterface {
         return $this->baseUri;
     }
 
+    /**
+     * Returns repository's arche-core major.minor version.
+     * 
+     * @return float
+     */
+    public function getVersion(): float {
+        return $this->version;
+    }
+    
     /**
      * Creates a repository resource.
      * 
