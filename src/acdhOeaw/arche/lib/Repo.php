@@ -277,7 +277,7 @@ class Repo implements RepoInterface {
      * 
      * @return float
      */
-    public function getVersion(): float {
+    public function getVersion(): string {
         return $this->version;
     }
 
