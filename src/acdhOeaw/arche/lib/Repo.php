@@ -29,6 +29,7 @@ namespace acdhOeaw\arche\lib;
 use Generator;
 use RuntimeException;
 use zozlak\ProxyClient;
+use Composer\Semver\Comparator;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Exception\TransferException;
@@ -69,7 +70,7 @@ class Repo implements RepoInterface {
     const REJECT_SKIP            = 1;
     const REJECT_FAIL            = 2;
     const REJECT_INCLUDE         = 3;
-    const ARCHE_CORE_MIN_VERSION = 3.2;
+    const ARCHE_CORE_MIN_VERSION = '3.2';
     use RepoTrait;
 
     /**
@@ -229,7 +230,7 @@ class Repo implements RepoInterface {
     private $txId;
     private string $baseUrl;
     private string $baseUri;
-    private float $version;
+    private string $version;
 
     /**
      * Creates an repository connection object.
@@ -251,12 +252,12 @@ class Repo implements RepoInterface {
         if ($response->getStatusCode() !== 200) {
             throw new NotFound("$baseUrl doesn't resolve to an ARCHE repository", 404);
         }
-        $config  = new Config((object) json_decode((string) $response->getBody()));
-        $version = (float) ($config->version ?? 0.1);
-        if ($version > 0 && $version < self::ARCHE_CORE_MIN_VERSION) {
-            throw new RepoLibException("This version of arche-lib requires ARCHE version " . self::ARCHE_CORE_MIN_VERSION . " while the repository version is $version");
+        $config        = new Config((object) json_decode((string) $response->getBody()));
+        $this->version = $config->version ?? '0.1';
+
+        if (Comparator::lessThan($this->version < self::ARCHE_CORE_MIN_VERSION)) {
+            throw new RepoLibException("This version of arche-lib requires ARCHE version " . self::ARCHE_CORE_MIN_VERSION . " while the repository version is " . $this->version);
         }
-        $this->version = $version;
         $this->schema  = new Schema($config->schema);
         $this->headers = $config->rest->headers;
         $this->baseUri = $config->rest->urlBase . $config->rest->pathBase;
@@ -279,7 +280,7 @@ class Repo implements RepoInterface {
     public function getVersion(): float {
         return $this->version;
     }
-    
+
     /**
      * Creates a repository resource.
      * 

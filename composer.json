@@ -20,7 +20,8 @@
         "psr/log": "^2 | ^3",
         "sweetrdf/quick-rdf": "^2",
         "sweetrdf/quick-rdf-io": "^1.0.6",
-        "zozlak/guzzle-proxy-client": "^1.1"
+        "zozlak/guzzle-proxy-client": "^1.1",
+        "composer/semver": "^3.4"
     },
     "autoload": {
         "psr-4": {
