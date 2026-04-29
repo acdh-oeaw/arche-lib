@@ -496,7 +496,7 @@ class Repo implements RepoInterface {
             switch (count($matches)) {
                 case 0:
                     return new RejectedPromise(new NotFound());
-                case 1;
+                case 1:
                     $res = $this->extractResourcesFromGraph($graph, $config);
                     return $res->current();
                 default:
