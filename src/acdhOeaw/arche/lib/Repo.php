@@ -199,6 +199,19 @@ class Repo implements RepoInterface {
         return new Repo($baseUrl, $guzzleOptions);
     }
 
+    /**
+     * Resolves any URI poinitng to an ARCHE repository REST interface to the repository's
+     * base URL.
+     * 
+     * @param string $url
+     * @param array<mixed> $guzzleOptions
+     * @param string|null $realUrl if provided, the final resource URL will be stored
+     *   in this variable.
+     * @param string|null $metaReadModeHeader header used by the repository to denote
+     *   the metadata read mode. Providing this parameter will speed up the
+     *   resolution if the $url points to a repository resource.
+     * @return string
+     */
     static public function findBaseUrl(string $url, array $guzzleOptions = [],
                                        ?string &$realUrl = null,
                                        ?string $metaReadModeHeader = null): string {
