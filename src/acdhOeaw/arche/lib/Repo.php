@@ -195,24 +195,29 @@ class Repo implements RepoInterface {
                                           array $guzzleOptions = [],
                                           ?string &$realUrl = null,
                                           ?string $metaReadModeHeader = null): self {
-        $resolveOptions                    = $guzzleOptions;
-        $resolveOptions['http_errors']     = false;
-        $resolveOptions['allow_redirects'] = ['max' => 10, 'strict' => true, 'track_redirects' => true];
+        $baseUrl = self::findBaseUrl($url, $guzzleOptions, $realUrl, $metaReadModeHeader);
+        return new Repo($baseUrl, $guzzleOptions);
+    }
+
+    static public function findBaseUrl(string $url, array $guzzleOptions = [],
+                                       ?string &$realUrl = null,
+                                       ?string $metaReadModeHeader = null): string {
+        $guzzleOptions['http_errors']     = false;
+        $guzzleOptions['allow_redirects'] = ['max' => 10, 'strict' => true, 'track_redirects' => true];
         if (!empty($metaReadModeHeader)) {
-            $resolveOptions['headers'] = array_merge(
-                $resolveOptions['headers'] ?? [],
+            $guzzleOptions['headers'] = array_merge(
+                $guzzleOptions['headers'] ?? [],
                 [$metaReadModeHeader => RepoResourceInterface::META_RESOURCE]
             );
         }
 
-        $client    = ProxyClient::factory($resolveOptions);
+        $client    = ProxyClient::factory($guzzleOptions);
         $resp      = $client->send(new Request('HEAD', $url));
         $redirects = array_merge([$url], $resp->getHeader('X-Guzzle-Redirect-History'));
         $realUrl   = (string) array_pop($redirects);
         $realUrl   = (string) preg_replace('`/metadata/?$`', '', $realUrl);
-        $baseUrl   = (string) preg_replace('`/?(|describe|user|user/[^/]+|metadata|transaction|[0-9]+|[0-9]+/tombstone|merge/[0-9]+/[0-9]+|search)/?$`', '', $realUrl);
-
-        return new Repo($baseUrl, $guzzleOptions);
+        $baseUrl   = (string) preg_replace('`/*(|describe|user|user/[^/]+|metadata|transaction|[0-9]+|[0-9]+/tombstone|merge/[0-9]+/[0-9]+|search)/?$`', '', $realUrl);
+        return $baseUrl . '/';
     }
 
     /**

@@ -30,9 +30,11 @@ use Generator;
 use PDO;
 use PDOException;
 use PDOStatement;
+use GuzzleHttp\Psr7\Request;
 use quickRdf\Dataset;
 use quickRdf\DataFactory as DF;
 use termTemplates\QuadTemplate as QT;
+use zozlak\ProxyClient;
 use zozlak\RdfConstants as RDF;
 use zozlak\queryPart\QueryPart;
 use acdhOeaw\arche\lib\RepoResourceInterface AS RRI;
@@ -81,6 +83,38 @@ class RepoDb implements RepoInterface {
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $nonRelProp = $config->metadataManagment->nonRelationProperties ?? [];
         return new RepoDb($baseUrl, $schema, $headers, $pdo, (array) $nonRelProp);
+    }
+
+    /**
+     * Creates a repository object instance from a repository URL and a database connection.
+     * 
+     * As it fetches repository config over the HTTP, it is slow comparing to the factory()
+     * and __construct() methods. On the other hand it does not require access to the repository
+     * config file.
+     * 
+     * @param string $url
+     * @param PDO|string $dbConn
+     * @param AuthInterface|null $auth
+     * @return RepoDb
+     * @throws RepoLibException
+     */
+    static public function factoryFromUrl(string $url, PDO | string $dbConn,
+                                          ?AuthInterface $auth = null): RepoDb {
+        if (is_string($dbConn)) {
+            $dbConn = new PDO($dbConn);
+        }
+        $baseUrl  = Repo::findBaseUrl($url);
+        $client   = ProxyClient::factory();
+        $headers  = ['Accept' => 'application/json'];
+        $response = $client->send(new Request('get', $baseUrl . "describe", $headers));
+        if ($response->getStatusCode() !== 200) {
+            throw new RepoLibException("Failed to read repository settings from $baseUrl");
+        }
+        $config      = new Config((object) json_decode((string) $response->getBody()));
+        $schema      = new Schema($config->schema);
+        $headers     = new Schema($config->rest->headers);
+        $nonRelProps = $config->nonRelationProperties ?? [];
+        return new RepoDb($url, $schema, $headers, $dbConn, $nonRelProps, null);
     }
 
     /**

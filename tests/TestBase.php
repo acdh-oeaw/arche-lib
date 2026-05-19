@@ -26,6 +26,8 @@
 
 namespace acdhOeaw\arche\lib\tests;
 
+use PDO;
+use PDOException;
 use GuzzleHttp\Exception\ClientException;
 use quickRdf\DataFactory as DF;
 use quickRdf\DatasetNode;
@@ -39,6 +41,8 @@ use acdhOeaw\arche\lib\Schema;
  * @author zozlak
  */
 class TestBase extends \PHPUnit\Framework\TestCase {
+
+    const DB_CONN_STR = 'pgsql: host=127.0.0.1 port=5432 user=www-data';
 
     static protected Repo $repo;
     static protected Config $config;
@@ -114,16 +118,16 @@ class TestBase extends \PHPUnit\Framework\TestCase {
 
     /**
      * 
-     * @return array<\PDO>
+     * @return array<PDO>
      */
     protected function saturateDbConnections(): array {
         $conn = [];
         try {
             /** @phpstan-ignore while.alwaysTrue */
             while (true) {
-                $conn[] = new \PDO('pgsql: host=127.0.0.1 port=5432 user=www-data');
+                $conn[] = new PDO(self::DB_CONN_STR);
             }
-        } catch (\PDOException $e) {
+        } catch (PDOException $e) {
             
         }
         return $conn;
