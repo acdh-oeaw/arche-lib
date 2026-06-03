@@ -260,7 +260,7 @@ class RepoTest extends TestBase {
         $res2->delete(false);
         self::$repo->commit();
         $client = new Client(['http_errors' => false]);
-        $resp   = $client->sendRequest(new Request('get', (string) $res2->getUri()));
+        $resp   = $client->sendRequest(new Request('GET', (string) $res2->getUri()));
         $this->assertEquals(410, $resp->getStatusCode());
 
         $query     = "SELECT id FROM identifiers WHERE ids IN (?, ?)";

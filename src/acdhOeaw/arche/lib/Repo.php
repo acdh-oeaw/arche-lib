@@ -266,7 +266,7 @@ class Repo implements RepoInterface {
         }
 
         $headers  = ['Accept' => 'application/json'];
-        $response = $this->client->send(new Request('get', $this->baseUrl . "describe", $headers));
+        $response = $this->client->send(new Request('GET', $this->baseUrl . "describe", $headers));
         if ($response->getStatusCode() !== 200) {
             throw new NotFound("$baseUrl doesn't resolve to an ARCHE repository", 404);
         }
@@ -341,7 +341,7 @@ class Repo implements RepoInterface {
         $serializer  = new NQuadsSerializer();
         $body        = $serializer->serialize($metadata);
         $headers     = ['Content-Type' => 'application/n-triples'];
-        $req         = new Request('post', $this->baseUrl . 'metadata', $headers, $body);
+        $req         = new Request('POST', $this->baseUrl . 'metadata', $headers, $body);
         $readModeTmp = $payload === null ? $readMode : RepoResourceInterface::META_NONE;
         $req         = $this->withReadHeaders($req, $readModeTmp, $parentProperty);
         $promise     = $this->sendRequestAsync($req);
@@ -620,7 +620,7 @@ class Repo implements RepoInterface {
             $config->toArray()
         );
         $body       = http_build_query($body);
-        $req        = new Request('post', $this->baseUrl . 'search', $headers, $body);
+        $req        = new Request('POST', $this->baseUrl . 'search', $headers, $body);
         $promise    = $this->sendRequestAsync($req);
         $promise    = $promise->then(function (ResponseInterface $resp) use ($config): Dataset {
             return $this->parseSearchResponse($resp, $config);
@@ -661,7 +661,7 @@ class Repo implements RepoInterface {
         }
         $body = implode('&', $body);
         $body .= (!empty($body) ? '&' : '') . $config->toQuery();
-        $req  = new Request('post', $this->baseUrl . 'search', $headers, $body);
+        $req  = new Request('POST', $this->baseUrl . 'search', $headers, $body);
 
         $promise = $this->sendRequestAsync($req);
         $promise = $promise->then(function (ResponseInterface $resp) use ($config): Dataset {
@@ -681,7 +681,7 @@ class Repo implements RepoInterface {
      */
     public function begin(): string {
         $this->txId = null;
-        $req        = new Request('post', $this->baseUrl . 'transaction');
+        $req        = new Request('POST', $this->baseUrl . 'transaction');
         $resp       = $this->sendRequest($req);
         $this->txId = $resp->getHeader($this->getHeaderName('transactionId'))[0];
         return $this->txId;
@@ -700,7 +700,7 @@ class Repo implements RepoInterface {
         if (!empty($this->txId)) {
             $headers    = [$this->getHeaderName('transactionId') => $this->txId];
             $this->txId = null;
-            $req        = new Request('delete', $this->baseUrl . 'transaction', $headers);
+            $req        = new Request('DELETE', $this->baseUrl . 'transaction', $headers);
             $this->sendRequest($req);
         }
     }
@@ -718,7 +718,7 @@ class Repo implements RepoInterface {
         if (!empty($this->txId)) {
             $headers    = [$this->getHeaderName('transactionId') => $this->txId];
             $this->txId = null;
-            $req        = new Request('put', $this->baseUrl . 'transaction', $headers);
+            $req        = new Request('PUT', $this->baseUrl . 'transaction', $headers);
             $this->sendRequest($req);
         }
     }
@@ -735,7 +735,7 @@ class Repo implements RepoInterface {
     public function prolong(): void {
         if (!empty($this->txId)) {
             $headers = [$this->getHeaderName('transactionId') => $this->txId];
-            $req     = new Request('get', $this->baseUrl . 'transaction', $headers);
+            $req     = new Request('GET', $this->baseUrl . 'transaction', $headers);
             $this->sendRequest($req);
         }
     }

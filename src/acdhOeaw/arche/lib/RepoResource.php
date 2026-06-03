@@ -111,7 +111,7 @@ class RepoResource implements RepoResourceInterface {
      * @see getContent()
      */
     public function getContentAsync(): ResponsePromise {
-        $request = new Request('get', (string) $this->getUri());
+        $request = new Request('GET', (string) $this->getUri());
         return $this->repo->sendRequestAsync($request);
     }
 
@@ -154,7 +154,7 @@ class RepoResource implements RepoResourceInterface {
                                        ?string $parentProperty = null,
                                        array $resourceProperties = [],
                                        array $relativesProperties = []): PromiseInterface {
-        $request = new Request('put', (string) $this->getUri());
+        $request = new Request('PUT', (string) $this->getUri());
         $request = $content->attachTo($request);
         $request = $this->withReadHeaders($request, $readMode, $parentProperty, $resourceProperties, $relativesProperties);
         $promise = $this->repo->sendRequestAsync($request);
@@ -222,7 +222,7 @@ class RepoResource implements RepoResourceInterface {
                 $this->repo->getHeaderName('metadataWriteMode') => $updateMode,
             ];
             $body    = (new NQuadsSerializer())->serialize($this->metadata);
-            $req     = new Request('patch', (string) $this->getUri() . '/metadata', $headers, $body);
+            $req     = new Request('PATCH', (string) $this->getUri() . '/metadata', $headers, $body);
             $req     = $this->withReadHeaders($req, $readMode, $parentProperty, $resourceProperties, $relativesProperties);
             $promise = $this->repo->sendRequestAsync($req);
             $promise = $promise->then(function (ResponseInterface $resp): void {
@@ -282,7 +282,7 @@ class RepoResource implements RepoResourceInterface {
         if (!empty($recursiveProperty)) {
             $headers[$this->repo->getHeaderName('metadataParentProperty')] = $recursiveProperty;
         }
-        $req            = new Request('delete', (string) $this->getUri(), $headers);
+        $req            = new Request('DELETE', (string) $this->getUri(), $headers);
         $promise        = $this->repo->sendRequestAsync($req);
         $this->metadata = $this->metadata->withDataset(new Dataset());
 
@@ -294,7 +294,7 @@ class RepoResource implements RepoResourceInterface {
                     $deleted[$quad->getSubject()->getValue()] = $quad->getSubject();
                 }
                 foreach ($deleted as $i) {
-                    $req  = new Request('delete', $i->getValue() . '/tombstone');
+                    $req  = new Request('DELETE', $i->getValue() . '/tombstone');
                     $resp = $this->repo->sendRequest($req);
                     if ($resp->getStatusCode() === 204) {
                         // fake response of a delete without tombstone removal
@@ -352,7 +352,7 @@ class RepoResource implements RepoResourceInterface {
                                       array $resourceProperties = [],
                                       array $relativesProperties = []): ?PromiseInterface {
         if (count($this->metadata) === 0 || $force) {
-            $req     = new Request('get', (string) $this->getUri() . '/metadata');
+            $req     = new Request('GET', (string) $this->getUri() . '/metadata');
             $req     = $this->withReadHeaders($req, $mode, $parentProperty, $resourceProperties, $relativesProperties);
             $promise = $this->repo->sendRequestAsync($req);
             $promise = $promise->then(function (ResponseInterface $resp): void {

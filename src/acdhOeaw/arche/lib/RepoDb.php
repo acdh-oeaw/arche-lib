@@ -106,7 +106,7 @@ class RepoDb implements RepoInterface {
         $baseUrl  = Repo::findBaseUrl($url);
         $client   = ProxyClient::factory();
         $headers  = ['Accept' => 'application/json'];
-        $response = $client->send(new Request('get', $baseUrl . "describe", $headers));
+        $response = $client->send(new Request('GET', $baseUrl . "describe", $headers));
         if ($response->getStatusCode() !== 200) {
             throw new RepoLibException("Failed to read repository settings from $baseUrl");
         }
