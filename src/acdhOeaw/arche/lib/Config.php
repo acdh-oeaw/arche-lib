@@ -26,9 +26,6 @@
 
 namespace acdhOeaw\arche\lib;
 
-use function GuzzleHttp\json_decode;
-use function GuzzleHttp\json_encode;
-
 /**
  * A container for the yaml configuration allowing to satisfy phpstan checks
  * by mocking config properties hierarchy.
