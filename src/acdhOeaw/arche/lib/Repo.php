@@ -58,7 +58,6 @@ use acdhOeaw\arche\lib\promise\GraphPromise;
 use acdhOeaw\arche\lib\promise\ResponsePromise;
 use acdhOeaw\arche\lib\promise\RepoResourcePromise;
 use acdhOeaw\arche\lib\SearchTerm;
-use function GuzzleHttp\json_decode;
 
 /**
  * A repository connection class.
