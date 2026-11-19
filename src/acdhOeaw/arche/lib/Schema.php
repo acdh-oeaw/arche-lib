@@ -41,6 +41,7 @@ use quickRdf\NamedNode;
  * @property NamedNode $binaryModificationUser
  * @property NamedNode $binarySize
  * @property NamedNode $binarySizeCumulative
+ * @property object    $checkRanges
  * @property NamedNode $class
  * @property object    $classes
  * @property NamedNode $cmdi
@@ -53,6 +54,7 @@ use quickRdf\NamedNode;
  * @property NamedNode $delete
  * @property Schema    $dissService
  * @property NamedNode $fileName
+ * @property NamedNode $firstName
  * @property NamedNode $hash
  * @property NamedNode $hasService
  * @property NamedNode $id
@@ -62,6 +64,8 @@ use quickRdf\NamedNode;
  * @property Schema    $ingest
  * @property NamedNode $isNewVersionOf
  * @property NamedNode $label
+ * @property NamedNode $language
+ * @property NamedNode $lastName
  * @property NamedNode $latitude
  * @property NamedNode $license
  * @property NamedNode $licenseAgg
@@ -75,6 +79,7 @@ use quickRdf\NamedNode;
  * @property NamedNode $modificationUser
  * @property Schema    $namespaces
  * @property NamedNode $nextItem
+ * @Property NamedNode $oaipmhSet
  * @property NamedNode $ontology
  * @property NamedNode $parent
  * @property NamedNode $parameterClass
