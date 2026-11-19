@@ -48,6 +48,7 @@ class SchemaTest extends \PHPUnit\Framework\TestCase {
             $this->assertTrue(false);
             /** @phpstan-ignore catch.neverThrown */
         } catch (\BadMethodCallException $ex) {
+            /** @phpstan-ignore method.alreadyNarrowedType */
             $this->assertTrue(true);
         }
     }
